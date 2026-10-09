@@ -1,0 +1,260 @@
+/*
+ * Hand-written: converted from the inline styles of legacy index.html
+ * #sosDetailModal (step labels, media box, contact row, service sections).
+ */
+
+.stepLabel {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-dim);
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.sectionTitle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.notesLabel {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-muted);
+  display: block;
+  margin-bottom: 6px;
+}
+
+.mediaBox {
+  margin-top: 12px;
+  background: rgba(0, 210, 255, 0.05);
+  border: 1px dashed rgba(0, 210, 255, 0.3);
+  border-radius: 12px;
+  padding: 12px;
+}
+
+.mediaHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.mediaLabel {
+  font-size: 13px;
+  font-weight: 800;
+  color: #60a5fa;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.mediaOptional {
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+.mediaButtons {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.mediaButton {
+  justify-content: center;
+  font-weight: 700;
+  font-size: 12px;
+  padding: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cameraButton {
+  composes: mediaButton;
+  background: rgba(0, 136, 255, 0.15);
+  border-color: #0088ff;
+  color: #60a5fa;
+}
+
+.galleryButton {
+  composes: mediaButton;
+  background: rgba(168, 85, 247, 0.15);
+  border-color: #a855f7;
+  color: #c084fc;
+}
+
+.hiddenInput {
+  display: none;
+}
+
+.previewGrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.previewItem {
+  position: relative;
+  display: inline-block;
+}
+
+.previewThumb {
+  width: 85px;
+  height: 85px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid rgba(0, 210, 255, 0.4);
+  display: block;
+}
+
+.removeButton {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  background: #ff2a4b;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  font-size: 11px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+}
+
+.processing {
+  font-size: 11px;
+  color: #94a3b8;
+  margin-top: 8px;
+}
+
+.contactRow {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.fieldLabel {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-dim);
+  display: block;
+  margin-bottom: 4px;
+}
+
+.submitBusy {
+  opacity: 0.85;
+  cursor: progress;
+}
+
+.spinner {
+  animation: spin 1s linear infinite;
+}
+
+/* Directory sections shown instead of the form for rescue / ambulance. */
+.serviceSection {
+  margin-top: 14px;
+  margin-bottom: 12px;
+  border-radius: 12px;
+  padding: 12px;
+}
+
+.serviceSectionRescue {
+  composes: serviceSection;
+  background: rgba(249, 115, 22, 0.08);
+  border: 1px solid rgba(249, 115, 22, 0.35);
+}
+
+.serviceSectionHospital {
+  composes: serviceSection;
+  background: rgba(16, 185, 129, 0.08);
+  border: 1px solid rgba(16, 185, 129, 0.35);
+}
+
+.serviceHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.serviceTitle {
+  font-size: 13px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.serviceTitleRescue {
+  composes: serviceTitle;
+  color: #fb923c;
+}
+
+.serviceTitleHospital {
+  composes: serviceTitle;
+  color: #34d399;
+}
+
+.serviceLogo {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+  vertical-align: middle;
+}
+
+.serviceBadge {
+  font-size: 10px;
+  color: white;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.serviceBadgeRescue {
+  composes: serviceBadge;
+  background: #f97316;
+}
+
+.serviceBadgeHospital {
+  composes: serviceBadge;
+  background: #10b981;
+}
+
+.serviceText {
+  font-size: 11px;
+  color: #cbd5e1;
+  margin: 0 0 10px;
+  line-height: 1.5;
+}
+
+.serviceCall {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  padding: 10px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #10b981, #047857);
+  color: #fff;
+  font-weight: 800;
+  font-size: 13px;
+  text-decoration: none;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

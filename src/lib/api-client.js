@@ -27,7 +27,16 @@ api.interceptors.response.use(
   (error) => {
     const status = error.response?.status;
     const data = error.response?.data;
-    const message = data?.message || data?.error || error.message || 'Không kết nối được máy chủ';
+    // be-v2 validation errors carry { data: { field: message } } and no message.
+    const fieldErrors =
+      data?.data && typeof data.data === 'object' ? Object.values(data.data).join('; ') : null;
+    const unreachable = !error.response || status === 502 || status === 504;
+    const message =
+      data?.message ||
+      fieldErrors ||
+      (unreachable ? 'Không kết nối được máy chủ' : null) ||
+      data?.error ||
+      error.message;
     return Promise.reject(new ApiError(message, { status, data }));
   },
 );

@@ -61,6 +61,7 @@ export default {
         'btn-close-modal',
         'is-open',
         'input-field',
+        'textarea-field',
         'btn-submit-sos',
         'btn-refresh-loc',
       ],
@@ -187,6 +188,24 @@ export default {
         'guide-pill-badge',
         'guide-checklist',
       ],
+    },
+    // ---- M2: citizen SOS request form ------------------------------------
+    {
+      mode: 'module',
+      file: 'src/features/sos-request/components/agency-picker.module.css',
+      classes: ['agency-cards-grid', 'agency-card', 'agency-real-logo', 'agency-title', 'agency-desc'],
+      states: ['is-selected', 'police', 'csgt', 'fire', 'hospital', 'traffic-rescue', 'rescue'],
+    },
+    {
+      mode: 'module',
+      file: 'src/features/sos-request/components/incident-chips.module.css',
+      classes: ['incident-chips-container', 'incident-chip'],
+      states: ['is-active'],
+    },
+    {
+      mode: 'module',
+      file: 'src/features/sos-request/components/sos-request-modal.module.css',
+      classes: ['modal-legal-banner-amber', 'legal-banner-head', 'legal-banner-body'],
     },
   ],
 };
