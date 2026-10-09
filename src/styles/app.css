@@ -1,0 +1,21 @@
+/*
+ * Hand-written global styles for the React shell. Legacy styles live in
+ * legacy-global.css (generated) and in each component's *.module.css.
+ */
+
+#root {
+  min-height: 100%;
+}
+
+/* Visually hidden but readable by screen readers. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
