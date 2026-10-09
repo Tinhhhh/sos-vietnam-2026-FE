@@ -56,6 +56,17 @@ Có thể đổi thứ tự. Ví dụ: làm M6 (đăng nhập) sớm hơn để 
 - Nút "Cài Lối Tắt" tạm hiện thông báo; luồng cài PWA thuộc M12.
 - Bấm SOS: hiệu ứng + giọng nói giữ nguyên, rồi hiện thông báo thay vì mở form (form thuộc M2).
 
+## M1.1: tối ưu hiệu năng + video bàn tay phát 1 lần
+
+- [x] Video nền bàn tay: bỏ `loop`, chỉ phát 1 lần mỗi lần tải trang rồi dừng ở khung cuối. Quay lại trang, bật giảm chuyển động hoặc máy yếu thì hiện thẳng khung cuối, không phát.
+- [x] 3 đốm sáng nền: `filter: blur(80px)` chuyển thành `radial-gradient` có độ mờ tương đương (σ 80px), không phải làm mờ lại mỗi khung hình.
+- [x] Bong bóng: bỏ `backdrop-filter: blur(4px)`. Máy yếu thì không hiện bong bóng.
+- [x] Kính mờ: `--ios26-glass-blur` 28px → 18px, `--ios26-glass-blur-heavy` 40px → 22px (khai báo trong `src/styles/app.css`).
+- [x] Canvas quả cầu: vẽ khoảng 30fps theo thời gian thực, dừng khi ra khỏi màn hình, chỉ vẽ 1 khung tĩnh khi bật giảm chuyển động. Canvas hạt bắn chỉ chạy khoảng 1 giây sau mỗi lần bấm.
+- [x] Phát sáng chữ SOS: thôi animate `text-shadow`, đổi sang animate `opacity` của `::after`.
+- [x] Máy yếu (`deviceMemory` < 4, `hardwareConcurrency` < 4 hoặc bật tiết kiệm dữ liệu): thêm class `low-power` lên `<html>`.
+- [x] Các file CSS sửa tay (`citizen-background`, `ambient-bubbles`, `crystal-orb`) đã bỏ header `AUTO-GENERATED`; `npm run css:extract` sẽ bỏ qua chúng.
+
 ## Lỗi phát hiện ở be-v2 (chưa sửa, để backend xử lý)
 
 - `POST /api/v1/auth/register` cho client tự chọn `roleName`, nên ai cũng đăng ký được ADMIN.

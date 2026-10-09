@@ -3,6 +3,16 @@
  * legacy-global.css (generated) and in each component's *.module.css.
  */
 
+/*
+ * Perf: backdrop blur cost grows with the radius and is paid again whenever
+ * anything behind the glass moves. Legacy used 28px / 40px; past ~20px the
+ * extra softness is barely visible over the dark background.
+ */
+:root {
+  --ios26-glass-blur: blur(18px) saturate(190%);
+  --ios26-glass-blur-heavy: blur(22px) saturate(200%);
+}
+
 #root {
   min-height: 100%;
 }

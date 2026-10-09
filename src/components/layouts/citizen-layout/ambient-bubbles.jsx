@@ -1,5 +1,7 @@
 import { useState } from 'react';
 
+import { isLowPowerDevice } from '@/lib/device-profile';
+
 import styles from './ambient-bubbles.module.css';
 
 // Port of legacy public/js/ios-bubble-ambient.js.
@@ -33,8 +35,9 @@ function createBubbles() {
 }
 
 export function AmbientBubbles() {
-  // Random layout is generated once per mount.
-  const [bubbles] = useState(createBubbles);
+  // Random layout is generated once per mount; weak devices get none.
+  const [bubbles] = useState(() => (isLowPowerDevice() ? [] : createBubbles()));
+  if (bubbles.length === 0) return null;
 
   return (
     <div className={styles.ios26AmbientBubblesBackdrop} aria-hidden="true">

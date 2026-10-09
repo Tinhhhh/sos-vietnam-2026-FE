@@ -44,8 +44,12 @@ export function createFlakes() {
   });
 }
 
-/** Swirling golden glitter inside the orb. Mutates flakes in place. */
-export function drawLiquidFrame(ctx, flakes, time, speedMult) {
+/**
+ * Swirling golden glitter inside the orb. Mutates flakes in place.
+ * `step` is the elapsed time in 60fps frames, so the swirl keeps the legacy
+ * speed at a lower frame rate.
+ */
+export function drawLiquidFrame(ctx, flakes, time, speedMult, step = 1) {
   const w = LIQUID_SIZE;
   const c = w / 2;
   ctx.clearRect(0, 0, w, w);
@@ -60,8 +64,8 @@ export function drawLiquidFrame(ctx, flakes, time, speedMult) {
   ctx.fill();
 
   for (const f of flakes) {
-    f.angle += f.speed * speedMult;
-    f.bobPhase += 0.04 * f.bobFreq;
+    f.angle += f.speed * speedMult * step;
+    f.bobPhase += 0.04 * f.bobFreq * step;
 
     const dist = f.dist + Math.sin(f.bobPhase) * 4;
     const px = c + Math.cos(f.angle) * dist;

@@ -236,9 +236,18 @@ function emit(out) {
     ` * Change the config and re-run instead of editing by hand; delete this header\n` +
     ` * once the file is taken over and edited manually.\n */\n`;
   const target = path.join(projectRoot, out.file);
+  // A file whose header was removed has been taken over by hand: never overwrite it.
+  if (fs.existsSync(target) && !fs.readFileSync(target, 'utf8').includes('AUTO-GENERATED')) {
+    return {
+      file: out.file,
+      rules: out.rules.length,
+      keyframes: out.keyframeNames.size,
+      written: 'skipped (hand-owned)',
+    };
+  }
   fs.mkdirSync(path.dirname(target), { recursive: true });
   fs.writeFileSync(target, header + result.toString().trim() + '\n');
-  return { file: out.file, rules: out.rules.length, keyframes: out.keyframeNames.size };
+  return { file: out.file, rules: out.rules.length, keyframes: out.keyframeNames.size, written: 'yes' };
 }
 
 const summary = config.outputs.map(emit);

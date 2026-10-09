@@ -1,5 +1,7 @@
 import { useEffect, useRef } from 'react';
 
+import { useReducedMotion } from '@/hooks/use-reduced-motion';
+
 import {
   createFlakes,
   drawLiquidFrame,
@@ -11,6 +13,9 @@ import {
 import styles from './crystal-orb.module.css';
 
 const HIGHLIGHT_REST = 'rotate(-22deg)';
+const FRAME_60 = 1000 / 60;
+// The glitter swirl reads the same at 30fps and costs half the CPU of 60fps.
+const LIQUID_FRAME_MS = 1000 / 30 - 2;
 
 /** Restarts a CSS animation by removing the class, forcing reflow, re-adding it. */
 function replayClass(el, className) {
@@ -31,30 +36,75 @@ export function CrystalOrb({ onActivate }) {
   const hoveredRef = useRef(false);
   const particlesRef = useRef([]);
   const clickTimerRef = useRef(null);
+  const splashFrameRef = useRef(0);
+  const reducedMotion = useReducedMotion();
 
+  // Liquid glitter: ~30fps, paused while the orb is off screen; a single
+  // still frame when the user prefers reduced motion.
   useEffect(() => {
-    const liquidCtx = liquidRef.current.getContext('2d');
-    const splashCtx = splashRef.current.getContext('2d');
+    const canvas = liquidRef.current;
+    const ctx = canvas.getContext('2d');
     const flakes = createFlakes();
     let time = 0;
     let speedMult = 1;
-    let frame;
+    let frame = 0;
+    let last = 0;
 
-    const loop = () => {
+    const draw = (step) => {
       // ease into 2.8x swirl speed while hovered
-      speedMult += ((hoveredRef.current ? 2.8 : 1.0) - speedMult) * 0.08;
-      time += 0.03 * speedMult;
-      drawLiquidFrame(liquidCtx, flakes, time, speedMult);
-      drawSplashFrame(splashCtx, particlesRef.current);
+      speedMult += ((hoveredRef.current ? 2.8 : 1.0) - speedMult) * Math.min(1, 0.08 * step);
+      time += 0.03 * speedMult * step;
+      drawLiquidFrame(ctx, flakes, time, speedMult, step);
+    };
+
+    if (reducedMotion) {
+      draw(1);
+      return undefined;
+    }
+
+    const loop = (now) => {
+      frame = requestAnimationFrame(loop);
+      if (last && now - last < LIQUID_FRAME_MS) return;
+      draw(last ? Math.min((now - last) / FRAME_60, 4) : 1);
+      last = now;
+    };
+    const start = () => {
+      if (frame) return;
+      last = 0;
       frame = requestAnimationFrame(loop);
     };
-    loop();
-
-    return () => {
+    const stop = () => {
       cancelAnimationFrame(frame);
-      clearTimeout(clickTimerRef.current);
+      frame = 0;
     };
-  }, []);
+
+    const observer = new IntersectionObserver(([entry]) => (entry.isIntersecting ? start() : stop()));
+    observer.observe(canvas);
+    start();
+    return () => {
+      stop();
+      observer.disconnect();
+    };
+  }, [reducedMotion]);
+
+  useEffect(
+    () => () => {
+      cancelAnimationFrame(splashFrameRef.current);
+      clearTimeout(clickTimerRef.current);
+    },
+    [],
+  );
+
+  // Splash particles: the loop only runs while particles are alive (~1 s).
+  const runSplash = () => {
+    if (splashFrameRef.current) return;
+    const ctx = splashRef.current.getContext('2d');
+    const loop = () => {
+      drawSplashFrame(ctx, particlesRef.current);
+      splashFrameRef.current = particlesRef.current.length ? requestAnimationFrame(loop) : 0;
+    };
+    splashFrameRef.current = requestAnimationFrame(loop);
+  };
 
   const handleMouseMove = (e) => {
     const rect = buttonRef.current.getBoundingClientRect();
@@ -77,6 +127,7 @@ export function CrystalOrb({ onActivate }) {
     replayClass(blastRef.current, styles.active);
     replayClass(rippleRef.current, styles.active);
     spawnSplash(particlesRef.current);
+    runSplash();
 
     onActivate?.(e);
   };
@@ -130,7 +181,9 @@ export function CrystalOrb({ onActivate }) {
         <div className={styles.orbGlassCausticBottom} />
 
         <div className={styles.orbContent}>
-          <span className={styles.orbSosText}>SOS</span>
+          <span className={styles.orbSosText} data-text="SOS">
+            SOS
+          </span>
           <span className={styles.orbSosSub}>BÁO CỨU HỘ</span>
         </div>
 

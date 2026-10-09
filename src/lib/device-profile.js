@@ -17,6 +17,7 @@ const PROFILE_CLASSES = [
   'os-mac',
   'touch-device',
   'no-touch',
+  'low-power',
 ];
 
 export function detectDeviceProfile() {
@@ -52,6 +53,17 @@ export function detectDeviceProfile() {
   return { deviceType, osType, width, height, isTouch, pixelRatio: window.devicePixelRatio || 1 };
 }
 
+/**
+ * Weak hardware or data-saver: ambient effects (background video, bubbles,
+ * drifting glows) are dropped so the SOS button stays responsive.
+ */
+export function isLowPowerDevice() {
+  const memory = navigator.deviceMemory; // GB, Chromium only
+  const cores = navigator.hardwareConcurrency;
+  const saveData = navigator.connection?.saveData;
+  return Boolean(saveData || (memory && memory < 4) || (cores && cores < 4));
+}
+
 function applyDeviceProfile() {
   const profile = detectDeviceProfile();
   const nextClasses = [
@@ -59,6 +71,7 @@ function applyDeviceProfile() {
     `os-${profile.osType}`,
     profile.isTouch ? 'touch-device' : 'no-touch',
   ];
+  if (isLowPowerDevice()) nextClasses.push('low-power');
 
   for (const el of [document.documentElement, document.body]) {
     el.classList.remove(...PROFILE_CLASSES);
