@@ -201,53 +201,15 @@ body:global(.in-sos-tracking) .header-nav-center {
   /*  legacy public/css/style.css:7159  */
   .header-nav-center {
     position: fixed !important;
-    bottom: 12px !important;
+    bottom: calc(14px + var(--sa-bottom, 0px)) !important;
     top: auto !important;
     left: 50% !important;
     transform: translateX(-50%) !important;
     z-index: 9999 !important;
     padding: 0 !important;
     width: calc(100% - 20px) !important;
-    max-width: 385px !important;
+    max-width: 440px !important;
     box-sizing: border-box !important;
-  }
-  .nav-center-pill {
-    width: 100% !important;
-    padding: 5px 6px !important;
-    gap: 4px !important;
-    box-sizing: border-box !important;
-    display: flex !important;
-    justify-content: space-between !important;
-    align-items: center !important;
-    scrollbar-width: none !important;
-    -ms-overflow-style: none !important;
-    overflow: hidden !important;
-  }
-  .nav-center-pill::-webkit-scrollbar {
-    display: none !important;
-    width: 0 !important;
-    height: 0 !important;
-  }
-  .nav-pill-item {
-    padding: 6px 8px !important;
-    font-size: 11px !important;
-    gap: 3px !important;
-    white-space: nowrap !important;
-    flex: 1 1 0 !important;
-    justify-content: center !important;
-    text-align: center !important;
-    border-radius: 9999px !important;
-  }
-  .nav-pill-item span {
-    font-size: 12px !important;
-  }
-  .nav-pill-item.btn-pill-dispatcher-link {
-    font-size: 11px !important;
-    padding: 6px 8px !important;
-  }
-  .nav-pill-item.btn-pill-dispatcher-link img {
-    width: 12px !important;
-    height: 12px !important;
   }
 }
 /*  legacy public/css/tactical-responsive.css:135  */

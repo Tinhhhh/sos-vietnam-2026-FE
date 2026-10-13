@@ -1,0 +1,521 @@
+/* ==================== CITIZEN INCIDENT TRACKING VIEW ==================== */
+.trackingWrapper {
+  display: block;
+  width: 100%;
+  max-width: 680px;
+  margin: 0 auto;
+  padding: 0 12px 100px;
+  animation: fadeInTracking 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes fadeInTracking {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.trackingCard {
+  background: rgba(10, 16, 32, 0.85);
+  backdrop-filter: blur(28px) saturate(210%);
+  -webkit-backdrop-filter: blur(28px) saturate(210%);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 20px;
+  padding: 18px;
+  margin-bottom: 20px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6), inset 0 1px 1.5px rgba(255, 255, 255, 0.2);
+}
+
+.trackingHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.trackingIdLabel {
+  font-size: 11px;
+  color: #94a3b8;
+  margin-bottom: 2px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.trackingIdValue {
+  font-size: 18px;
+  font-weight: 800;
+  color: #60a5fa;
+  font-family: var(--font-family, monospace);
+  letter-spacing: 0.5px;
+}
+
+.trackingBadgeStatus {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.trackingBadgeStatus.pending {
+  background: rgba(245, 158, 11, 0.15);
+  border: 1px solid #f59e0b;
+  color: #fbbf24;
+}
+
+.trackingBadgeStatus.dispatching {
+  background: rgba(56, 189, 248, 0.18);
+  border: 1px solid #38bdf8;
+  color: #60a5fa;
+  animation: pulseStatus 2s infinite ease-in-out;
+}
+
+.trackingBadgeStatus.enRoute {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.25), rgba(220, 38, 38, 0.35));
+  border: 1px solid #ef4444;
+  color: #fca5a5;
+  animation: pulseStatus 1.5s infinite ease-in-out;
+}
+
+.trackingBadgeStatus.resolved {
+  background: rgba(16, 185, 129, 0.18);
+  border: 1px solid #10b981;
+  color: #34d399;
+}
+
+@keyframes pulseStatus {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(56, 189, 248, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(56, 189, 248, 0);
+  }
+}
+
+/* 5-Step Visual Stepper */
+.stepperTimeline {
+  display: flex;
+  justify-content: space-between;
+  position: relative;
+  margin: 20px 0 24px;
+  padding: 0 4px;
+}
+
+.stepperTimeline::before {
+  content: '';
+  position: absolute;
+  top: 14px;
+  left: 20px;
+  right: 20px;
+  height: 3px;
+  background: rgba(255, 255, 255, 0.12);
+  z-index: 1;
+}
+
+.stepperProgressFill {
+  position: absolute;
+  top: 14px;
+  left: 20px;
+  height: 3px;
+  background: linear-gradient(90deg, #10b981 0%, #38bdf8 65%, #f59e0b 100%);
+  z-index: 2;
+  transition: width 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.5);
+}
+
+.stepNode {
+  position: relative;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  flex: 1;
+}
+
+.stepCircle {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #0d1424;
+  border: 2px solid rgba(255, 255, 255, 0.25);
+  color: #94a3b8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 800;
+  margin-bottom: 6px;
+  transition: all 0.3s ease;
+}
+
+.stepNode.active .stepCircle {
+  border-color: #60a5fa;
+  background: #0284c7;
+  color: #ffffff;
+  box-shadow: 0 0 15px rgba(2, 132, 199, 0.7);
+  transform: scale(1.1);
+}
+
+.stepNode.completed .stepCircle {
+  border-color: #10b981;
+  background: #10b981;
+  color: #ffffff;
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.5);
+}
+
+.stepText {
+  font-size: 10.5px;
+  font-weight: 600;
+  color: #94a3b8;
+  max-width: 65px;
+  line-height: 1.25;
+}
+
+.stepNode.active .stepText {
+  color: #f8fafc;
+  font-weight: 800;
+}
+
+.stepNode.completed .stepText {
+  color: #a7f3d0;
+}
+
+/* Assigned Rescue Unit Card */
+.unitCard {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 14px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.unitTopRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.unitInfo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.unitAvatar {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #0284c7, #0ea5e9);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  box-shadow: 0 0 15px rgba(14, 165, 233, 0.4);
+  flex-shrink: 0;
+}
+
+.unitLevelBadge {
+  display: inline-block;
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  background: rgba(56, 189, 248, 0.15);
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  color: #38bdf8;
+}
+
+.unitName {
+  font-size: 14px;
+  font-weight: 800;
+  color: #f8fafc;
+  margin-top: 2px;
+}
+
+.unitSub {
+  font-size: 11.5px;
+  color: #94a3b8;
+  margin-top: 1px;
+}
+
+.unitActionsRow {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.btnCallUnit {
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: #ffffff;
+  padding: 8px 14px;
+  border-radius: 9999px;
+  text-decoration: none;
+  font-weight: 700;
+  font-size: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4);
+  transition: all 0.2s ease;
+  border: none;
+  cursor: pointer;
+}
+
+.btnCallUnit:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.1);
+}
+
+.btnVideoUnit {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.35), rgba(220, 38, 38, 0.55));
+  border: 1.5px solid #ef4444;
+  color: #fca5a5;
+  box-shadow: 0 4px 15px rgba(239, 68, 68, 0.35);
+}
+
+.btnVideoUnit:hover {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.5), rgba(220, 38, 38, 0.7));
+  color: #ffffff;
+}
+
+.unitStationDetailsBox {
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px dashed rgba(255, 255, 255, 0.16);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 11px;
+  line-height: 1.6;
+  color: #cbd5e1;
+}
+
+/* Multi-channel Notification Grid */
+.multiChannelGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.multiChannelCard {
+  background: rgba(0, 136, 255, 0.1);
+  border: 1px solid rgba(0, 136, 255, 0.25);
+  border-radius: 10px;
+  padding: 8px;
+  text-align: center;
+}
+
+.multiChannelBtnCall {
+  background: rgba(16, 185, 129, 0.15);
+  border: 1px solid rgba(16, 185, 129, 0.45);
+  border-radius: 10px;
+  padding: 8px;
+  text-align: center;
+  cursor: pointer;
+  width: 100%;
+  transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 15px rgba(16, 185, 129, 0.15);
+  font-family: inherit;
+}
+
+.multiChannelBtnCall:hover {
+  background: rgba(16, 185, 129, 0.28);
+  border-color: #34d399;
+  transform: translateY(-1px);
+}
+
+/* Map Container */
+.trackingMapContainer {
+  width: 100%;
+  border-radius: 14px;
+  margin-bottom: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  overflow: hidden;
+  position: relative;
+}
+
+.mapViewport {
+  width: 100%;
+  height: 280px;
+}
+
+/* Chat Section */
+.chatWrapper {
+  background: rgba(15, 23, 42, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 16px;
+  padding: 14px;
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+}
+
+.chatMessagesBox {
+  max-height: 220px;
+  min-height: 100px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 10px;
+  padding: 8px 6px;
+  background: rgba(10, 15, 29, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+}
+
+.chatBubble {
+  padding: 9px 14px;
+  border-radius: 16px;
+  font-size: 13px;
+  max-width: 84%;
+  line-height: 1.45;
+  word-break: break-word;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  position: relative;
+}
+
+.chatBubble.citizen {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.38), rgba(185, 28, 28, 0.25));
+  border: 1px solid rgba(248, 113, 113, 0.55);
+  color: #ffffff;
+  align-self: flex-end;
+  border-bottom-right-radius: 4px;
+}
+
+.chatBubble.dispatcher {
+  background: linear-gradient(135deg, rgba(14, 165, 233, 0.35), rgba(2, 132, 199, 0.22));
+  border: 1px solid rgba(56, 189, 248, 0.55);
+  color: #f0f9ff;
+  align-self: flex-start;
+  border-bottom-left-radius: 4px;
+}
+
+.chatBubble.system {
+  background: rgba(30, 41, 59, 0.75);
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  color: #94a3b8;
+  font-size: 11.5px;
+  align-self: center;
+  border-radius: 10px;
+  text-align: center;
+  padding: 7px 14px;
+  max-width: 92%;
+}
+
+.chatInputBar {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.chatInput {
+  flex: 1;
+  background: rgba(15, 23, 42, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 22px;
+  padding: 9px 16px;
+  color: #ffffff;
+  font-size: 12.5px;
+  outline: none;
+}
+
+.chatInput:focus {
+  border-color: #38bdf8;
+  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.3);
+}
+
+.btnSendChat {
+  background: linear-gradient(135deg, rgba(14, 165, 233, 0.95), rgba(37, 99, 235, 0.95));
+  border: 1px solid rgba(125, 211, 252, 0.6);
+  color: #ffffff;
+  padding: 8px 18px;
+  border-radius: 22px;
+  font-weight: 700;
+  font-size: 12.5px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.btnSendChat:hover {
+  filter: brightness(1.15);
+}
+
+/* Button: Tôi đã an toàn */
+.btnCitizenSafe {
+  margin-top: 10px;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(16, 185, 129, 0.55);
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.22), rgba(5, 150, 105, 0.14));
+  color: #6ee7b7;
+  font-size: 12.5px;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+  cursor: pointer;
+  transition: filter 0.18s ease, transform 0.18s ease;
+}
+
+.btnCitizenSafe:hover {
+  filter: brightness(1.15);
+}
+
+.btnCitizenSafe:active {
+  transform: scale(0.985);
+}
+
+.btnCitizenSafe:disabled {
+  opacity: 0.65;
+  cursor: progress;
+}
+
+@media (max-width: 480px) {
+  .trackingHeader {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .unitTopRow {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .multiChannelGrid {
+    grid-template-columns: 1fr;
+  }
+  .btnCitizenSafe {
+    font-size: 11px;
+    padding: 11px 10px;
+  }
+}

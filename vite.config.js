@@ -8,7 +8,7 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, projectRoot, '');
   // Spring Boot backend (sos-vietnam-be-v2). The dev server proxies /api and /ws
   // to it, so the browser stays same-origin and no CORS setup is needed locally.
-  const backendUrl = env.BACKEND_URL || 'http://localhost:8080';
+  const backendUrl = env.BACKEND_URL || 'http://localhost:3000';
 
   return {
     root: projectRoot,

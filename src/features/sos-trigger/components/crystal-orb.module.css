@@ -18,7 +18,8 @@
   width: 100%;
   height: 100%;
   border-radius: 50%;
-  border: 1.5px solid rgba(255, 42, 75, 0.4);
+  border: 1.5px solid rgba(172, 0, 21, 0.55);
+  box-shadow: 0 0 12px rgba(223, 176, 119, 0.25);
   animation: radar-expand 3.6s infinite cubic-bezier(0.2, 0.8, 0.2, 1);
   pointer-events: none;
 }
@@ -36,10 +37,10 @@
   width: 100%;
   height: 100%;
   border-radius: 50%;
-  border: 3px solid #ff4d6d;
+  border: 3px solid #DFB077;
   box-shadow:
-    0 0 40px #ff2a4b,
-    inset 0 0 20px #ff2a4b;
+    0 0 40px #AC0015,
+    inset 0 0 20px #AC0015;
   pointer-events: none;
   opacity: 0;
   transform: scale(0.5);
@@ -58,8 +59,8 @@
 }
 .btn-crystal-orb {
   position: relative;
-  width: 165px;
-  height: 165px;
+  width: 198px;
+  height: 198px;
   border-radius: 50%;
   border: none;
   background: transparent;
@@ -72,9 +73,9 @@
   z-index: 10;
   overflow: hidden;
   box-shadow:
-    0 0 50px rgba(255, 42, 75, 0.5),
-    0 20px 40px rgba(0, 0, 0, 0.75),
-    inset 0 0 25px rgba(255, 42, 75, 0.4);
+    0 0 55px rgba(172, 0, 21, 0.7),
+    0 20px 44px rgba(4, 35, 72, 0.82),
+    inset 0 0 28px rgba(172, 0, 21, 0.55);
   transition:
     transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275),
     box-shadow 0.3s ease;
@@ -83,17 +84,17 @@
 .btn-crystal-orb:hover {
   transform: scale(1.06);
   box-shadow:
-    0 0 75px rgba(255, 42, 75, 0.85),
-    0 25px 50px rgba(0, 0, 0, 0.85),
-    inset 0 0 35px rgba(255, 107, 129, 0.6);
+    0 0 75px rgba(172, 0, 21, 0.92),
+    0 25px 50px rgba(4, 35, 72, 0.9),
+    inset 0 0 35px rgba(223, 176, 119, 0.55);
 }
 .btn-crystal-orb:active,
 .btn-crystal-orb.is-clicking {
   transform: scale(0.93);
   box-shadow:
-    0 0 100px rgba(255, 42, 75, 1),
-    0 10px 25px rgba(0, 0, 0, 0.9),
-    inset 0 0 45px rgba(255, 255, 255, 0.8);
+    0 0 100px rgba(172, 0, 21, 1),
+    0 10px 25px rgba(4, 35, 72, 0.95),
+    inset 0 0 45px rgba(241, 236, 203, 0.8);
 }
 .orb-glass-base {
   position: absolute;
@@ -101,13 +102,13 @@
   border-radius: 50%;
   background: radial-gradient(
     circle at 50% 50%,
-    rgba(255, 42, 75, 0.5) 0%,
-    rgba(220, 38, 38, 0.3) 60%,
-    rgba(255, 255, 255, 0.08) 100%
+    rgba(172, 0, 21, 0.65) 0%,
+    rgba(172, 0, 21, 0.35) 60%,
+    rgba(241, 236, 203, 0.12) 100%
   );
   box-shadow:
-    inset 0 -14px 28px rgba(255, 42, 75, 0.6),
-    inset 0 2px 10px rgba(255, 255, 255, 0.6);
+    inset 0 -14px 28px rgba(172, 0, 21, 0.7),
+    inset 0 2px 10px rgba(241, 236, 203, 0.65);
   pointer-events: none;
 }
 .orb-liquid-chamber {
@@ -115,8 +116,8 @@
   inset: 2px;
   border-radius: 50%;
   overflow: hidden;
-  background: radial-gradient(circle at 50% 45%, #ef4444 0%, #dc2626 40%, #991b1b 75%, #701010 100%);
-  box-shadow: inset 0 0 25px rgba(255, 42, 75, 0.6);
+  background: radial-gradient(circle at 50% 45%, #d90429 0%, #AC0015 45%, #7a000f 78%, #4a0009 100%);
+  box-shadow: inset 0 0 25px rgba(172, 0, 21, 0.75);
   pointer-events: none;
 }
 .orb-fluid-deep {
@@ -124,9 +125,9 @@
   inset: 0;
   background: radial-gradient(
     circle at 50% 55%,
-    rgba(255, 59, 92, 0.8) 0%,
-    rgba(220, 38, 38, 0.85) 60%,
-    rgba(136, 19, 55, 0.95) 100%
+    rgba(223, 176, 119, 0.35) 0%,
+    rgba(172, 0, 21, 0.9) 60%,
+    rgba(100, 0, 12, 0.95) 100%
   );
   mix-blend-mode: multiply;
 }
@@ -152,8 +153,8 @@
   background: linear-gradient(
     180deg,
     transparent 45%,
-    rgba(255, 42, 75, 0.4) 65%,
-    rgba(153, 0, 27, 0.8) 100%
+    rgba(172, 0, 21, 0.5) 65%,
+    rgba(120, 0, 15, 0.85) 100%
   );
   opacity: 0.6;
   animation: wave-spin 10s linear infinite;
@@ -163,8 +164,8 @@
   background: linear-gradient(
     180deg,
     transparent 48%,
-    rgba(255, 107, 129, 0.5) 68%,
-    rgba(220, 38, 38, 0.85) 100%
+    rgba(223, 176, 119, 0.45) 68%,
+    rgba(172, 0, 21, 0.88) 100%
   );
   opacity: 0.75;
   border-radius: 44% 38% 46% 40%;
@@ -175,9 +176,9 @@
   background: linear-gradient(
     180deg,
     transparent 52%,
-    rgba(255, 215, 0, 0.35) 60%,
-    rgba(255, 42, 75, 0.7) 72%,
-    rgba(185, 28, 28, 0.95) 100%
+    rgba(241, 236, 203, 0.4) 60%,
+    rgba(223, 176, 119, 0.55) 72%,
+    rgba(172, 0, 21, 0.95) 100%
   );
   opacity: 0.9;
   border-radius: 41% 45% 39% 43%;
@@ -188,8 +189,8 @@
   position: absolute;
   inset: -10%;
   background:
-    radial-gradient(circle at 40% 40%, rgba(255, 215, 0, 0.25) 0%, transparent 40%),
-    radial-gradient(circle at 60% 70%, rgba(255, 42, 75, 0.4) 0%, transparent 50%);
+    radial-gradient(circle at 40% 40%, rgba(241, 236, 203, 0.3) 0%, transparent 40%),
+    radial-gradient(circle at 60% 70%, rgba(223, 176, 119, 0.4) 0%, transparent 50%);
   animation: vortex-swirl 12s linear infinite;
   mix-blend-mode: color-dodge;
   pointer-events: none;
@@ -204,8 +205,8 @@
   left: 18%;
   background: radial-gradient(
     ellipse at 50% 30%,
-    rgba(255, 255, 255, 0.85) 0%,
-    rgba(255, 255, 255, 0.2) 60%,
+    rgba(241, 236, 203, 0.88) 0%,
+    rgba(241, 236, 203, 0.2) 60%,
     transparent 100%
   );
   transform: rotate(-22deg);
@@ -217,11 +218,11 @@
   position: absolute;
   inset: 0;
   border-radius: 50%;
-  border: 1.5px solid rgba(255, 255, 255, 0.4);
+  border: 1.5px solid rgba(223, 176, 119, 0.55);
   box-shadow:
-    inset 0 1.5px 3px rgba(255, 255, 255, 0.7),
-    inset 0 -3px 8px rgba(0, 0, 0, 0.4),
-    inset 0 0 18px rgba(255, 42, 75, 0.35);
+    inset 0 1.5px 3px rgba(241, 236, 203, 0.75),
+    inset 0 -3px 8px rgba(4, 35, 72, 0.5),
+    inset 0 0 18px rgba(172, 0, 21, 0.45);
   pointer-events: none;
   z-index: 9;
 }
@@ -235,8 +236,8 @@
   transform: translateX(-50%);
   background: radial-gradient(
     ellipse at center,
-    rgba(255, 77, 109, 0.95) 0%,
-    rgba(255, 215, 0, 0.4) 45%,
+    rgba(223, 176, 119, 0.9) 0%,
+    rgba(241, 236, 203, 0.45) 45%,
     transparent 75%
   );
   filter: blur(2px);
@@ -264,15 +265,15 @@
 .orb-sos-text {
   position: relative;
   font-family: var(--font-family);
-  font-size: 38px;
+  font-size: 44px;
   font-weight: 900;
   letter-spacing: 2px;
-  color: #ffffff;
+  color: #F1ECCB;
   line-height: 1;
   text-shadow:
-    0 2px 8px rgba(0, 0, 0, 0.9),
-    0 0 16px rgba(255, 255, 255, 0.7),
-    0 0 25px rgba(255, 42, 75, 0.7);
+    0 2px 8px rgba(4, 35, 72, 0.9),
+    0 0 20px rgba(241, 236, 203, 0.85),
+    0 0 35px rgba(172, 0, 21, 0.95);
 }
 .orb-sos-text::after {
   content: attr(data-text);
@@ -280,8 +281,9 @@
   inset: 0;
   color: transparent;
   text-shadow:
-    0 0 25px rgba(255, 255, 255, 1),
-    0 0 45px rgba(255, 42, 75, 1);
+    0 2px 8px rgba(4, 35, 72, 0.9),
+    0 0 25px rgba(241, 236, 203, 1),
+    0 0 45px rgba(172, 0, 21, 1);
   opacity: 0;
   will-change: opacity;
   pointer-events: none;
@@ -289,14 +291,14 @@
 }
 .orb-sos-sub {
   font-family: var(--font-family);
-  font-size: 10.5px;
+  font-size: 11.5px;
   font-weight: 800;
   letter-spacing: 1.8px;
   text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.95);
+  color: #F1ECCB;
   text-shadow:
-    0 1px 6px rgba(0, 0, 0, 0.9),
-    0 0 10px rgba(255, 255, 255, 0.6);
+    0 1px 6px rgba(4, 35, 72, 0.9),
+    0 0 10px rgba(223, 176, 119, 0.65);
 }
 .orb-click-ripple {
   position: absolute;
@@ -304,8 +306,8 @@
   border-radius: 50%;
   background: radial-gradient(
     circle,
-    rgba(255, 255, 255, 0.9) 0%,
-    rgba(255, 42, 75, 0.6) 50%,
+    rgba(241, 236, 203, 0.9) 0%,
+    rgba(172, 0, 21, 0.65) 50%,
     transparent 80%
   );
   opacity: 0;
@@ -365,37 +367,37 @@
 @media (min-aspect-ratio: 1/1) {
   /*  legacy public/css/tactical-responsive.css:1043  */
   .crystal-orb-wrapper {
-    margin: 12px auto 10px !important;
-    width: clamp(190px, 13vw, 220px) !important;
-    height: clamp(190px, 13vw, 220px) !important;
+    margin: clamp(68px, 8.5vh, 96px) auto 10px !important;
+    width: clamp(238px, 16.5vw, 272px) !important;
+    height: clamp(238px, 16.5vw, 272px) !important;
   }
   .btn-crystal-orb {
-    width: clamp(150px, 10.5vw, 172px) !important;
-    height: clamp(150px, 10.5vw, 172px) !important;
+    width: clamp(192px, 13.5vw, 218px) !important;
+    height: clamp(192px, 13.5vw, 218px) !important;
   }
 }
 @media (min-aspect-ratio: 1/1) and (max-height: 520px) {
   /*  legacy public/css/tactical-responsive.css:1061  */
   .crystal-orb-wrapper {
-    width: 140px !important;
-    height: 140px !important;
-    margin: 4px auto !important;
+    width: 156px !important;
+    height: 156px !important;
+    margin: 16px auto 4px !important;
   }
   .btn-crystal-orb {
-    width: 110px !important;
-    height: 110px !important;
+    width: 126px !important;
+    height: 126px !important;
   }
 }
 @media (min-aspect-ratio: 1/1) and (min-height: 521px) and (max-height: 850px) {
   /*  legacy public/css/tactical-responsive.css:1074  */
   .crystal-orb-wrapper {
-    width: 185px !important;
-    height: 185px !important;
-    margin: 8px auto 8px !important;
+    width: 228px !important;
+    height: 228px !important;
+    margin: clamp(52px, 7.2vh, 78px) auto 8px !important;
   }
   .btn-crystal-orb {
-    width: 146px !important;
-    height: 146px !important;
+    width: 186px !important;
+    height: 186px !important;
   }
 }
 @media (max-aspect-ratio: 1/1) {
@@ -403,7 +405,7 @@
   .crystal-orb-wrapper {
     width: clamp(202px, 52vw, 234px) !important;
     height: clamp(202px, 52vw, 234px) !important;
-    margin: var(--orb-calc-margin-top, clamp(140px, calc(51.4vh - 215px), 260px)) auto 10px !important;
+    margin: var(--orb-calc-margin-top, clamp(160px, calc(51.4vh - 215px), 260px)) auto 10px !important;
   }
   .btn-crystal-orb {
     width: clamp(164px, 43vw, 188px) !important;

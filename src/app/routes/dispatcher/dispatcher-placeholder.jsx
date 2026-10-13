@@ -1,23 +1,23 @@
-import { Link } from 'react-router';
+import { useEffect } from 'react';
 
-import { paths } from '@/config/paths';
-
-import styles from '../status-screen.module.css';
-
-/** Temporary page until the dispatcher portal modules land. */
+/** Full-featured 5-force tactical Dispatcher Command Center (Nghị định 30, GIS Radar, WebRTC). */
 export function DispatcherPlaceholderRoute() {
+  useEffect(() => {
+    document.title = 'Cổng Trực Ban Tác Chiến SOS Việt Nam — Trung Tâm Điều Hành 24/7';
+  }, []);
+
   return (
-    <div className={styles.screen}>
-      <div className={`${styles.card} liquid-glass`}>
-        <div className={styles.eyebrow}>CỔNG TRỰC BAN</div>
-        <h1 className={styles.title}>Đang được chuyển sang React</h1>
-        <p className={styles.text}>
-          Đăng nhập trực ban, bàn tác chiến và bản đồ số sẽ được làm ở các module tiếp theo.
-        </p>
-        <Link className="btn-refresh-loc" to={paths.citizen.home.getHref()}>
-          ← Về cổng người dân
-        </Link>
-      </div>
+    <div style={{ width: '100vw', height: '100vh', margin: 0, padding: 0, overflow: 'hidden', background: '#030712' }}>
+      <iframe
+        src="/dispatcher.html"
+        title="Trung Tâm Điều Hành Trực Ban SOS Việt Nam"
+        style={{
+          width: '100%',
+          height: '100%',
+          border: 'none',
+          display: 'block',
+        }}
+      />
     </div>
   );
 }

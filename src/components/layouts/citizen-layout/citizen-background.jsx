@@ -8,9 +8,9 @@ import styles from './citizen-background.module.css';
 
 const POSTER = '/assets/videos/sos-citizen-bg-poster.jpg';
 const VIDEO_BY_TIER = {
-  full: '/assets/videos/sos-citizen-bg.mp4',
-  '4g': '/assets/videos/sos-citizen-bg.mp4',
-  lite: '/assets/videos/sos-citizen-bg.mp4',
+  full: '/assets/videos/sos-citizen-bg-hq.mp4',
+  '4g': '/assets/videos/sos-citizen-bg-hq.mp4',
+  lite: '/assets/videos/sos-citizen-bg-lite.mp4',
   none: '',
 };
 
