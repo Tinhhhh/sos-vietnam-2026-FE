@@ -10,9 +10,9 @@ function coordsText({ status, coords, accuracy }) {
 
 /**
  * "VỊ TRÍ GPS VỆ TINH CỦA BẠN" glass banner.
- * @param {{ geo: ReturnType<import('../hooks/use-geolocation').useGeolocation>, networkLabel: string }} props
+ * @param {{ geo: ReturnType<import('../hooks/use-geolocation').useGeolocation> }} props
  */
-export function LocationBanner({ geo, networkLabel }) {
+export function LocationBanner({ geo }) {
   const isLocating = geo.status === 'locating';
 
   return (
@@ -39,18 +39,6 @@ export function LocationBanner({ geo, networkLabel }) {
             )}
           </div>
           <div className={styles.locCoords}>{coordsText(geo)}</div>
-          <div className={styles.locNetwork} role="status" aria-live="polite" title={networkLabel}>
-            <svg className="svg-ico ico-sm" viewBox="0 0 24 24" aria-hidden="true">
-              <path
-                d="M5 20v-3M10 20v-6M15 20v-10M20 20V2"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-              />
-            </svg>
-            <span>Mạng hiện tại: {networkLabel}</span>
-          </div>
         </div>
       </div>
       <button

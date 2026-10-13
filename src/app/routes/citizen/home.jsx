@@ -5,12 +5,10 @@ import { useToast } from '@/components/ui/toast/toast-context';
 import { LocationBanner } from '@/features/location/components/location-banner';
 import { SosRequestModal } from '@/features/sos-request/components/sos-request-modal';
 import { SosHero } from '@/features/sos-trigger/components/sos-hero';
-import { useNetworkStatus } from '@/hooks/use-network-status';
 
 /** "/" — SOS trigger screen (legacy #sosTriggerView) + the SOS request form. */
 export function CitizenHomeRoute() {
   const { geo } = useOutletContext();
-  const { label: networkLabel } = useNetworkStatus();
   const toast = useToast();
   const [requestOpen, setRequestOpen] = useState(false);
   const closeRequest = useCallback(() => setRequestOpen(false), []);
@@ -31,7 +29,7 @@ export function CitizenHomeRoute() {
 
   return (
     <div>
-      <LocationBanner geo={geo} networkLabel={networkLabel} />
+      <LocationBanner geo={geo} />
       <SosHero onTrigger={() => setRequestOpen(true)} />
       <SosRequestModal
         open={requestOpen}
