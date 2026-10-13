@@ -1,12 +1,41 @@
 import { useEffect, useRef, useState } from 'react';
 import styles from './call-modal.module.css';
 
-const ICE_SERVERS = [
-  { urls: 'stun:stun.l.google.com:19302' },
-  { urls: 'stun:stun1.l.google.com:19302' },
-  { urls: 'stun:stun2.l.google.com:19302' },
-  { urls: 'stun:stun.cloudflare.com:3478' },
-];
+// ---------------------------------------------------------------------------
+// Dynamic ICE servers with TURN relay support (coturn REST API HMAC-SHA1).
+// Fetches short-lived TURN credentials from /api/turn/credentials so WebRTC
+// media can traverse symmetric NAT / CGNAT (mobile 4G/5G). Falls back to
+// STUN-only when the TURN service is not configured.
+// ---------------------------------------------------------------------------
+let _cachedIceServers = null;
+let _iceServersFetchedAt = 0;
+async function buildIceServers() {
+  const now = Date.now();
+  if (_cachedIceServers && now - _iceServersFetchedAt < 10 * 60 * 1000) {
+    return _cachedIceServers;
+  }
+  const servers = [
+    { urls: 'stun:stun.l.google.com:19302' },
+    { urls: 'stun:stun1.l.google.com:19302' },
+    { urls: 'stun:stun2.l.google.com:19302' },
+    { urls: 'stun:stun.cloudflare.com:3478' },
+  ];
+  try {
+    const r = await fetch('/api/turn/credentials', { credentials: 'same-origin' });
+    const t = await r.json();
+    if (t && t.ok && t.username && t.password && Array.isArray(t.uris) && t.uris.length) {
+      servers.push({ urls: t.uris, username: t.username, credential: t.password });
+      console.log('🧊 [ICE] TURN relay enabled via', t.uris[0]);
+    } else {
+      console.log('🧊 [ICE] TURN not configured — STUN-only mode');
+    }
+  } catch (e) {
+    console.warn('🧊 [ICE] Could not fetch TURN credentials, STUN-only mode:', e);
+  }
+  _cachedIceServers = servers;
+  _iceServersFetchedAt = now;
+  return servers;
+}
 
 function createSyntheticStream({ video = true, audio = true } = {}) {
   const tracks = [];
@@ -162,7 +191,7 @@ export function CallModal({
     }
 
     // 2. Setup WebRTC PeerConnection
-    const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
+    const pc = new RTCPeerConnection({ iceServers: await buildIceServers() });
     pcRef.current = pc;
 
     stream.getTracks().forEach((track) => pc.addTrack(track, stream));
