@@ -266,13 +266,32 @@
   padding: 8px 0 0 !important;
   border-top: 1px solid rgba(245, 158, 11, 0.15) !important;
 }
-@media (max-width: 420px) {
+@media (max-width: 440px) {
   /*  legacy public/css/tactical-responsive.css:1319  */
   .legal-summary-inline {
     display: none !important;
   }
 }
-@media (max-width: 380px) {
+@media (max-width: 600px) {
+  /*  legacy public/css/tactical-responsive.css:2216  */
+  .legal-warning-card {
+    box-sizing: border-box;
+    max-inline-size: 100%;
+    padding: 6px 12px !important;
+  }
+  .legal-warning-card .legal-title {
+    font-size: clamp(9.5px, 2.65vw, 10.8px) !important;
+    letter-spacing: 0.15px !important;
+  }
+  .legal-toggle-btn {
+    min-height: 26px !important;
+    min-block-size: 26px !important;
+    height: 26px !important;
+    padding: 2px 9px !important;
+    font-size: 10px !important;
+  }
+}
+@media (max-width: 375px) {
   /*  legacy public/css/tactical-responsive.css:1360  */
   .legal-warning-card .legal-title {
     font-size: 10px !important;
@@ -281,12 +300,5 @@
   .legal-toggle-btn {
     padding: 3px 6px !important;
     font-size: 9.5px !important;
-  }
-}
-@media (max-width: 600px) {
-  /*  legacy public/css/tactical-responsive.css:2216  */
-  .legal-warning-card {
-    box-sizing: border-box;
-    max-inline-size: 100%;
   }
 }

@@ -257,98 +257,93 @@ body:global(.in-sos-tracking) .header-nav-center {
 @media (max-width: 600px) {
   /*  legacy public/css/tactical-responsive.css:1279  */
   .header-nav-center {
-    width: calc(100% - 16px) !important;
-    max-width: none !important;
+    bottom: calc(14px + var(--sa-bottom)) !important;
+    width: calc(100% - 20px) !important;
+    max-width: 440px !important;
     left: 50% !important;
   }
   .nav-center-pill {
     display: flex !important;
     width: 100% !important;
     max-width: none !important;
-    gap: 4px !important;
-    padding: 5px 6px !important;
+    gap: 6px !important;
+    padding: 6px 7px !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    box-sizing: border-box;
+    max-inline-size: 100%;
   }
-  .nav-pill-item {
-    flex: 1 1 0 !important;
+  .nav-pill-item,
+  .nav-pill-item.btn-pill-dispatcher-link {
+    flex: 1 1 auto !important;
     min-width: 0 !important;
+    min-height: 34px !important;
+    min-block-size: 34px !important;
+    height: 34px !important;
     justify-content: center !important;
-    padding: 8px 4px !important;
-    font-size: 10.5px !important;
+    align-items: center !important;
+    padding: 4px 7px !important;
+    font-size: clamp(8.2px, 2.2vw, 9.6px) !important;
     font-weight: 700 !important;
     letter-spacing: -0.2px !important;
     white-space: nowrap !important;
     overflow: hidden !important;
-    text-overflow: ellipsis !important;
+    text-overflow: clip !important;
     gap: 3px !important;
-  }
-  .nav-pill-item.btn-pill-dispatcher-link {
-    font-size: 10.5px !important;
-    letter-spacing: -0.2px !important;
-    padding: 8px 4px !important;
+    border-radius: 9999px !important;
+    box-sizing: border-box !important;
   }
   .nav-pill-item :global(.svg-ico) {
-    width: 14px !important;
-    height: 14px !important;
+    width: 11.5px !important;
+    height: 11.5px !important;
     flex-shrink: 0 !important;
   }
 }
 @media (max-width: 400px) {
   /*  legacy public/css/tactical-responsive.css:1325  */
   .nav-center-pill {
-    padding: 4px 4px !important;
-    gap: 2px !important;
+    padding: 5px 6px !important;
+    gap: 5px !important;
   }
-  .nav-pill-item {
-    font-size: 9.5px !important;
-    padding: 7px 2px !important;
-    gap: 2px !important;
-    letter-spacing: -0.3px !important;
-  }
+  .nav-pill-item,
   .nav-pill-item.btn-pill-dispatcher-link {
-    font-size: 9.5px !important;
-    letter-spacing: -0.3px !important;
-    padding: 7px 2px !important;
-  }
-  .nav-pill-item :global(.svg-ico) {
-    width: 12px !important;
-    height: 12px !important;
-  }
-}
-@media (max-width: 380px) {
-  /*  legacy public/css/tactical-responsive.css:1341  */
-  .nav-center-pill {
-    padding: 4px 3px !important;
-    gap: 1px !important;
-  }
-  .nav-pill-item {
-    font-size: 8.8px !important;
-    padding: 6px 1px !important;
-    gap: 2px !important;
-    letter-spacing: -0.4px !important;
-  }
-  .nav-pill-item.btn-pill-dispatcher-link {
-    font-size: 8.8px !important;
-    letter-spacing: -0.4px !important;
-    padding: 6px 1px !important;
+    font-size: clamp(8.2px, 2.25vw, 9.2px) !important;
+    min-height: 32px !important;
+    min-block-size: 32px !important;
+    height: 32px !important;
+    padding: 4px 6px !important;
+    gap: 3px !important;
+    letter-spacing: -0.25px !important;
   }
   .nav-pill-item :global(.svg-ico) {
     width: 11px !important;
     height: 11px !important;
   }
 }
+@media (max-width: 375px) {
+  /*  legacy public/css/tactical-responsive.css:1341  */
+  .nav-center-pill {
+    padding: 5px 5px !important;
+    gap: 4px !important;
+  }
+  .nav-pill-item,
+  .nav-pill-item.btn-pill-dispatcher-link {
+    font-size: 8px !important;
+    min-height: 30px !important;
+    min-block-size: 30px !important;
+    height: 30px !important;
+    padding: 3px 5px !important;
+    gap: 2.5px !important;
+    letter-spacing: -0.3px !important;
+  }
+  .nav-pill-item :global(.svg-ico) {
+    width: 10px !important;
+    height: 10px !important;
+  }
+}
 @media print {
   /*  legacy public/css/tactical-responsive.css:1407  */
   .header-nav-center {
     display: none !important;
-  }
-}
-@media (max-width: 600px) {
-  /*  legacy public/css/tactical-responsive.css:2216  */
-  .nav-center-pill {
-    box-sizing: border-box;
-    max-inline-size: 100%;
-  }
-  .nav-pill-item {
-    min-block-size: 44px !important;
   }
 }
