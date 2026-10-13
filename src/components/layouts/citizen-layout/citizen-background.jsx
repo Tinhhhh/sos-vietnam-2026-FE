@@ -8,16 +8,11 @@ import styles from './citizen-background.module.css';
 
 const POSTER = '/assets/videos/sos-citizen-bg-poster.jpg';
 const VIDEO_BY_TIER = {
-  full: '/assets/videos/sos-citizen-bg-hq.mp4',
-  '4g': '/assets/videos/sos-citizen-bg-hq.mp4',
-  lite: '/assets/videos/sos-citizen-bg-lite.mp4',
+  full: '/assets/videos/sos-citizen-bg.mp4',
+  '4g': '/assets/videos/sos-citizen-bg.mp4',
+  lite: '/assets/videos/sos-citizen-bg.mp4',
   none: '',
 };
-const LITE_VIDEO = VIDEO_BY_TIER.lite;
-
-// The "hands cupping the SOS sphere" intro plays once per page load; after
-// that (or when motion is unwanted) the video only shows its final frame.
-let introPlayed = false;
 
 function whenIdle(fn) {
   if ('requestIdleCallback' in window) {
@@ -39,32 +34,15 @@ export function CitizenBackground() {
     const video = videoRef.current;
     if (!video || loadedRef.current || !VIDEO_BY_TIER[tier]) return undefined;
 
-    const lowPower = reducedMotion || isLowPowerDevice();
-    const staticOnly = introPlayed || lowPower;
-    // A single still frame decodes fine from the small file on weak devices.
-    const source = lowPower ? LITE_VIDEO : VIDEO_BY_TIER[tier];
+    const source = VIDEO_BY_TIER[tier];
 
-    // Load only when the browser is idle so it never delays the SOS button.
     return whenIdle(() => {
       loadedRef.current = true;
       video.src = source;
-      if (staticOnly) {
-        video.addEventListener(
-          'loadedmetadata',
-          () => {
-            video.currentTime = Math.max(0, video.duration - 0.05);
-          },
-          { once: true },
-        );
-        video.preload = 'auto';
-        video.load();
-        return;
-      }
-      introPlayed = true;
-      // autoplay (not a one-off play()): Chrome pauses video-only media in a
-      // hidden tab and rejects play(), but starts autoplay once it is visible.
       video.autoplay = true;
+      video.loop = true;
       video.load();
+      video.play().catch(() => {});
     });
   }, [tier, reducedMotion]);
 
@@ -72,15 +50,17 @@ export function CitizenBackground() {
     <div className={styles.bgVideoContainer}>
       <video
         ref={videoRef}
+        id="citizenBgVideo"
         className={`${styles.bgVideo} ${styles.citizenBgVideo}`}
+        autoPlay
         muted
+        loop
         playsInline
-        preload="none"
+        preload="auto"
         poster={POSTER}
         controlsList="nodownload nofullscreen noremoteplayback"
         disablePictureInPicture
         disableRemotePlayback
-        onEnded={(e) => e.currentTarget.pause()} // stay on the final frame
         onContextMenu={(e) => e.preventDefault()}
         aria-hidden="true"
         tabIndex={-1}

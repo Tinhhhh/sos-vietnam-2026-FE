@@ -7,6 +7,7 @@ import { useToast } from '@/components/ui/toast/toast-context';
 import { paths } from '@/config/paths';
 import { FamilySosModal } from '@/features/family-sos/components/family-sos-modal';
 import { useGeolocation } from '@/features/location/hooks/use-geolocation';
+import { InstallShortcutModal } from '@/features/pwa/components/install-shortcut-modal';
 import { SurvivalGuideModal } from '@/features/survival-guide/components/survival-guide-modal';
 
 /**
@@ -24,7 +25,7 @@ export function CitizenRoot() {
     <CitizenLayout
       dock={
         <CitizenDock
-          onInstallApp={() => toast.show('Cài lối tắt (PWA) sẽ có ở module PWA.', { tone: 'info' })}
+          onInstallApp={() => setOpenModal('install')}
           onOpenFamilySos={() => setOpenModal('family')}
           onOpenSurvivalGuide={() => setOpenModal('guide')}
           dispatcherHref={paths.dispatcher.root.getHref()}
@@ -32,6 +33,7 @@ export function CitizenRoot() {
       }
       overlay={
         <>
+          <InstallShortcutModal open={openModal === 'install'} onClose={closeModal} />
           <FamilySosModal
             open={openModal === 'family'}
             onClose={closeModal}

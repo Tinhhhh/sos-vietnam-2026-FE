@@ -141,8 +141,14 @@
 }
 /*  legacy public/css/tactical-responsive.css:1147  */
 .legal-warning-card {
+  position: fixed !important;
+  bottom: calc(82px + var(--sa-bottom, 0px)) !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  z-index: 9990 !important;
+  width: calc(100% - 32px) !important;
   max-width: 640px !important;
-  margin: 10px auto 0 !important;
+  margin: 0 !important;
   border-radius: 9999px !important;
   padding: 6px 14px !important;
   cursor: pointer !important;
@@ -152,6 +158,18 @@
   backdrop-filter: blur(18px) !important;
   -webkit-backdrop-filter: blur(18px) !important;
   outline: none;
+  box-sizing: border-box !important;
+  transform-origin: bottom center !important;
+}
+:global(body.in-sos-tracking) .legal-warning-card,
+.legal-warning-card:global(.is-hidden-sos) {
+  display: none !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+:global(body.tac-keyboard-open) .legal-warning-card {
+  transform: translate(-50%, 200%) !important;
+  transition: transform 0.2s ease;
 }
 .legal-warning-card:hover,
 .legal-warning-card:focus-visible {
@@ -275,6 +293,12 @@
 @media (max-width: 600px) {
   /*  legacy public/css/tactical-responsive.css:2216  */
   .legal-warning-card {
+    position: fixed !important;
+    bottom: calc(74px + var(--sa-bottom, 0px)) !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    width: calc(100% - 20px) !important;
+    max-width: 440px !important;
     box-sizing: border-box;
     max-inline-size: 100%;
     padding: 6px 12px !important;
@@ -293,6 +317,9 @@
 }
 @media (max-width: 375px) {
   /*  legacy public/css/tactical-responsive.css:1360  */
+  .legal-warning-card {
+    bottom: calc(70px + var(--sa-bottom, 0px)) !important;
+  }
   .legal-warning-card .legal-title {
     font-size: 10px !important;
     letter-spacing: 0.1px !important;

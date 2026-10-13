@@ -401,13 +401,13 @@
 @media (max-aspect-ratio: 1/1) {
   /*  legacy public/css/tactical-responsive.css:1111  */
   .crystal-orb-wrapper {
-    width: clamp(165px, 44vw, 195px) !important;
-    height: clamp(165px, 44vw, 195px) !important;
-    margin: 6px auto 10px !important;
+    width: clamp(202px, 52vw, 234px) !important;
+    height: clamp(202px, 52vw, 234px) !important;
+    margin: var(--orb-calc-margin-top, clamp(140px, calc(51.4vh - 215px), 260px)) auto 10px !important;
   }
   .btn-crystal-orb {
-    width: clamp(130px, 35vw, 154px) !important;
-    height: clamp(130px, 35vw, 154px) !important;
+    width: clamp(164px, 43vw, 188px) !important;
+    height: clamp(164px, 43vw, 188px) !important;
   }
 }
 @media (min-width: 700px) and (max-width: 1024px) and (max-aspect-ratio: 1/1) {

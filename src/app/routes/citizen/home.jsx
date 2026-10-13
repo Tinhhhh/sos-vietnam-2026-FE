@@ -2,7 +2,6 @@ import { useCallback, useState } from 'react';
 import { useOutletContext } from 'react-router';
 
 import { useToast } from '@/components/ui/toast/toast-context';
-import { LocationBanner } from '@/features/location/components/location-banner';
 import { SosRequestModal } from '@/features/sos-request/components/sos-request-modal';
 import { SosHero } from '@/features/sos-trigger/components/sos-hero';
 
@@ -29,7 +28,6 @@ export function CitizenHomeRoute() {
 
   return (
     <div>
-      <LocationBanner geo={geo} />
       <SosHero onTrigger={() => setRequestOpen(true)} />
       <SosRequestModal
         open={requestOpen}
