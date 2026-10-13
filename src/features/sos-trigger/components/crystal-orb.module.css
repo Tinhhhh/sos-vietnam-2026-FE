@@ -5,9 +5,9 @@
 /*  legacy public/css/style.css:528  */
 .crystal-orb-wrapper {
   position: relative;
-  width: 210px;
-  height: 210px;
-  margin: 0 auto 16px;
+  width: 248px;
+  height: 248px;
+  margin: 56px auto 14px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -274,20 +274,7 @@
     0 2px 8px rgba(4, 35, 72, 0.9),
     0 0 20px rgba(241, 236, 203, 0.85),
     0 0 35px rgba(172, 0, 21, 0.95);
-}
-.orb-sos-text::after {
-  content: attr(data-text);
-  position: absolute;
-  inset: 0;
-  color: transparent;
-  text-shadow:
-    0 2px 8px rgba(4, 35, 72, 0.9),
-    0 0 25px rgba(241, 236, 203, 1),
-    0 0 45px rgba(172, 0, 21, 1);
-  opacity: 0;
-  will-change: opacity;
-  pointer-events: none;
-  animation: sos-glow-fade 2s ease-in-out infinite alternate;
+  animation: sos-glow-pulse 2s ease-in-out infinite alternate;
 }
 .orb-sos-sub {
   font-family: var(--font-family);
@@ -509,12 +496,18 @@
     transform: rotate(360deg) scale(1);
   }
 }
-@keyframes sos-glow-fade {
-  from {
-    opacity: 0;
+@keyframes sos-glow-pulse {
+  0% {
+    text-shadow:
+      0 2px 8px rgba(4, 35, 72, 0.9),
+      0 0 16px rgba(241, 236, 203, 0.7),
+      0 0 25px rgba(172, 0, 21, 0.75);
   }
-  to {
-    opacity: 1;
+  100% {
+    text-shadow:
+      0 2px 8px rgba(4, 35, 72, 0.9),
+      0 0 25px rgba(241, 236, 203, 1),
+      0 0 45px rgba(172, 0, 21, 1);
   }
 }
 @keyframes click-ripple-anim {

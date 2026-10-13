@@ -1,0 +1,213 @@
+{
+  "isSyncing": false,
+  "lastSyncTime": "2026-10-13T12:50:49.407Z",
+  "lastStatus": "SUCCESS",
+  "sourceUrl": "https://sapnhap.bando.com.vn/",
+  "cosoUrl": "https://cosodulieu.bando.com.vn/",
+  "totalProvinces": 34,
+  "totalWards": 3321,
+  "totalUbnd": 3357,
+  "checksum": "",
+  "history": [
+    {
+      "time": "2026-10-13T12:50:49.407Z",
+      "manual": false,
+      "totalUnits": 3355,
+      "provinces": 34,
+      "wards": 3321,
+      "updatedCount": 0,
+      "newCount": 3321,
+      "summary": "Đã đồng bộ 3321 thay đổi mới nhất từ bando.com.vn."
+    },
+    {
+      "time": "2026-10-13T10:29:49.147Z",
+      "manual": false,
+      "totalUnits": 3355,
+      "provinces": 34,
+      "wards": 3321,
+      "updatedCount": 0,
+      "newCount": 3321,
+      "summary": "Đã đồng bộ 3321 thay đổi mới nhất từ bando.com.vn."
+    },
+    {
+      "time": "2026-10-13T09:55:30.771Z",
+      "manual": false,
+      "totalUnits": 3355,
+      "provinces": 34,
+      "wards": 3321,
+      "updatedCount": 0,
+      "newCount": 3321,
+      "summary": "Đã đồng bộ 3321 thay đổi mới nhất từ bando.com.vn."
+    },
+    {
+      "time": "2026-10-13T03:55:42.960Z",
+      "manual": false,
+      "totalUnits": 3355,
+      "provinces": 34,
+      "wards": 3321,
+      "updatedCount": 0,
+      "newCount": 3321,
+      "summary": "Đã đồng bộ 3321 thay đổi mới nhất từ bando.com.vn."
+    },
+    {
+      "time": "2026-10-12T15:58:30.303Z",
+      "manual": false,
+      "totalUnits": 3355,
+      "provinces": 34,
+      "wards": 3321,
+      "updatedCount": 0,
+      "newCount": 3321,
+      "summary": "Đã đồng bộ 3321 thay đổi mới nhất từ bando.com.vn."
+    },
+    {
+      "time": "2026-10-12T12:28:42.692Z",
+      "manual": false,
+      "totalUnits": 3355,
+      "provinces": 34,
+      "wards": 3321,
+      "updatedCount": 0,
+      "newCount": 3321,
+      "summary": "Đã đồng bộ 3321 thay đổi mới nhất từ bando.com.vn."
+    },
+    {
+      "time": "2026-10-11T15:53:46.243Z",
+      "manual": false,
+      "totalUnits": 3355,
+      "provinces": 34,
+      "wards": 3321,
+      "updatedCount": 0,
+      "newCount": 3321,
+      "summary": "Đã đồng bộ 3321 thay đổi mới nhất từ bando.com.vn."
+    },
+    {
+      "time": "2026-10-11T15:10:22.570Z",
+      "manual": false,
+      "totalUnits": 3355,
+      "provinces": 34,
+      "wards": 3321,
+      "updatedCount": 0,
+      "newCount": 3321,
+      "summary": "Đã đồng bộ 3321 thay đổi mới nhất từ bando.com.vn."
+    },
+    {
+      "time": "2026-10-11T15:08:55.176Z",
+      "manual": false,
+      "totalUnits": 3355,
+      "provinces": 34,
+      "wards": 3321,
+      "updatedCount": 0,
+      "newCount": 3321,
+      "summary": "Đã đồng bộ 3321 thay đổi mới nhất từ bando.com.vn."
+    },
+    {
+      "time": "2026-10-11T15:06:02.975Z",
+      "manual": false,
+      "totalUnits": 3355,
+      "provinces": 34,
+      "wards": 3321,
+      "updatedCount": 0,
+      "newCount": 3321,
+      "summary": "Đã đồng bộ 3321 thay đổi mới nhất từ bando.com.vn."
+    },
+    {
+      "time": "2026-10-11T15:00:47.674Z",
+      "manual": false,
+      "totalUnits": 3355,
+      "provinces": 34,
+      "wards": 3321,
+      "updatedCount": 0,
+      "newCount": 3321,
+      "summary": "Đã đồng bộ 3321 thay đổi mới nhất từ bando.com.vn."
+    },
+    {
+      "time": "2026-10-11T11:23:00.539Z",
+      "manual": false,
+      "totalUnits": 3355,
+      "provinces": 34,
+      "wards": 3321,
+      "updatedCount": 0,
+      "newCount": 3321,
+      "summary": "Đã đồng bộ 3321 thay đổi mới nhất từ bando.com.vn."
+    },
+    {
+      "time": "2026-10-11T08:10:45.114Z",
+      "manual": false,
+      "totalUnits": 3355,
+      "provinces": 34,
+      "wards": 3321,
+      "updatedCount": 0,
+      "newCount": 3321,
+      "summary": "Đã đồng bộ 3321 thay đổi mới nhất từ bando.com.vn."
+    },
+    {
+      "time": "2026-10-11T08:03:23.544Z",
+      "manual": false,
+      "totalUnits": 3355,
+      "provinces": 34,
+      "wards": 3321,
+      "updatedCount": 0,
+      "newCount": 3321,
+      "summary": "Đã đồng bộ 3321 thay đổi mới nhất từ bando.com.vn."
+    },
+    {
+      "time": "2026-10-11T07:27:48.780Z",
+      "manual": false,
+      "totalUnits": 3355,
+      "provinces": 34,
+      "wards": 3321,
+      "updatedCount": 0,
+      "newCount": 3321,
+      "summary": "Đã đồng bộ 3321 thay đổi mới nhất từ bando.com.vn."
+    },
+    {
+      "time": "2026-10-11T06:20:06.849Z",
+      "manual": false,
+      "totalUnits": 3355,
+      "provinces": 34,
+      "wards": 3321,
+      "updatedCount": 0,
+      "newCount": 3321,
+      "summary": "Đã đồng bộ 3321 thay đổi mới nhất từ bando.com.vn."
+    },
+    {
+      "time": "2026-10-11T06:09:54.638Z",
+      "manual": false,
+      "totalUnits": 3355,
+      "provinces": 34,
+      "wards": 3321,
+      "updatedCount": 0,
+      "newCount": 3321,
+      "summary": "Đã đồng bộ 3321 thay đổi mới nhất từ bando.com.vn."
+    },
+    {
+      "time": "2026-10-11T05:08:02.893Z",
+      "manual": false,
+      "totalUnits": 3355,
+      "provinces": 34,
+      "wards": 3321,
+      "updatedCount": 0,
+      "newCount": 3321,
+      "summary": "Đã đồng bộ 3321 thay đổi mới nhất từ bando.com.vn."
+    },
+    {
+      "time": "2026-10-11T03:42:53.475Z",
+      "manual": false,
+      "totalUnits": 3355,
+      "provinces": 34,
+      "wards": 3321,
+      "updatedCount": 0,
+      "newCount": 3321,
+      "summary": "Đã đồng bộ 3321 thay đổi mới nhất từ bando.com.vn."
+    },
+    {
+      "time": "2026-10-11T03:37:18.517Z",
+      "manual": false,
+      "totalUnits": 3355,
+      "provinces": 34,
+      "wards": 3321,
+      "updatedCount": 0,
+      "newCount": 3321,
+      "summary": "Đã đồng bộ 3321 thay đổi mới nhất từ bando.com.vn."
+    }
+  ]
+}
