@@ -7,8 +7,8 @@ export function CitizenDock({ onInstallApp, onOpenFamilySos, onOpenSurvivalGuide
       <nav className={`${styles.navCenterPill} liquid-glass`} aria-label="Tiện ích">
         <button
           type="button"
-          className={styles.navPillItem}
-          title="Tạo lối tắt ra Màn hình chính"
+          className={`${styles.navPillItem} ${styles.btnPillInstallHighlight}`}
+          title="Tạo lối tắt ra Màn hình chính (1 Click)"
           onClick={onInstallApp}
         >
           <svg className="svg-ico ico-md ico-emerald" viewBox="0 0 24 24" aria-hidden="true">
@@ -33,7 +33,7 @@ export function CitizenDock({ onInstallApp, onOpenFamilySos, onOpenSurvivalGuide
               strokeLinejoin="round"
             />
           </svg>{' '}
-          Cài Lối Tắt
+          ⚡ Cài Lối Tắt (1 Click)
         </button>
 
         <button type="button" className={styles.navPillItem} onClick={onOpenFamilySos}>

@@ -35,15 +35,43 @@ export function CitizenBackground() {
     if (!video || loadedRef.current || !VIDEO_BY_TIER[tier]) return undefined;
 
     const source = VIDEO_BY_TIER[tier];
+    const lowPower = reducedMotion || isLowPowerDevice();
 
-    return whenIdle(() => {
+    const onTimeUpdate = () => {
+      // Loop exclusively within the warm cupped-hands phase (1.2s - 2.75s)
+      // to permanently eliminate the cold blue shockwave rings (which start at 2.85s)
+      if (video.currentTime >= 2.75) {
+        video.currentTime = 1.2;
+      }
+    };
+
+    video.addEventListener('timeupdate', onTimeUpdate);
+
+    const cleanupIdle = whenIdle(() => {
       loadedRef.current = true;
       video.src = source;
+      if (lowPower) {
+        video.addEventListener(
+          'loadedmetadata',
+          () => {
+            video.currentTime = 2.5; // peak warm hands frame without blue rings
+          },
+          { once: true },
+        );
+        video.preload = 'auto';
+        video.load();
+        return;
+      }
       video.autoplay = true;
       video.loop = true;
       video.load();
       video.play().catch(() => {});
     });
+
+    return () => {
+      cleanupIdle?.();
+      video.removeEventListener('timeupdate', onTimeUpdate);
+    };
   }, [tier, reducedMotion]);
 
   return (
