@@ -12,7 +12,7 @@ const OPEN_FORM_DELAY_MS = 320;
  * Home hero: headline, crystal SOS orb and the legal warning.
  * `onTrigger` fires after the tap animation; the route decides what opens.
  */
-export function SosHero({ onTrigger }) {
+export function SosHero({ location, onTrigger }) {
   const timerRef = useRef(null);
 
   useEffect(() => {
@@ -61,7 +61,7 @@ export function SosHero({ onTrigger }) {
   }, []);
 
   const handleActivate = () => {
-    speakSosPrompt();
+    speakSosPrompt(location);
     navigator.vibrate?.([250, 100, 250]);
     clearTimeout(timerRef.current);
     timerRef.current = setTimeout(() => onTrigger?.(), OPEN_FORM_DELAY_MS);

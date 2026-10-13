@@ -28,7 +28,7 @@ export function CitizenHomeRoute() {
 
   return (
     <div>
-      <SosHero onTrigger={() => setRequestOpen(true)} />
+      <SosHero location={geo} onTrigger={() => setRequestOpen(true)} />
       <SosRequestModal
         open={requestOpen}
         onClose={closeRequest}
