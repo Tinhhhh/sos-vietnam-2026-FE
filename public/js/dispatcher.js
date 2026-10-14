@@ -1,5 +1,39 @@
 import { MapController } from './map-controller.js?v=20261012_wardhud_single_v5';
 
+// ---------------------------------------------------------------------------
+// PATCH 2026-10-13: Dynamic ICE servers with TURN relay support.
+// Fetches short-lived TURN credentials from /api/turn/credentials so WebRTC
+// media can traverse symmetric NAT / CGNAT (mobile 4G/5G). Falls back to
+// STUN-only when the TURN service is not configured.
+// ---------------------------------------------------------------------------
+let _cachedIceServers = null;
+let _iceServersFetchedAt = 0;
+async function buildIceServers() {
+  const now = Date.now();
+  if (_cachedIceServers && (now - _iceServersFetchedAt) < 10 * 60 * 1000) {
+    return _cachedIceServers;
+  }
+  const servers = [
+    { urls: 'stun:stun.l.google.com:19302' },
+    { urls: 'stun:stun1.l.google.com:19302' }
+  ];
+  try {
+    const r = await fetch('/api/turn/credentials', { credentials: 'same-origin' });
+    const t = await r.json();
+    if (t && t.ok && t.username && t.password && Array.isArray(t.uris) && t.uris.length) {
+      servers.push({ urls: t.uris, username: t.username, credential: t.password });
+      console.log('🧊 [ICE] TURN relay enabled via', t.uris[0]);
+    } else {
+      console.log('🧊 [ICE] TURN not configured — STUN-only mode');
+    }
+  } catch (e) {
+    console.warn('🧊 [ICE] Could not fetch TURN credentials, STUN-only mode:', e);
+  }
+  _cachedIceServers = servers;
+  _iceServersFetchedAt = now;
+  return servers;
+}
+
 const AGENCY_PREVIEWS = {
   congan: {
     title: 'CỔNG TRỰC BAN CÔNG AN NHÂN DÂN',
@@ -7900,12 +7934,7 @@ class DispatcherApp {
       try { this.dispatcherVideoPeerConnection.close(); } catch (e) {}
     }
     const pc = new RTCPeerConnection({
-      iceServers: [
-        { urls: 'stun:stun.l.google.com:19302' },
-        { urls: 'stun:stun1.l.google.com:19302' },
-        { urls: 'stun:stun2.l.google.com:19302' },
-        { urls: 'stun:stun.cloudflare.com:3478' }
-      ]
+      iceServers: await buildIceServers()
     });
     this.dispatcherVideoPeerConnection = pc;
     this._dispatcherHandlingVideoOffer = false;
@@ -8402,12 +8431,7 @@ class DispatcherApp {
       try { this.dispatcherVoicePeerConnection.close(); } catch (e) {}
     }
     const pc = new RTCPeerConnection({
-      iceServers: [
-        { urls: 'stun:stun.l.google.com:19302' },
-        { urls: 'stun:stun1.l.google.com:19302' },
-        { urls: 'stun:stun2.l.google.com:19302' },
-        { urls: 'stun:stun.cloudflare.com:3478' }
-      ]
+      iceServers: await buildIceServers()
     });
     this.dispatcherVoicePeerConnection = pc;
     this._dispatcherHandlingVoiceOffer = false;
@@ -10275,33 +10299,10 @@ class DispatcherApp {
             }
             this.showToast?.('🟢 Đầu bên kia đã nhấc máy đàm thoại!', 'success');
 
-            // Re-send WebRTC offer now that the recipient has accepted and opened their peer connection
-            const pc = this.dispatcherVoicePeerConnection;
-            if (pc) {
-              try {
-                this._dispatcherHandlingVoiceAnswer = false;
-                const offer = pc.localDescription || await pc.createOffer();
-                if (!pc.localDescription) await pc.setLocalDescription(offer);
-                fetch('/api/sos/videocall/signal', {
-                  method: 'POST',
-                  credentials: 'same-origin',
-                  headers: this.getAuthHeaders(),
-                  body: JSON.stringify({
-                    id: signal.incidentId,
-                    action: 'webrtc-offer',
-                    sender: 'dispatcher',
-                    senderUsername: this.currentOfficer?.username,
-                    callType: 'voice',
-                    callScope: signal.callScope || 'citizen_dispatcher',
-                    targetUnit: signal.targetUnit || null,
-                    token: this.currentOfficer?.token,
-                    sdp: offer
-                  })
-                }).catch(() => {});
-              } catch (e) {
-                console.warn('Re-send voice offer on accept error:', e);
-              }
-            }
+            // PATCH 2026-10-13: removed duplicate webrtc-offer re-send on accept.
+            // The offer was already sent when the call started; re-sending causes
+            // needless re-negotiation (and glare risk). Delivery reliability is
+            // now handled by SSE heartbeat + client ack/retry.
           } else if (signal.action === 'reject') {
             const hint = document.getElementById('voiceCallVisualizerHint');
             if (hint) {
@@ -10376,33 +10377,10 @@ class DispatcherApp {
           }
           if (waitingOverlay) waitingOverlay.style.display = 'none';
 
-          // Re-send WebRTC video offer now that Citizen accepted and opened peer connection
-          const pc = this.dispatcherVideoPeerConnection;
-          if (pc) {
-            try {
-              this._dispatcherHandlingVideoAnswer = false;
-              const offer = pc.localDescription || await pc.createOffer();
-              if (!pc.localDescription) await pc.setLocalDescription(offer);
-              fetch('/api/sos/videocall/signal', {
-                method: 'POST',
-                credentials: 'same-origin',
-                headers: this.getAuthHeaders(),
-                body: JSON.stringify({
-                  id: signal.incidentId,
-                  action: 'webrtc-offer',
-                  sender: 'dispatcher',
-                  senderUsername: this.currentOfficer?.username,
-                  callType: 'video',
-                  callScope: signal.callScope || 'citizen_dispatcher',
-                  targetUnit: signal.targetUnit || null,
-                  token: this.currentOfficer?.token,
-                  sdp: offer
-                })
-              }).catch(() => {});
-            } catch (e) {
-              console.warn('Re-send video offer on accept error:', e);
-            }
-          }
+          // PATCH 2026-10-13: removed duplicate webrtc-offer re-send on accept.
+          // The offer was already sent when the call started; re-sending causes
+          // needless re-negotiation (and glare risk). Delivery reliability is
+          // now handled by SSE heartbeat + client ack/retry.
         } else if (signal.action === 'reject') {
           if (statusBadge) {
             statusBadge.textContent = '🔴 Người dân từ chối mở Camera';
@@ -12337,11 +12315,69 @@ class DispatcherApp {
     setTimeout(playNext, cfg.playChime ? 600 : 280);
   }
 
+  showToast(msg, type = 'info') {
+    if (!msg) return;
+    if (typeof window !== 'undefined' && !window.showToast) {
+      window.showToast = this.showToast.bind(this);
+    }
+    let container = document.getElementById('dispatcherToastContainer');
+    if (!container) {
+      container = document.createElement('div');
+      container.id = 'dispatcherToastContainer';
+      container.style.cssText = 'position:fixed;top:24px;right:24px;z-index:9999999;display:flex;flex-direction:column;gap:10px;pointer-events:none;max-width:440px;';
+      document.body.appendChild(container);
+    }
+
+    const toast = document.createElement('div');
+    toast.className = `dispatcher-toast toast-${type}`;
+    const bgMap = {
+      warning: 'rgba(245, 158, 11, 0.95)',
+      danger: 'rgba(239, 68, 68, 0.95)',
+      success: 'rgba(16, 185, 129, 0.95)',
+      info: 'rgba(14, 165, 233, 0.95)'
+    };
+    const iconMap = {
+      warning: '⚠️',
+      danger: '🚨',
+      success: '✅',
+      info: 'ℹ️'
+    };
+    const borderMap = {
+      warning: '#fbbf24',
+      danger: '#f87171',
+      success: '#34d399',
+      info: '#38bdf8'
+    };
+
+    const bg = bgMap[type] || bgMap.info;
+    const icon = iconMap[type] || iconMap.info;
+    const border = borderMap[type] || borderMap.info;
+
+    toast.style.cssText = `background:${bg};border:1.5px solid ${border};color:#ffffff;padding:12px 16px;border-radius:10px;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;font-size:13px;line-height:1.45;box-shadow:0 8px 30px rgba(0,0,0,0.6);display:flex;align-items:flex-start;gap:10px;pointer-events:auto;backdrop-filter:blur(10px);transition:all 0.3s ease;transform:translateY(-10px);opacity:0;`;
+
+    toast.innerHTML = `<span style="font-size:18px;line-height:1;flex-shrink:0;">${icon}</span><div style="flex:1;word-break:break-word;">${msg}</div>`;
+    container.appendChild(toast);
+
+    requestAnimationFrame(() => {
+      toast.style.transform = 'translateY(0)';
+      toast.style.opacity = '1';
+    });
+
+    setTimeout(() => {
+      toast.style.transform = 'translateY(-10px)';
+      toast.style.opacity = '0';
+      setTimeout(() => {
+        if (toast.parentNode) toast.parentNode.removeChild(toast);
+      }, 300);
+    }, 4500);
+  }
+
   async handleAcceptSOS() {
     this.stopVoiceAlert(); // Immediately stop siren & speech voice AI!
 
     if (this.currentOfficer?.level === 'national' || this.currentOfficer?.username === 'admin' || this.currentOfficer?.agency === 'chihuy') {
-      alert('Đặc quyền Giám Sát Quốc Gia: Tài khoản Trung Tâm Chỉ Huy Quốc Gia chỉ có thẩm quyền giám sát và điều phối vĩ mô, không tiếp nhận trực tiếp thay đơn vị tác chiến địa phương!');
+      // FIX 2026-10-14: replaced blocking alert() (freezes automated browsers) with non-blocking toast
+      this.showToast?.('Đặc quyền Giám Sát Quốc Gia: Tài khoản Trung Tâm Chỉ Huy Quốc Gia chỉ có thẩm quyền giám sát và điều phối vĩ mô, không tiếp nhận trực tiếp thay đơn vị tác chiến địa phương!', 'warning');
       return;
     }
 
@@ -12390,7 +12426,8 @@ class DispatcherApp {
         const updatedInc = data.incident || inc;
         this.incidents.set(updatedInc.id, updatedInc);
         this.selectedIncidentId = updatedInc.id;
-        this.startVehicleSimulation(updatedInc);
+        // PATCH 2026-10-13: real GPS tracking (falls back to simulation if no GPS)
+        this.startRealVehicleTracking(updatedInc);
         this.updateDrawer(updatedInc);
         this.showIncidentDrawer(updatedInc);
         this.renderQueue();
@@ -12442,11 +12479,16 @@ class DispatcherApp {
 
   async handleUpdateStatus(status, message) {
     if (this.currentOfficer?.level === 'national' || this.currentOfficer?.username === 'admin' || this.currentOfficer?.agency === 'chihuy') {
-      alert('Đặc quyền Giám Sát Quốc Gia: Tài khoản Trung Tâm Chỉ Huy Quốc Gia chỉ có thẩm quyền giám sát và điều phối vĩ mô, không cập nhật tiến độ thay đơn vị tác chiến địa phương!');
+      // FIX 2026-10-14: replaced blocking alert() (freezes automated browsers) with non-blocking toast
+      this.showToast?.('Đặc quyền Giám Sát Quốc Gia: Tài khoản Trung Tâm Chỉ Huy Quốc Gia chỉ có thẩm quyền giám sát và điều phối vĩ mô, không cập nhật tiến độ thay đơn vị tác chiến địa phương!', 'warning');
       return;
     }
     if (!this.selectedIncidentId) return;
     const resolvedIncId = this.selectedIncidentId;
+    // PATCH 2026-10-13: stop GPS vehicle tracking when arrived/resolved
+    if (status === 'arrived' || status === 'resolved') {
+      this.stopVehicleTracking(resolvedIncId);
+    }
     try {
       const res = await fetch('/api/dispatcher/update-status', {
         method: 'POST',
@@ -14087,6 +14129,128 @@ class DispatcherApp {
   }
 
   // =========================================================================
+  // PATCH 2026-10-13: REAL GPS vehicle tracking.
+  // When the officer accepts an incident and moves (phone in the vehicle),
+  // watch the device's REAL GPS and stream positions to the server, which
+  // broadcasts them to the citizen via SSE 'vehicle_pos'.
+  // Falls back to the fake simulation if GPS is unavailable/denied.
+  // =========================================================================
+  startRealVehicleTracking(incident) {
+    if (!incident || !incident.id) return;
+    // Stop any previous tracking/simulation for this incident
+    this.stopVehicleTracking(incident.id);
+
+    if (!('geolocation' in navigator)) {
+      console.warn('[VehicleTrack] geolocation unavailable, using simulation fallback');
+      this.startVehicleSimulation(incident);
+      return;
+    }
+
+    const incidentId = incident.id;
+    const agency = incident.agency;
+    const unitName = incident.dispatchUnit?.unitName || incident.assignedUnit?.unitName;
+
+    // Clear old trail, start fresh for this run
+    if (this.mapController) this.mapController.clearVehicleTrail?.();
+
+    let lastSentAt = 0;
+    let lastSent = null;
+    let watchId = null;
+    let gotFirstFix = false;
+
+    const sendPosition = async (lat, lng, accuracy) => {
+      const now = Date.now();
+      // Throttle: at most 1 update per 5s, and only if moved >10m
+      if (now - lastSentAt < 5000) return;
+      if (lastSent) {
+        const dLat = (lat - lastSent.lat) * 111320;
+        const dLng = (lng - lastSent.lng) * 111320 * Math.cos(lastSent.lat * Math.PI / 180);
+        if (Math.hypot(dLat, dLng) < 10 && now - lastSentAt < 30000) return;
+      }
+      lastSentAt = now;
+      lastSent = { lat, lng };
+
+      // ETA from real remaining distance (assume 30 km/h urban average)
+      let etaMinutes = null;
+      const inc = this.incidents.get(incidentId);
+      if (inc && Number.isFinite(inc.lat) && Number.isFinite(inc.lng)) {
+        const R = 6371;
+        const dLat = (inc.lat - lat) * Math.PI / 180;
+        const dLng = (inc.lng - lng) * Math.PI / 180;
+        const a = Math.sin(dLat / 2) ** 2 +
+          Math.cos(lat * Math.PI / 180) * Math.cos(inc.lat * Math.PI / 180) * Math.sin(dLng / 2) ** 2;
+        const distKm = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        etaMinutes = Math.max(1, Math.round(distKm / 30 * 60));
+      }
+
+      try {
+        await fetch('/api/dispatcher/update-vehicle', {
+          method: 'POST',
+          headers: typeof this.getAuthHeaders === 'function'
+            ? { ...this.getAuthHeaders(), 'Content-Type': 'application/json' }
+            : { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: incidentId, lat, lng, etaMinutes, accuracy })
+        });
+      } catch (e) { /* offline: keep tracking locally */ }
+    };
+
+    const onPosition = (pos) => {
+      const lat = pos.coords.latitude;
+      const lng = pos.coords.longitude;
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+      gotFirstFix = true;
+      if (this.mapController) {
+        this.mapController.setVehicleMarker(lat, lng, agency, unitName);
+        this.mapController.addVehicleTrailPoint?.(lat, lng);
+      }
+      sendPosition(lat, lng, pos.coords.accuracy);
+    };
+
+    const onError = (err) => {
+      console.warn('[VehicleTrack] GPS error, fallback to simulation:', err?.message);
+      this.stopVehicleTracking(incidentId, true);
+      if (!gotFirstFix) this.startVehicleSimulation(incident);
+    };
+
+    try {
+      watchId = navigator.geolocation.watchPosition(onPosition, onError, {
+        enableHighAccuracy: true,
+        timeout: 15000,
+        maximumAge: 3000
+      });
+      if (!this.vehicleWatchers) this.vehicleWatchers = new Map();
+      this.vehicleWatchers.set(incidentId, watchId);
+      console.log('[VehicleTrack] real GPS tracking started for', incidentId);
+
+      // Safety: if no GPS fix within 20s, fall back to simulation so demo still works
+      setTimeout(() => {
+        if (!gotFirstFix && this.vehicleWatchers?.has(incidentId)) {
+          console.warn('[VehicleTrack] no GPS fix in 20s, using simulation fallback');
+          this.stopVehicleTracking(incidentId, true);
+          this.startVehicleSimulation(incident);
+        }
+      }, 20000);
+    } catch (e) {
+      console.warn('[VehicleTrack] watchPosition failed, simulation fallback:', e);
+      this.startVehicleSimulation(incident);
+    }
+  }
+
+  stopVehicleTracking(incidentId, keepMarker) {
+    if (this.vehicleWatchers?.has(incidentId)) {
+      try { navigator.geolocation.clearWatch(this.vehicleWatchers.get(incidentId)); } catch (e) {}
+      this.vehicleWatchers.delete(incidentId);
+    }
+    if (this.simulationTimers?.has(incidentId)) {
+      clearInterval(this.simulationTimers.get(incidentId));
+      this.simulationTimers.delete(incidentId);
+    }
+    if (!keepMarker && this.mapController && this.selectedIncidentId !== incidentId) {
+      this.mapController.clearVehicleMarker?.();
+    }
+  }
+
+  // =========================================================================
   // GATEKEEPER INTRO CINEMATIC (Video 3 - Strictly NO skip button, auto-fades)
   // =========================================================================
   playGatekeeperIntroVideo() {
@@ -14266,6 +14430,12 @@ class DispatcherApp {
     setT('osintScreenDisplay', telem.screenResolution || 'Không được cung cấp');
     setT('osintNetworkDisplay', telem.networkType || 'Không được cung cấp');
     setT('osintUserAgentDisplay', telem.userAgent || 'Không được cung cấp');
+
+    // Real-time GeoIP (auto-looked-up by backend via ip-api.com)
+    const geo = trace.ipGeolocation || null;
+    setT('osintGeoIpDisplay', geo
+      ? `${geo.city || ''}${geo.region ? ', ' + geo.region : ''}${geo.country ? ', ' + geo.country : ''} — ${geo.isp || geo.org || 'ISP không xác định'}${geo.asn ? ' (' + geo.asn + ')' : ''}${geo.lat ? ` [${geo.lat}, ${geo.lon}]` : ''}`
+      : 'Chưa tra cứu được (IP nội bộ hoặc mạng không cho phép)');
 
     // Whois Link
     const whoisLink = document.getElementById('btnLookupIpWhois');

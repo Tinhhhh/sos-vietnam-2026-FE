@@ -509,6 +509,62 @@ export class MapController {
       try { this.markers.get('vehicle').remove(); } catch (e) {}
       this.markers.delete('vehicle');
     }
+    this.clearVehicleTrail();
+  }
+
+  // PATCH 2026-10-13: vehicle movement trail (breadcrumb path).
+  // Draws a polyline of past vehicle positions so movement is visible.
+  addVehicleTrailPoint(lat, lng) {
+    if (!this.map || !Number.isFinite(lat) || !Number.isFinite(lng)) return;
+    if (!this._vehicleTrail) this._vehicleTrail = [];
+    const last = this._vehicleTrail[this._vehicleTrail.length - 1];
+    // Skip if moved less than ~5 meters (avoid jitter clutter)
+    if (last) {
+      const dLat = (lat - last[1]) * 111320;
+      const dLng = (lng - last[0]) * 111320 * Math.cos(last[1] * Math.PI / 180);
+      if (Math.hypot(dLat, dLng) < 5) return;
+    }
+    this._vehicleTrail.push([lng, lat]);
+    if (this._vehicleTrail.length > 200) this._vehicleTrail.shift();
+    const srcId = 'vehicle-trail-src';
+    const layerId = 'vehicle-trail-line';
+    try {
+      if (this.map.getSource(srcId)) {
+        this.map.getSource(srcId).setData({
+          type: 'Feature',
+          geometry: { type: 'LineString', coordinates: this._vehicleTrail }
+        });
+      } else {
+        this.map.addSource(srcId, {
+          type: 'geojson',
+          data: {
+            type: 'Feature',
+            geometry: { type: 'LineString', coordinates: this._vehicleTrail }
+          }
+        });
+        this.map.addLayer({
+          id: layerId,
+          type: 'line',
+          source: srcId,
+          paint: {
+            'line-color': '#38bdf8',
+            'line-width': 4,
+            'line-opacity': 0.85,
+            'line-dasharray': [2, 1.5]
+          }
+        });
+      }
+    } catch (e) { /* map not ready */ }
+  }
+
+  clearVehicleTrail() {
+    this._vehicleTrail = [];
+    try {
+      if (this.map) {
+        if (this.map.getLayer('vehicle-trail-line')) this.map.removeLayer('vehicle-trail-line');
+        if (this.map.getSource('vehicle-trail-src')) this.map.removeSource('vehicle-trail-src');
+      }
+    } catch (e) {}
   }
 
   setStationMarker(lat, lng, name, agency) {

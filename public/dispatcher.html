@@ -419,7 +419,7 @@
     </div>
   </div>
 
-  <!-- LEVEL-0: CYBER DEFENSE INTERNAL GATEKEEPER MODAL (PASS: 2002) -->
+  <!-- LEVEL-0: CYBER DEFENSE GATEKEEPER MODAL -->
   <div id="cyberGatekeeperModal" class="auth-gate-backdrop" style="z-index: 999999; display: flex;">
     
     <!-- Top Central Holographic Terminal Card -->
@@ -894,7 +894,7 @@
           <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px;">
             <label style="display: flex; align-items: center; gap: 8px; font-size: 11.5px; color: #f8fafc; cursor: pointer; background: rgba(0,0,0,0.3); padding: 8px 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.08);">
               <input type="checkbox" id="toggleGatekeeperSecurity" style="width: 16px; height: 16px; accent-color: #ef4444;">
-              <span><b>Lớp Bảo Vệ Web Nội Bộ</b> (Pass: 2002)</span>
+              <span><b>Lớp Bảo Vệ Web Nội Bộ</b></span>
             </label>
             <label style="display: flex; align-items: center; gap: 8px; font-size: 11.5px; color: #f8fafc; cursor: pointer; background: rgba(0,0,0,0.3); padding: 8px 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.08);">
               <input type="checkbox" id="toggleAntiCopySecurity" style="width: 16px; height: 16px; accent-color: #3b82f6;">
@@ -3241,6 +3241,11 @@
             <div style="grid-column: 1 / -1;">
               <span style="color: #94a3b8;">Chuỗi User-Agent do thiết bị khai báo:</span><br>
               <span id="osintUserAgentDisplay" style="font-family: monospace; font-size: 10.5px; color: #e2e8f0; word-break: break-all;">---</span>
+            </div>
+            <div style="grid-column: 1 / -1; border-top: 1px solid rgba(56,189,248,0.25); padding-top: 10px;">
+              <span style="color: #4ade80; font-weight: 800;">📍 ĐỊNH VỊ IP THỜI GIAN THỰC (GeoIP trực tiếp):</span><br>
+              <span id="osintGeoIpDisplay" style="font-weight: 700; color: #ffffff;">---</span><br>
+              <span style="color: #64748b; font-size: 10.5px;">Nguồn: ip-api.com — tra cứu tự động khi gắn cờ báo khống</span>
             </div>
           </div>
         </div>

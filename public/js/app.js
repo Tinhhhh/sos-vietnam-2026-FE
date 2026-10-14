@@ -1,6 +1,40 @@
 import { LocationService } from './location.js?v=20261012_wardhud_single_v5';
 import { MapController } from './map-controller.js?v=20261012_wardhud_single_v5';
 
+// ---------------------------------------------------------------------------
+// PATCH 2026-10-13: Dynamic ICE servers with TURN relay support.
+// Fetches short-lived TURN credentials from /api/turn/credentials so WebRTC
+// media can traverse symmetric NAT / CGNAT (mobile 4G/5G). Falls back to
+// STUN-only when the TURN service is not configured.
+// ---------------------------------------------------------------------------
+let _cachedIceServers = null;
+let _iceServersFetchedAt = 0;
+async function buildIceServers() {
+  const now = Date.now();
+  if (_cachedIceServers && (now - _iceServersFetchedAt) < 10 * 60 * 1000) {
+    return _cachedIceServers;
+  }
+  const servers = [
+    { urls: 'stun:stun.l.google.com:19302' },
+    { urls: 'stun:stun1.l.google.com:19302' }
+  ];
+  try {
+    const r = await fetch('/api/turn/credentials', { credentials: 'same-origin' });
+    const t = await r.json();
+    if (t && t.ok && t.username && t.password && Array.isArray(t.uris) && t.uris.length) {
+      servers.push({ urls: t.uris, username: t.username, credential: t.password });
+      console.log('🧊 [ICE] TURN relay enabled via', t.uris[0]);
+    } else {
+      console.log('🧊 [ICE] TURN not configured — STUN-only mode');
+    }
+  } catch (e) {
+    console.warn('🧊 [ICE] Could not fetch TURN credentials, STUN-only mode:', e);
+  }
+  _cachedIceServers = servers;
+  _iceServersFetchedAt = now;
+  return servers;
+}
+
 // Incident Suggestion Dictionary (6 Official Services)
 const INCIDENT_SUGGESTIONS = {
   police: [
@@ -1823,6 +1857,14 @@ class SOSApp {
           this.activeIncident.agency,
           this.activeIncident.dispatchUnit?.unitName
         );
+        // PATCH 2026-10-13: draw movement trail from live positions
+        if (Array.isArray(data.vehicleTrail)) {
+          // Full trail sent by server (e.g. on reconnect) — redraw
+          this.mapController.clearVehicleTrail?.();
+          data.vehicleTrail.forEach(p => this.mapController.addVehicleTrailPoint?.(p.lat, p.lng));
+        } else {
+          this.mapController.addVehicleTrailPoint?.(data.vehicleLocation.lat, data.vehicleLocation.lng);
+        }
       }
     });
 
@@ -2377,12 +2419,7 @@ class SOSApp {
       try { this.citizenVideoPeerConnection.close(); } catch (e) {}
     }
     const pc = new RTCPeerConnection({
-      iceServers: [
-        { urls: 'stun:stun.l.google.com:19302' },
-        { urls: 'stun:stun1.l.google.com:19302' },
-        { urls: 'stun:stun2.l.google.com:19302' },
-        { urls: 'stun:stun.cloudflare.com:3478' }
-      ]
+      iceServers: await buildIceServers()
     });
     this.citizenVideoPeerConnection = pc;
     this._citizenHandlingVideoOffer = false;
@@ -2401,6 +2438,12 @@ class SOSApp {
           remoteAudioEl.srcObject = remoteStream;
           remoteAudioEl.muted = false;
           remoteAudioEl.play().catch(() => {});
+        }
+        // PATCH 2026-10-13: render dispatcher video in PiP element
+        const remoteVideoEl = document.getElementById('citizenRemoteVideoElement');
+        if (remoteVideoEl) {
+          remoteVideoEl.srcObject = remoteStream;
+          remoteVideoEl.play().catch(() => {});
         }
       }
       if (hintEl) {
@@ -2571,6 +2614,9 @@ class SOSApp {
 
     const videoEl = document.getElementById('citizenLiveVideoElement');
     if (videoEl) videoEl.srcObject = null;
+    // PATCH 2026-10-13: clear remote PiP video on hangup
+    const remoteVideoEl = document.getElementById('citizenRemoteVideoElement');
+    if (remoteVideoEl) remoteVideoEl.srcObject = null;
 
     if (this.citizenMediaStream) {
       this.citizenMediaStream.getTracks().forEach(track => track.stop());
@@ -2671,12 +2717,7 @@ class SOSApp {
       try { this.citizenVoicePeerConnection.close(); } catch (e) {}
     }
     const pc = new RTCPeerConnection({
-      iceServers: [
-        { urls: 'stun:stun.l.google.com:19302' },
-        { urls: 'stun:stun1.l.google.com:19302' },
-        { urls: 'stun:stun2.l.google.com:19302' },
-        { urls: 'stun:stun.cloudflare.com:3478' }
-      ]
+      iceServers: await buildIceServers()
     });
     this.citizenVoicePeerConnection = pc;
     this._citizenHandlingVoiceOffer = false;

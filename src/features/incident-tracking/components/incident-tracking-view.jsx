@@ -23,8 +23,12 @@ export function IncidentTrackingView({
   ]);
   const [chatInput, setChatInput] = useState('');
   const [submittingSafe, setSubmittingSafe] = useState(false);
+  const [vehiclePos, setVehiclePos] = useState(null);
+  const [vehicleTrail, setVehicleTrail] = useState([]);
+  const [vehicleEta, setVehicleEta] = useState(null);
   const mapContainerRef = useRef(null);
   const mapInstanceRef = useRef(null);
+  const vehicleMarkerRef = useRef(null);
 
   // Sync prop changes
   useEffect(() => {
@@ -49,6 +53,22 @@ export function IncidentTrackingView({
           const data = JSON.parse(e.data);
           if (data?.message) {
             setMessages((prev) => [...prev, data.message]);
+          }
+        } catch {}
+      });
+      eventSource.addEventListener('vehicle_pos', (e) => {
+        try {
+          const data = JSON.parse(e.data);
+          if (data?.vehicleLocation) {
+            setVehiclePos(data.vehicleLocation);
+          }
+          if (Array.isArray(data?.vehicleTrail)) {
+            setVehicleTrail(data.vehicleTrail);
+          } else if (data?.vehicleLocation) {
+            setVehicleTrail((prev) => [...prev, data.vehicleLocation]);
+          }
+          if (data?.etaMinutes !== undefined) {
+            setVehicleEta(data.etaMinutes);
           }
         } catch {}
       });
@@ -158,9 +178,81 @@ export function IncidentTrackingView({
     } catch {}
 
     return () => {
+      vehicleMarkerRef.current?.remove();
+      vehicleMarkerRef.current = null;
       mapInstanceRef.current?.remove();
     };
   }, [currentIncident]);
+
+  // Update Live Vehicle Marker and Movement Trail on Map
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    if (!map || !vehiclePos) return;
+    const maplibregl = window.maplibregl;
+    if (!maplibregl) return;
+
+    const vLng = Number(vehiclePos.lng);
+    const vLat = Number(vehiclePos.lat);
+    if (!Number.isFinite(vLng) || !Number.isFinite(vLat)) return;
+
+    if (!vehicleMarkerRef.current) {
+      const elVehicle = document.createElement('div');
+      elVehicle.style.width = '34px';
+      elVehicle.style.height = '34px';
+      elVehicle.style.borderRadius = '50%';
+      elVehicle.style.backgroundColor = '#10b981';
+      elVehicle.style.border = '3px solid #ffffff';
+      elVehicle.style.boxShadow = '0 0 16px rgba(16, 185, 129, 0.95)';
+      elVehicle.style.display = 'flex';
+      elVehicle.style.alignItems = 'center';
+      elVehicle.style.justifyContent = 'center';
+      elVehicle.style.fontSize = '18px';
+      elVehicle.innerText = '🚒';
+      vehicleMarkerRef.current = new maplibregl.Marker({ element: elVehicle })
+        .setLngLat([vLng, vLat])
+        .addTo(map);
+    } else {
+      vehicleMarkerRef.current.setLngLat([vLng, vLat]);
+    }
+
+    if (vehicleTrail.length > 1 && map.getSource) {
+      const coordinates = vehicleTrail
+        .map((p) => [Number(p.lng), Number(p.lat)])
+        .filter((c) => Number.isFinite(c[0]) && Number.isFinite(c[1]));
+
+      if (coordinates.length > 1) {
+        const source = map.getSource('vehicle-trail');
+        if (source) {
+          source.setData({
+            type: 'Feature',
+            geometry: { type: 'LineString', coordinates },
+          });
+        } else {
+          try {
+            map.addSource('vehicle-trail', {
+              type: 'geojson',
+              data: {
+                type: 'Feature',
+                geometry: { type: 'LineString', coordinates },
+              },
+            });
+            map.addLayer({
+              id: 'vehicle-trail-line',
+              type: 'line',
+              source: 'vehicle-trail',
+              layout: { 'line-join': 'round', 'line-cap': 'round' },
+              paint: {
+                'line-color': '#10b981',
+                'line-width': 4,
+                'line-dasharray': [2, 2],
+                'line-opacity': 0.9,
+              },
+            });
+          } catch {}
+        }
+      }
+    }
+  }, [vehiclePos, vehicleTrail]);
 
   // Stepper calculations
   const stepIndex = currentIncident.stepIndex || (currentIncident.status === 'resolved' ? 5 : 2);
@@ -235,7 +327,7 @@ export function IncidentTrackingView({
             {isResolved
               ? '✅ Ca cứu hộ đã hoàn tất'
               : stepIndex >= 3
-                ? '🚒 Đang điều động xe tiếp cận'
+                ? (vehicleEta ? `🚒 Xe cứu hộ đang tới (~${vehicleEta} phút)` : '🚒 Đang điều động xe tiếp cận')
                 : '⏳ Đang kết nối Trực ban Xã/Phường'}
           </div>
         </div>
