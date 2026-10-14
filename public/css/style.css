@@ -1727,11 +1727,13 @@ body.in-sos-tracking .header-nav-center,
   text-decoration: none;
   font-weight: 700;
   font-size: 13px;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 6px;
   box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4);
   transition: all 0.2s;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .btn-call-unit:hover {

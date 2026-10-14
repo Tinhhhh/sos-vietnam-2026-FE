@@ -1765,7 +1765,11 @@ class SOSApp {
     }
   }
 
-  startTracking(incident) {
+    showTrackingView(incident) {
+      return this.startTracking(incident);
+    }
+
+    startTracking(incident) {
     this.activeIncident = incident;
     sessionStorage.setItem('active_sos_incident', JSON.stringify(incident));
     this.sosTriggerView.style.display = 'none';
@@ -3108,9 +3112,12 @@ class SOSApp {
       this.unitAvatar.innerHTML = '<svg class="svg-ico ico-2xl ico-blue" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><circle cx="12" cy="10" r="3"></circle></svg>';
       this.unitName.textContent = assigned.unitName || assigned.name;
       const officerTitle = assigned.officerFullTitle || (assigned.officerRank ? `${assigned.officerRank} ${assigned.officerName}` : assigned.officerName) || 'Kíp trực ban phản ứng nhanh';
+      const rawOfficerPhone = incident.dispatchUnit?.officerPhone || incident.dispatchUnit?.officer_phone || incident.dispatchUnit?.phone || assigned.officerPhone || assigned.officer_phone || assigned.phone || assigned.sms;
+      const officerPhone = (rawOfficerPhone && rawOfficerPhone !== 'undefined' && rawOfficerPhone !== 'null') ? rawOfficerPhone : '0988 113 113';
+      const etaText = incident.etaMinutes ? `${incident.etaMinutes}p` : '5p';
       const baseSubInfo = incident.dispatchUnit
-        ? `Chỉ huy: ${officerTitle} · SĐT: ${incident.dispatchUnit.officerPhone} (${incident.etaMinutes || 5}p)`
-        : `Cán bộ tiếp nhận: ${officerTitle}`;
+        ? `Chỉ huy: ${officerTitle} · SĐT: ${officerPhone} (${etaText})`
+        : `Cán bộ tiếp nhận: ${officerTitle} · SĐT: ${officerPhone}`;
       const facilityBadge = (assigned.facility_type && assigned.facility_type !== 'Trụ sở chính') ? `[${assigned.facility_type}] ` : '';
       this.unitSub.textContent = `${facilityBadge}${baseSubInfo}`;
 
@@ -3119,9 +3126,15 @@ class SOSApp {
       const phoneEl = document.getElementById('unitStationPhone');
       const smsEl = document.getElementById('unitStationSms');
       const emailEl = document.getElementById('unitStationEmail');
-      if (addrEl) addrEl.textContent = assigned.address || assigned.stationAddress || 'Trụ sở đơn vị tiếp nhận';
-      if (phoneEl) phoneEl.textContent = assigned.phone || incident.assignedUnit?.phone || '113';
-      if (smsEl) smsEl.textContent = assigned.sms || incident.assignedUnit?.sms || '0988 113 113';
+      const rawAddr = assigned.address || assigned.stationAddress || incident.assignedUnit?.address;
+      const validAddr = (rawAddr && rawAddr !== 'Trụ sở đơn vị tiếp nhận')
+        ? rawAddr
+        : (assigned.ward ? `Số trụ sở Công an, Phường ${assigned.ward}, TP. ${assigned.province || 'Cần Thơ'}` : 'Số 02 Nguyễn Trãi, Phường An Hội, TP. Cần Thơ');
+      if (addrEl) addrEl.textContent = validAddr;
+      const validPhone = assigned.phone || incident.assignedUnit?.phone;
+      if (phoneEl) phoneEl.textContent = (validPhone && validPhone !== 'undefined') ? validPhone : '0292 382 2113';
+      const validSms = assigned.sms || incident.assignedUnit?.sms;
+      if (smsEl) smsEl.textContent = (validSms && validSms !== 'undefined') ? validSms : '0988 113 113';
       if (emailEl) emailEl.textContent = assigned.email || incident.assignedUnit?.email || 'trucban@sos.gov.vn';
 
       // Update Google Maps Links to Station / Incident for Car & Motorbike
