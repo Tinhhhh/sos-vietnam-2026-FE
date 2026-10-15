@@ -1,0 +1,743 @@
+/* ============================================================
+   Officer Login Page — Module CSS
+   Tactical Dark Navy + Cyan/Gold Glassmorphism
+   Immersive Cinematic Satellite Video & Starfield Particles
+   ============================================================ */
+
+/* ── Base Layout ─────────────────────────────────────────── */
+.page {
+  position: fixed;
+  inset: 0;
+  min-height: 100dvh;
+  width: 100%;
+  overflow: hidden;
+  background-color: #042348;
+  font-family: 'Inter', 'Be Vietnam Pro', system-ui, -apple-system, sans-serif;
+  color: #F1ECCB;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  user-select: none;
+}
+
+/* ── Cinematic Background Video & Orbit Layer ─────────────── */
+.bgContainer {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100dvh;
+  overflow: hidden;
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* Fallback image with 4K/8K Vietnam Dolly Zoom */
+.vietnamZoomLayer {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  transform-origin: 49.5% 52%;
+  animation: cinematicVietnamDollyZoom 26s cubic-bezier(0.42, 0, 0.15, 1) infinite alternate;
+  will-change: transform, filter;
+  pointer-events: none;
+}
+
+@keyframes cinematicVietnamDollyZoom {
+  0% {
+    transform: scale(1) translate3d(0, 0, 0);
+    filter: brightness(1.02) contrast(1.1);
+  }
+  20% {
+    transform: scale(1.04) translate3d(-0.3%, -0.2%, 0);
+    filter: brightness(1.04) contrast(1.12);
+  }
+  55% {
+    transform: scale(1.18) translate3d(-1.2%, -0.8%, 0);
+    filter: brightness(1.08) contrast(1.16);
+  }
+  75% {
+    transform: scale(1.22) translate3d(-1.5%, -1.0%, 0);
+    filter: brightness(1.1) contrast(1.18);
+  }
+  90% {
+    transform: scale(1.20) translate3d(-1.3%, -0.9%, 0);
+    filter: brightness(1.07) contrast(1.15);
+  }
+  100% {
+    transform: scale(1) translate3d(0, 0, 0);
+    filter: brightness(1.02) contrast(1.1);
+  }
+}
+
+.bgTacticalOrbit {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 49.5% 50%;
+  backface-visibility: hidden;
+  transform: translate3d(0, 0, 0);
+  pointer-events: none;
+}
+
+/* Background video */
+.bgVideo {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Starfield canvas */
+.starfieldCanvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* Vignette & Gradient Overlays */
+.bgOverlay {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at center, rgba(4, 35, 72, 0.12) 0%, rgba(4, 35, 72, 0.72) 100%),
+    linear-gradient(180deg, rgba(2, 16, 36, 0.6) 0%, transparent 35%, transparent 65%, rgba(2, 16, 36, 0.85) 100%);
+  pointer-events: none;
+  z-index: 3;
+}
+
+/* Military Scanline effect */
+.bgScanline {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(0, 236, 243, 0.6), transparent);
+  box-shadow: 0 0 14px rgba(0, 236, 243, 0.7);
+  animation: scanline 5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  pointer-events: none;
+  z-index: 4;
+}
+
+@keyframes scanline {
+  0%   { transform: translateY(-5vh); opacity: 0; }
+  15%  { opacity: 0.9; }
+  85%  { opacity: 0.6; }
+  100% { transform: translateY(105vh); opacity: 0; }
+}
+
+/* ── Top Header ─────────────────────────────────────────── */
+.header {
+  position: relative;
+  z-index: 10;
+  text-align: center;
+  padding: clamp(24px, 5dvh, 48px) 20px 0;
+  animation: fadeDown 0.8s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes fadeDown {
+  from { opacity: 0; transform: translateY(-20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.headerBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 18px;
+  background: rgba(172, 0, 21, 0.22);
+  border: 1px solid rgba(223, 176, 119, 0.45);
+  border-radius: 9999px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 1.8px;
+  text-transform: uppercase;
+  color: #F1ECCB;
+  box-shadow: 0 0 20px rgba(172, 0, 21, 0.35);
+  margin-bottom: 12px;
+}
+
+.headerBadgeDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #00ECF3;
+  box-shadow: 0 0 10px #00ECF3;
+  animation: pingDot 2s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+@keyframes pingDot {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.4); opacity: 0.6; }
+}
+
+.headerTitle {
+  font-size: clamp(20px, 4vw, 32px);
+  font-weight: 900;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: #F1ECCB;
+  margin: 0 0 10px;
+  text-shadow: 0 0 35px rgba(0, 236, 243, 0.45), 0 2px 10px rgba(0, 0, 0, 0.8);
+}
+
+.headerDescCard {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  max-width: min(92vw, 680px);
+  margin: 0 auto;
+  padding: 10px 24px;
+  background: rgba(4, 35, 72, 0.78);
+  border: 1px solid rgba(223, 176, 119, 0.45);
+  border-radius: 16px;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow:
+    0 8px 32px rgba(2, 16, 36, 0.85),
+    0 0 24px rgba(0, 102, 154, 0.35),
+    inset 0 1px 1px rgba(241, 236, 203, 0.25);
+}
+
+.headerDescText {
+  font-size: clamp(12.5px, 1.8vw, 14.5px);
+  font-weight: 600;
+  color: #F1ECCB;
+  line-height: 1.5;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.95);
+  text-wrap: balance;
+  text-align: center;
+}
+
+.emergencyTags {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.emergencyTag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 12px;
+  border-radius: 9999px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.6px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+.tagBlue {
+  background: rgba(0, 102, 154, 0.35);
+  border: 1px solid rgba(0, 236, 243, 0.6);
+  color: #00ECF3;
+}
+
+.tagGold {
+  background: rgba(223, 176, 119, 0.22);
+  border: 1px solid rgba(223, 176, 119, 0.7);
+  color: #DFB077;
+}
+
+.tagRed {
+  background: rgba(172, 0, 21, 0.32);
+  border: 1px solid rgba(255, 77, 109, 0.7);
+  color: #ff8599;
+}
+
+/* ── Center Stage & Single Action Button ──────────────────── */
+.stage {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 28px;
+  padding: 20px;
+  animation: zoomFadeIn 0.9s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes zoomFadeIn {
+  from { opacity: 0; transform: scale(0.92); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+/* Central Tactical Hologram Shield */
+.shieldContainer {
+  position: relative;
+  width: 140px;
+  height: 140px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.shieldRadarRing {
+  position: absolute;
+  inset: -14px;
+  border: 1px dashed rgba(0, 236, 243, 0.45);
+  border-radius: 50%;
+  animation: rotateRadar 16s linear infinite;
+  pointer-events: none;
+}
+
+@keyframes rotateRadar {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+.shieldPingRing {
+  position: absolute;
+  inset: -6px;
+  border: 1.5px solid rgba(223, 176, 119, 0.5);
+  border-radius: 50%;
+  animation: shieldPulse 2.8s cubic-bezier(0, 0, 0.2, 1) infinite;
+  pointer-events: none;
+}
+
+@keyframes shieldPulse {
+  0% { transform: scale(0.92); opacity: 0.8; }
+  50% { transform: scale(1.15); opacity: 0.2; }
+  100% { transform: scale(1.28); opacity: 0; }
+}
+
+.shieldCore {
+  width: 96px;
+  height: 96px;
+  background: radial-gradient(circle, rgba(172, 0, 21, 0.45) 0%, rgba(4, 35, 72, 0.75) 75%);
+  border: 2px solid #DFB077;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow:
+    0 0 50px rgba(172, 0, 21, 0.8),
+    0 0 25px rgba(0, 236, 243, 0.4),
+    inset 0 0 20px rgba(223, 176, 119, 0.35);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.shieldIcon {
+  width: 60px;
+  height: 60px;
+  object-fit: contain;
+  filter: drop-shadow(0 0 16px rgba(172, 0, 21, 0.95)) drop-shadow(0 0 8px rgba(0, 236, 243, 0.6));
+}
+
+/* The Single Prominent Action Button */
+.openPortalBtn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 16px 36px;
+  background: linear-gradient(135deg, rgba(172, 0, 21, 0.9) 0%, rgba(0, 102, 154, 0.95) 50%, rgba(4, 35, 72, 0.98) 100%);
+  border: 1.5px solid #DFB077;
+  border-radius: 9999px;
+  color: #F1ECCB;
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  cursor: pointer;
+  box-shadow:
+    0 12px 40px rgba(2, 16, 36, 0.85),
+    0 0 35px rgba(172, 0, 21, 0.55),
+    inset 0 1px 2px rgba(241, 236, 203, 0.35);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  overflow: hidden;
+}
+
+.openPortalBtn:hover {
+  transform: translateY(-3px) scale(1.02);
+  border-color: #00ECF3;
+  box-shadow:
+    0 16px 50px rgba(2, 16, 36, 0.9),
+    0 0 45px rgba(0, 236, 243, 0.6),
+    inset 0 1px 3px rgba(241, 236, 203, 0.5);
+}
+
+.openPortalBtn:active {
+  transform: translateY(0) scale(0.99);
+}
+
+.openPortalBtn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.25), transparent);
+  transition: left 0.6s ease;
+}
+
+.openPortalBtn:hover::before {
+  left: 100%;
+}
+
+.openPortalIcon {
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
+  filter: drop-shadow(0 0 6px rgba(223, 176, 119, 0.8));
+}
+
+.openPortalArrow {
+  transition: transform 0.25s ease;
+}
+
+.openPortalBtn:hover .openPortalArrow {
+  transform: translateX(4px);
+}
+
+/* ── Auth Gate Modal ──────────────────────────────────────── */
+.backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(2, 16, 36, 0.75);
+  backdrop-filter: blur(16px) saturate(160%);
+  -webkit-backdrop-filter: blur(16px) saturate(160%);
+  z-index: 99999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+  animation: fadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.modal {
+  position: relative;
+  width: 100%;
+  max-width: 480px;
+  background: rgba(4, 35, 72, 0.88);
+  border: 1px solid rgba(223, 176, 119, 0.45);
+  border-radius: 26px;
+  padding: 32px 28px;
+  box-shadow:
+    0 25px 80px rgba(2, 16, 36, 0.95),
+    0 0 60px rgba(172, 0, 21, 0.35),
+    inset 0 1px 2px rgba(241, 236, 203, 0.25);
+  backdrop-filter: blur(28px);
+  -webkit-backdrop-filter: blur(28px);
+  text-align: center;
+  animation: modalPop 0.32s cubic-bezier(0.16, 1, 0.3, 1) both;
+  overflow: hidden;
+}
+
+@keyframes modalPop {
+  from { opacity: 0; transform: scale(0.93) translateY(12px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+/* Close button */
+.modalCloseBtn {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: rgba(0, 102, 154, 0.25);
+  border: 1px solid rgba(223, 176, 119, 0.35);
+  color: rgba(241, 236, 203, 0.75);
+  border-radius: 9999px;
+  padding: 6px 14px;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+}
+
+.modalCloseBtn:hover {
+  background: rgba(172, 0, 21, 0.45);
+  border-color: #DFB077;
+  color: #F1ECCB;
+}
+
+/* Modal Shield Emblem */
+.modalShieldWrap {
+  margin: 0 auto 16px;
+  width: 76px;
+  height: 76px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(172, 0, 21, 0.4) 0%, rgba(4, 35, 72, 0.6) 70%);
+  border: 2px solid #DFB077;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow:
+    0 0 35px rgba(172, 0, 21, 0.7),
+    inset 0 0 16px rgba(223, 176, 119, 0.3);
+}
+
+.modalShieldImg {
+  width: 48px;
+  height: 48px;
+  object-fit: contain;
+  filter: drop-shadow(0 0 12px rgba(172, 0, 21, 0.95));
+}
+
+.modalBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 14px;
+  background: rgba(172, 0, 21, 0.25);
+  border: 1px solid rgba(223, 176, 119, 0.4);
+  border-radius: 9999px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: #F1ECCB;
+  margin-bottom: 10px;
+}
+
+.modalBadgeDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #00ECF3;
+  box-shadow: 0 0 6px #00ECF3;
+}
+
+.modalTitle {
+  font-size: 20px;
+  font-weight: 900;
+  letter-spacing: 0.5px;
+  color: #F1ECCB;
+  margin: 0 0 8px;
+  text-transform: uppercase;
+}
+
+.modalSubtitle {
+  font-size: 12.5px;
+  color: rgba(241, 236, 203, 0.75);
+  line-height: 1.55;
+  margin: 0 0 20px;
+}
+
+/* ── Form Controls ────────────────────────────────────────── */
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  text-align: left;
+}
+
+.fieldLabel {
+  display: block;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  color: #F1ECCB;
+  margin-bottom: 6px;
+}
+
+.inputWrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.input {
+  width: 100%;
+  box-sizing: border-box;
+  background: rgba(2, 16, 36, 0.75);
+  border: 1.5px solid rgba(223, 176, 119, 0.4);
+  border-radius: 12px;
+  padding: 12px 14px;
+  font-size: 14px;
+  color: #F1ECCB;
+  font-family: inherit;
+  outline: none;
+  transition: all 0.2s ease;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.input::placeholder {
+  color: rgba(241, 236, 203, 0.35);
+  font-size: 13px;
+}
+
+.input:focus {
+  border-color: #00ECF3;
+  box-shadow:
+    inset 0 2px 4px rgba(0, 0, 0, 0.4),
+    0 0 16px rgba(0, 236, 243, 0.4);
+}
+
+.input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.togglePwd {
+  position: absolute;
+  right: 12px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: rgba(241, 236, 203, 0.6);
+  font-size: 16px;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  transition: color 0.15s;
+}
+
+.togglePwd:hover {
+  color: #00ECF3;
+}
+
+/* Error message */
+.errorBox {
+  background: rgba(172, 0, 21, 0.32);
+  border: 1px solid rgba(223, 176, 119, 0.5);
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #ff99a8;
+  line-height: 1.45;
+  text-align: center;
+}
+
+/* Submit button */
+.submitBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  padding: 14px 20px;
+  background: linear-gradient(135deg, #AC0015 0%, #7a000f 100%);
+  border: 1.5px solid rgba(223, 176, 119, 0.55);
+  border-radius: 12px;
+  color: #F1ECCB;
+  font-size: 13.5px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  cursor: pointer;
+  box-shadow: 0 8px 25px rgba(172, 0, 21, 0.65);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  margin-top: 4px;
+}
+
+.submitBtn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  border-color: #00ECF3;
+  box-shadow: 0 10px 30px rgba(172, 0, 21, 0.8), 0 0 20px rgba(0, 236, 243, 0.4);
+}
+
+.submitBtn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Spinner */
+.spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(241, 236, 203, 0.3);
+  border-top-color: #00ECF3;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Progress Box */
+.progressBox {
+  margin-top: 14px;
+  background: rgba(2, 16, 36, 0.8);
+  border: 1px solid rgba(0, 236, 243, 0.35);
+  border-radius: 12px;
+  padding: 12px;
+}
+
+.progressTop {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: #00ECF3;
+  margin-bottom: 8px;
+}
+
+.progressPercent {
+  color: #DFB077;
+  font-family: monospace;
+  font-size: 12px;
+}
+
+.progressTrack {
+  height: 5px;
+  background: rgba(4, 35, 72, 0.9);
+  border-radius: 9999px;
+  overflow: hidden;
+  border: 1px solid rgba(223, 176, 119, 0.3);
+}
+
+.progressBar {
+  height: 100%;
+  background: linear-gradient(90deg, #AC0015, #DFB077, #00ECF3);
+  box-shadow: 0 0 10px #00ECF3;
+  border-radius: 9999px;
+  transition: width 0.4s ease;
+}
+
+.progressDetail {
+  margin-top: 8px;
+  font-size: 10px;
+  color: rgba(241, 236, 203, 0.6);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* ── Bottom Bar ───────────────────────────────────────────── */
+.bottomBar {
+  position: relative;
+  z-index: 10;
+  text-align: center;
+  padding: 16px 20px;
+  background: linear-gradient(180deg, transparent, rgba(2, 16, 36, 0.85));
+  border-top: 1px solid rgba(223, 176, 119, 0.15);
+}
+
+.bottomText {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.2px;
+  color: rgba(241, 236, 203, 0.55);
+  text-transform: uppercase;
+}

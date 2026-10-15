@@ -6,8 +6,9 @@ import { paths } from '@/config/paths';
 import { RouteErrorBoundary } from './routes/route-error-boundary';
 import { RouteLoading } from './routes/route-loading';
 
-// Each route is lazy-loaded so the citizen bundle never ships dispatcher code.
+// Each route is lazy-loaded so the citizen bundle never ships officer/dispatcher code.
 const router = createBrowserRouter([
+  // ── Citizen portal ───────────────────────────────────────────────
   {
     path: paths.citizen.home.path,
     lazy: async () => ({ Component: (await import('./routes/citizen/citizen-root')).CitizenRoot }),
@@ -20,6 +21,34 @@ const router = createBrowserRouter([
       },
     ],
   },
+
+  // ── Officer portal ───────────────────────────────────────────────
+  {
+    // Public: login page (no auth required)
+    path: paths.officer.login.path,
+    lazy: async () => ({
+      Component: (await import('./routes/officer/officer-login')).OfficerLoginRoute,
+    }),
+    ErrorBoundary: RouteErrorBoundary,
+    HydrateFallback: RouteLoading,
+  },
+  {
+    // Protected: OfficerRoot guards via ProtectedRoute + Outlet
+    path: '/officer',
+    lazy: async () => ({ Component: (await import('./routes/officer/officer-root')).OfficerRoot }),
+    ErrorBoundary: RouteErrorBoundary,
+    HydrateFallback: RouteLoading,
+    children: [
+      {
+        path: 'dashboard',
+        lazy: async () => ({
+          Component: (await import('./routes/officer/officer-dashboard')).OfficerDashboardRoute,
+        }),
+      },
+    ],
+  },
+
+  // ── Legacy dispatcher placeholder ────────────────────────────────
   {
     path: paths.dispatcher.root.path,
     lazy: async () => ({
@@ -28,6 +57,8 @@ const router = createBrowserRouter([
     ErrorBoundary: RouteErrorBoundary,
     HydrateFallback: RouteLoading,
   },
+
+  // ── 404 ──────────────────────────────────────────────────────────
   {
     path: '*',
     HydrateFallback: RouteLoading,
