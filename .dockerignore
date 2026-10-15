@@ -1,0 +1,13 @@
+node_modules
+dist
+.tmp
+.git
+.github
+.claude
+.vscode
+.idea
+docs
+*.log
+# Local env must not leak into the image (VITE_* would be baked into the bundle)
+.env
+.env.*
