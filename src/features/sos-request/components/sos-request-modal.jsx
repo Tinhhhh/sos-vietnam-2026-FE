@@ -67,21 +67,22 @@ export function SosRequestModal({ open, onClose, location, notify, onSubmitted }
 
     setSubmitting(true);
     try {
-      const result = await createIncident({
-        emergencyType: agency.emergencyType,
-        incidentTags: tags,
+      const body = await createIncident({
+        emergency_type: agency.emergencyType,
+        incident_tags: tags,
         description: notes.trim() || null,
-        citizenName: reporterName.trim() || DEFAULT_REPORTER_NAME,
+        citizen_name: reporterName.trim() || DEFAULT_REPORTER_NAME,
         phone: phone || null,
         address: location.address || null,
         latitude: location.coords.lat,
         longitude: location.coords.lng,
-        accuracy: location.accuracy ?? null,
+        accuracy: location.accuracy != null ? Math.round(location.accuracy) : null,
       });
-      if (!result?.ok || !result.incident)
-        throw new Error(result?.message || 'Máy chủ không xác nhận tin báo');
+      // body = { http_status, message, data: { incident, citizen_access_token } }
+      const result = body?.data;
+      if (!result?.incident) throw new Error(body?.message || 'Máy chủ không xác nhận tin báo');
 
-      saveActiveIncident(result.incident, result.citizenAccessToken);
+      saveActiveIncident(result.incident, result.citizen_access_token);
 
       // The SOS is already recorded; a failed upload must not hide that.
       let mediaError;
@@ -89,7 +90,7 @@ export function SosRequestModal({ open, onClose, location, notify, onSubmitted }
         try {
           await uploadIncidentMedia({
             incidentId: result.incident.id,
-            citizenAccessToken: result.citizenAccessToken,
+            citizenAccessToken: result.citizen_access_token,
             attachments: media.attachments,
           });
         } catch (err) {
