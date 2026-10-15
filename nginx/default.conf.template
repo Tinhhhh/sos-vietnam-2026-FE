@@ -16,6 +16,9 @@ server {
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
+        # The browser only ever talks to this origin, so the call is not cross-origin for it.
+        # Drop Origin so the backend's CORS filter (localhost-only list) doesn't reject it with 403.
+        proxy_set_header Origin "";
         # Incident media upload limit is 60 MB per request on the backend
         client_max_body_size 60m;
         # A sleeping free-tier backend can take a while to wake up
@@ -30,6 +33,7 @@ server {
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection "upgrade";
         proxy_set_header Host $proxy_host;
+        proxy_set_header Origin "";
         proxy_read_timeout 3600s;
     }
 
