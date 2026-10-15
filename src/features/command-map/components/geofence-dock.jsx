@@ -10,6 +10,9 @@ const WARD_RESULTS_LIMIT = 80;
 const WARD_PREFIX_RE = /^(phường|xã|thị trấn|đặc khu|p\.|x\.|tt\.)\s*/i;
 const UNIT_PREFIX_RE = /^(công an|ca)\s+(phường|xã|thị trấn|đặc khu)\s*/i;
 
+// The popover is a height-capped flex column: only the list may shrink/scroll, never these rows.
+const FIXED_ROW = { flexShrink: 0 };
+
 const cleanWard = (s) =>
   (s || '').toLowerCase().replace(UNIT_PREFIX_RE, '').replace(WARD_PREFIX_RE, '').trim();
 
@@ -311,7 +314,7 @@ export function GeofenceDock({
           className={`${styles.liquidGlassPopover} ${styles.provinceBubblePopover}`}
           onClick={(e) => e.stopPropagation()}
         >
-          <div className={styles.popoverHeader}>
+          <div className={styles.popoverHeader} style={FIXED_ROW}>
             <div className={styles.popoverTitle} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               <SvgIcon name="star" size="sm" color="blue" /> ĐỊA GIỚI {provinces?.length ?? 34} TỈNH & THÀNH
               PHỐ
@@ -320,7 +323,7 @@ export function GeofenceDock({
               <SvgIcon name="x" color="white" />
             </button>
           </div>
-          <div className={styles.popoverSearchWrap}>
+          <div className={styles.popoverSearchWrap} style={FIXED_ROW}>
             <input
               type="text"
               placeholder="Gõ tên tỉnh/thành để lọc nhanh..."
@@ -329,7 +332,7 @@ export function GeofenceDock({
               onChange={(e) => setProvinceQuery(e.target.value)}
             />
           </div>
-          <div className={styles.popoverFilterTabs}>
+          <div className={styles.popoverFilterTabs} style={FIXED_ROW}>
             {REGION_TABS.map((tab) => (
               <button
                 key={tab.key}
@@ -393,7 +396,7 @@ export function GeofenceDock({
           style={{ width: 450, maxWidth: '92vw' }}
           onClick={(e) => e.stopPropagation()}
         >
-          <div className={styles.popoverHeader}>
+          <div className={styles.popoverHeader} style={FIXED_ROW}>
             <div className={styles.popoverTitle} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               <SvgIcon name="pin" color="blue" />{' '}
               {selectedProvince
@@ -404,7 +407,7 @@ export function GeofenceDock({
               <SvgIcon name="x" color="white" />
             </button>
           </div>
-          <div className={styles.popoverSearchWrap}>
+          <div className={styles.popoverSearchWrap} style={FIXED_ROW}>
             <input
               type="text"
               placeholder={
