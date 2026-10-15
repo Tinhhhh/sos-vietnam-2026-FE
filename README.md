@@ -50,3 +50,31 @@ CSS gốc được chép nguyên văn sang React bằng `tools/legacy-css/extrac
 - Class dùng chung (`liquid-glass`, `svg-ico`, `modal-*`, ...) nằm trong `src/styles/legacy-global.css`.
 
 File sinh tự động có header `AUTO-GENERATED`. Muốn sửa thì sửa config rồi chạy lại `npm run css:extract`. Khi đã sửa tay, xoá header đó đi.
+
+## Deploy (Docker + Render)
+
+`Dockerfile` build bằng Node rồi chạy **nginx**: phục vụ file tĩnh và chuyển tiếp `/api`, `/ws` sang backend,
+nên trình duyệt luôn gọi cùng origin (không cần CORS, link ảnh/video `/api/...` dùng được ngay).
+
+Chạy thử local (cần backend ở cổng 8080):
+
+```bash
+docker build -t sos-vietnam-fe:local .
+docker run --rm -p 18080:10000 -e BACKEND_URL=http://host.docker.internal:8080 sos-vietnam-fe:local
+```
+
+GitHub Actions (`.github/workflows/deploy.yml`):
+
+- Mọi push / PR: `npm ci` → `npm run lint` → `npm run build`. Hỏng bước nào thì dừng.
+- Push lên `main` (CI xanh): build image → đẩy lên Docker Hub `<user>/sos-vietnam-fe` → gọi deploy hook của Render.
+  Push mới huỷ lần chạy cũ đang chạy dở.
+
+Cần khai báo:
+
+| Ở đâu                                 | Tên                                     | Giá trị                                                                   |
+| ------------------------------------- | --------------------------------------- | ------------------------------------------------------------------------- |
+| GitHub → Settings → Secrets → Actions | `DOCKERHUB_USERNAME`, `DOCKERHUB_TOKEN` | Tài khoản Docker Hub (giống repo backend)                                 |
+| GitHub → Settings → Secrets → Actions | `RENDER_DEPLOY_HOOK_URL`                | Deploy hook của service FE trên Render                                    |
+| Render → service FE → Environment     | `BACKEND_URL`                           | URL backend, vd `https://sos-vietnam-be.onrender.com` (không có `/` cuối) |
+
+Service FE trên Render: **Deploy an existing image** → `docker.io/<user>/sos-vietnam-fe:latest`. Render tự cấp `PORT`.
