@@ -39,7 +39,9 @@ const legacyRoot = process.env.LEGACY_REPO || config.legacyRoot;
 const contextClasses = new Set(config.contextClasses || []);
 const globalOutput = config.outputs.find((o) => o.mode === 'global');
 const moduleOutputs = config.outputs.filter((o) => o.mode === 'module');
-const globalClasses = new Set(globalOutput?.classes || []);
+// `externalGlobalClasses`: classes already emitted by another config's global sheet.
+// They stay unscoped (:global) inside module selectors, but this run never emits them.
+const globalClasses = new Set([...(globalOutput?.classes || []), ...(config.externalGlobalClasses || [])]);
 
 for (const out of config.outputs) {
   // `states` are owned (localised) but never anchor a selector on their own,

@@ -1,0 +1,66 @@
+/*
+ * Officer portal: per-agency theme variables (body.theme-*) and the mobile console
+ * body rule. Copied verbatim from legacy css/style.css and css/tactical-responsive.css;
+ * the extractor cannot route rules that only target <body> context classes.
+ */
+body.theme-police {
+  --theme-primary: #0088ff;
+  --theme-secondary: #00ecf3;
+  --theme-glow: rgba(0, 136, 255, 0.45);
+  --theme-glow-soft: rgba(0, 136, 255, 0.18);
+  --theme-gradient: linear-gradient(135deg, #00669a 0%, #0088ff 100%);
+  --theme-badge-gradient: linear-gradient(135deg, #0088ff, #0055aa);
+  --theme-border: rgba(0, 236, 243, 0.35);
+  --theme-card-glow: 0 0 20px rgba(0, 136, 255, 0.25);
+}
+
+body.theme-csgt {
+  --theme-primary: #f59e0b;
+  --theme-secondary: #dfb077;
+  --theme-glow: rgba(245, 158, 11, 0.45);
+  --theme-glow-soft: rgba(245, 158, 11, 0.18);
+  --theme-gradient: linear-gradient(135deg, #dfb077 0%, #f59e0b 100%);
+  --theme-badge-gradient: linear-gradient(135deg, #f59e0b, #d97706);
+  --theme-border: rgba(245, 158, 11, 0.4);
+  --theme-card-glow: 0 0 20px rgba(245, 158, 11, 0.25);
+}
+
+body.theme-rescue {
+  --theme-primary: #ac0015;
+  --theme-secondary: #ff3b30;
+  --theme-glow: rgba(172, 0, 21, 0.55);
+  --theme-glow-soft: rgba(172, 0, 21, 0.22);
+  --theme-gradient: linear-gradient(135deg, #ac0015 0%, #ff3b30 100%);
+  --theme-badge-gradient: linear-gradient(135deg, #ac0015, #dc2626);
+  --theme-border: rgba(255, 59, 48, 0.45);
+  --theme-card-glow: 0 0 22px rgba(172, 0, 21, 0.35);
+}
+
+body.theme-hospital {
+  --theme-primary: #10b981;
+  --theme-secondary: #00ecf3;
+  --theme-glow: rgba(16, 185, 129, 0.45);
+  --theme-glow-soft: rgba(16, 185, 129, 0.18);
+  --theme-gradient: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  --theme-badge-gradient: linear-gradient(135deg, #10b981, #047857);
+  --theme-border: rgba(16, 185, 129, 0.4);
+  --theme-card-glow: 0 0 20px rgba(16, 185, 129, 0.25);
+}
+
+body.theme-admin {
+  --theme-primary: #8b5cf6;
+  --theme-secondary: #00ecf3;
+  --theme-glow: rgba(139, 92, 246, 0.5);
+  --theme-glow-soft: rgba(139, 92, 246, 0.2);
+  --theme-gradient: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
+  --theme-badge-gradient: linear-gradient(135deg, #8b5cf6, #6366f1);
+  --theme-border: rgba(139, 92, 246, 0.45);
+  --theme-card-glow: 0 0 22px rgba(139, 92, 246, 0.3);
+}
+
+@media (max-width: 992px) {
+  body.tac-mobile-console {
+    overflow: hidden !important;
+    height: var(--tac-vh);
+  }
+}

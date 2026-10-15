@@ -1,59 +1,123 @@
 /**
- * Officer Dashboard Route — /officer/dashboard (placeholder)
- * Wrapped by ProtectedRoute in router.
+ * /officer/dashboard — officer console after login (legacy dispatcher.html main screen).
+ * Composes header, command map, incident panels and station directory.
  */
-import { useAuth } from '@/features/auth';
+import '@/styles/officer-theme.css';
 
-const styles = {
-  page: {
-    minHeight: '100dvh',
-    background: '#0a0f1e',
-    color: '#f1f5f9',
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'center',
-    fontFamily: "'Inter', system-ui, sans-serif",
-    gap: '1rem',
-  },
-  badge: {
-    fontSize: '4rem',
-  },
-  title: {
-    fontSize: '1.5rem',
-    fontWeight: 700,
-    margin: 0,
-  },
-  sub: {
-    color: '#64748b',
-    margin: 0,
-    fontSize: '0.875rem',
-  },
-  logoutBtn: {
-    marginTop: '1rem',
-    padding: '0.625rem 1.5rem',
-    borderRadius: '0.75rem',
-    background: 'rgba(239,68,68,0.15)',
-    border: '1px solid rgba(239,68,68,0.35)',
-    color: '#fca5a5',
-    cursor: 'pointer',
-    fontFamily: 'inherit',
-    fontSize: '0.875rem',
-    fontWeight: 600,
-  },
+import { useEffect, useMemo, useRef, useState } from 'react';
+
+import { OfficerLayout } from '@/components/layouts/officer-layout/officer-layout';
+import { useToast } from '@/components/ui/toast/toast-context';
+import { SvgIcon } from '@/components/ui/svg-icon/svg-icon';
+import { buildOfficerProfile, useAuth } from '@/features/auth';
+import { CommandMap, ServiceDirectoryPanel, StationDirectory, useStations } from '@/features/command-map';
+import { IncidentHistoryPanel, IncidentQueuePanel, StatsTopBar } from '@/features/incident-queue';
+import { OfficerHeader } from '@/features/officer-header';
+
+const LATER = {
+  admin: 'Phân quyền & quản trị thuộc module Quản trị (làm sau).',
+  officer: 'Hồ sơ cán bộ & giao ca trực thuộc module Ca trực (làm sau).',
+  incidents: 'Danh sách sự cố sẽ có ở module Hàng đợi sự cố.',
+  fake: 'Hồ sơ báo khống & OSINT thuộc module Báo giả (làm sau).',
+  directory: 'Quản lý danh bạ thuộc module Quản trị (làm sau).',
 };
 
 export function OfficerDashboardRoute() {
   const { user, logout } = useAuth();
+  const toast = useToast();
+  const officer = useMemo(() => buildOfficerProfile(user), [user]);
+  const { stations, status: stationsStatus } = useStations();
+  const mapApi = useRef(null);
+  const [activeTab, setActiveTab] = useState('incidents');
+  const [unitCoords, setUnitCoords] = useState(null);
+
+  // Legacy put the agency theme on <body> (CSS variables + per-theme accents).
+  useEffect(() => {
+    const body = document.body;
+    body.classList.add(officer.theme, 'officer-authenticated');
+    return () => body.classList.remove(officer.theme, 'officer-authenticated');
+  }, [officer.theme]);
+
+  const later = (key) => () => toast.show(LATER[key], { tone: 'info' });
+
+  const tabs = [
+    {
+      key: 'incidents',
+      title: 'Danh sách sự cố khẩn cấp tiếp nhận',
+      icon: <SvgIcon name="alert" color="red" />,
+      label: <>Sự Cố (0)</>,
+    },
+    {
+      key: 'history',
+      title: 'Lịch sử sự cố đã điều phối',
+      icon: <SvgIcon name="file" color="blue" />,
+      label: <>Lịch Sử (0)</>,
+    },
+    {
+      key: 'stations',
+      title: 'Danh bạ trụ sở cơ quan',
+      icon: <SvgIcon name="building" color="blue" />,
+      label: officer.stationsTabTitle,
+    },
+    ...(officer.isAdmin
+      ? [
+          {
+            key: 'enterprises',
+            title: 'Mạng lưới doanh nghiệp cứu hộ giao thông',
+            icon: <SvgIcon name="car" color="amber" />,
+            label: 'Cứu Hộ',
+          },
+          {
+            key: 'hospitals',
+            title: 'Mạng lưới bệnh viện & trạm cấp cứu 115',
+            icon: <SvgIcon name="building" color="emerald" />,
+            label: 'Bệnh Viện',
+          },
+        ]
+      : []),
+  ];
+
+  const panels = {
+    incidents: <IncidentQueuePanel />,
+    history: (
+      <IncidentHistoryPanel
+        agency={officer.agency}
+        onExportExcel={later('incidents')}
+        onClear={later('incidents')}
+      />
+    ),
+    stations: (
+      <StationDirectory
+        officer={officer}
+        stations={stations}
+        status={stationsStatus}
+        onFlyTo={(st) => mapApi.current?.flyToStation(st)}
+        onAdminAction={later('directory')}
+      />
+    ),
+    enterprises: <ServiceDirectoryPanel kind="enterprises" onAdminAction={later('directory')} />,
+    hospitals: <ServiceDirectoryPanel kind="hospitals" onAdminAction={later('directory')} />,
+  };
 
   return (
-    <div style={styles.page}>
-      <span style={styles.badge}>🏛️</span>
-      <h1 style={styles.title}>Chào mừng, {user?.full_name || user?.email || 'Cán bộ'}</h1>
-      <p style={styles.sub}>Vai trò: {user?.role_name ?? '—'} · Dashboard đang được xây dựng</p>
-      <button style={styles.logoutBtn} onClick={logout}>
-        🚪 Đăng xuất
-      </button>
-    </div>
+    <OfficerLayout
+      header={
+        <OfficerHeader
+          officer={officer}
+          unitCoords={unitCoords}
+          onLocateUnit={() => mapApi.current?.focusUnit()}
+          onOpenAdmin={later('admin')}
+          onOpenOfficerInfo={later('officer')}
+          onLogout={logout}
+        />
+      }
+      topBar={<StatsTopBar provinceCount={34} onFakeArchive={later('fake')} />}
+      map={<CommandMap ref={mapApi} officer={officer} stations={stations} onUnitLocated={setUnitCoords} />}
+      tabs={tabs}
+      activeTab={activeTab}
+      onTabChange={setActiveTab}
+      onClearIncidents={later('incidents')}
+      panel={panels[activeTab]}
+    />
   );
 }
