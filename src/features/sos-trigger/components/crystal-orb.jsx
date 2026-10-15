@@ -1,5 +1,7 @@
 import { useEffect, useRef } from 'react';
 
+import { speakSosPrompt } from '../utils/sos-voice-prompt';
+
 import { useReducedMotion } from '@/hooks/use-reduced-motion';
 
 import {
@@ -128,6 +130,9 @@ export function CrystalOrb({ onActivate }) {
     replayClass(rippleRef.current, styles.active);
     spawnSplash(particlesRef.current);
     runSplash();
+
+    // Phát âm thanh SOS vùng miền
+    speakSosPrompt();
 
     onActivate?.(e);
   };
