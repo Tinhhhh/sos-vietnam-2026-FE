@@ -8,7 +8,7 @@ import { api } from '@/lib/api-client';
  *   GET /api/v1/geo/provinces              -> data: [{ code, name, name_en, center_lat, center_lng }]
  *   GET /api/v1/geo/wards?provinceCode     -> data: [{ id, malk, name, province_code, province_name, sap_nhap_tu, center_lat, center_lng }]
  *
- * Planned (not built yet), read-only data status for every officer:
+ * Read-only data status (OFFICER/ADMIN):
  *   GET /api/v1/geo/data-status
  *     -> data: [{ dataset: 'boundaries' | 'rescue_stations', version, updated_at, checked_at, total }]
  */

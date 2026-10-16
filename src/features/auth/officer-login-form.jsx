@@ -286,10 +286,10 @@ export function OfficerLoginForm() {
       <header className={s.header}>
         <div className={s.headerBadge}>
           <span className={s.headerBadgeDot} />
-          HỆ THỐNG TRỰC BAN TÁC CHIẾN QUỐC GIA 2026
+          HỆ THỐNG TRỰC CHIẾN QUỐC GIA 2026
         </div>
         <h1 className={s.headerTitle}>
-          CỔNG TRỰC BAN & ĐIỀU PHỐI CỨU HỘ KHẨN CẤP
+          CỔNG CÁN BỘ & ĐIỀU PHỐI CỨU HỘ KHẨN CẤP
         </h1>
         <div className={s.headerDescCard}>
           <span className={s.headerDescText}>
@@ -340,7 +340,7 @@ export function OfficerLoginForm() {
             className={s.openPortalIcon}
             aria-hidden="true"
           />
-          <span>ĐĂNG NHẬP TRỰC BAN TÁC CHIẾN</span>
+          <span>ĐĂNG NHẬP CÁN BỘ TÁC CHIẾN</span>
           <svg
             className={s.openPortalArrow}
             viewBox="0 0 24 24"
@@ -362,7 +362,7 @@ export function OfficerLoginForm() {
           className={s.backdrop}
           role="dialog"
           aria-modal="true"
-          aria-label="Đăng nhập trực ban"
+          aria-label="Đăng nhập cán bộ"
           onClick={(e) => {
             if (e.target === e.currentTarget) closeModal();
           }}
@@ -394,9 +394,9 @@ export function OfficerLoginForm() {
               XÁC THỰC AN NINH NỘI BỘ
             </div>
 
-            <h2 className={s.modalTitle}>ĐĂNG NHẬP TRỰC BAN</h2>
+            <h2 className={s.modalTitle}>ĐĂNG NHẬP CÁN BỘ</h2>
             <p className={s.modalSubtitle}>
-              Vui lòng nhập tài khoản email và mật khẩu cán bộ trực ban được cấp để vào ca tác chiến.
+              Vui lòng nhập tài khoản email và mật khẩu cán bộ được cấp.
             </p>
 
             {/* Form */}
@@ -404,7 +404,7 @@ export function OfficerLoginForm() {
               {/* Email */}
               <div>
                 <label className={s.fieldLabel} htmlFor="officer-email">
-                  Email tài khoản cán bộ trực ban *
+                  Email tài khoản cán bộ *
                 </label>
                 <div className={s.inputWrap}>
                   <input

@@ -59,7 +59,7 @@ export function OfficerHeader({
 
         <div
           className={`${styles.headerWidgetPill} ${styles.clickableLocationPill} ${styles.locationWidget} liquid-glass`}
-          title="Đơn vị trực ban (Bấm để xem trên bản đồ)"
+          title="Đơn vị công tác (Bấm để xem trên bản đồ)"
           onClick={onLocateUnit}
         >
           <span className={styles.widgetIcon}>
@@ -85,7 +85,7 @@ export function OfficerHeader({
 
         <div
           className={`${styles.headerWidgetPill} ${styles.clickableOfficerPill} ${styles.headerDutyShiftPill} liquid-glass`}
-          title="Kíp trực ban tác chiến (Bấm để xem & giao ca)"
+          title="Cán bộ đang đăng nhập (Bấm để xem hồ sơ)"
           style={{ cursor: 'pointer', borderColor: 'rgba(56, 189, 248, 0.45)', display: 'flex' }}
           onClick={onOpenOfficerInfo}
         >
@@ -119,10 +119,10 @@ export function OfficerHeader({
                   whiteSpace: 'nowrap',
                 }}
               >
-                TRỰC BAN
+                CÁN BỘ
               </span>
             </div>
-            <span className={styles.widgetSecondary}>Ca trực: chưa phân ca</span>
+            <span className={styles.widgetSecondary}>Đang trực tuyến</span>
           </div>
         </div>
 
@@ -249,11 +249,7 @@ function GearMenu({ isAdmin, onOpenAdmin, onOpenOfficerInfo, onLogout }) {
               </div>
             )}
 
-            <div
-              className={styles.gearMenuItem}
-              title="Hồ sơ cán bộ trực ban & phân công kíp trực"
-              onClick={pick(onOpenOfficerInfo)}
-            >
+            <div className={styles.gearMenuItem} title="Hồ sơ cán bộ" onClick={pick(onOpenOfficerInfo)}>
               <div
                 className={styles.gearMenuIcon}
                 style={{
@@ -268,17 +264,13 @@ function GearMenu({ isAdmin, onOpenAdmin, onOpenOfficerInfo, onLogout }) {
                 <div className={styles.gearMenuTitle} style={{ color: '#38bdf8' }}>
                   Thông Tin Cán Bộ
                 </div>
-                <div className={styles.gearMenuDesc}>Hồ sơ ca trực, phân công, trực thay</div>
+                <div className={styles.gearMenuDesc}>Hồ sơ cán bộ, đơn vị công tác</div>
               </div>
             </div>
 
             <div className={styles.gearMenuDivider} />
 
-            <div
-              className={styles.gearMenuItem}
-              title="Đăng xuất khỏi phiên trực ban"
-              onClick={pick(onLogout)}
-            >
+            <div className={styles.gearMenuItem} title="Đăng xuất" onClick={pick(onLogout)}>
               <div
                 className={styles.gearMenuIcon}
                 style={{

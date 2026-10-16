@@ -1,5 +1,6 @@
 import { SvgIcon } from '@/components/ui/svg-icon/svg-icon';
 
+import { CallSplit } from './call-split';
 import styles from './officer-layout.module.css';
 import { useTacticalLayout } from './use-tactical-layout';
 
@@ -26,6 +27,8 @@ const TAB_ID_CLASS = {
  *   onClearIncidents?: () => void,
  *   panel: React.ReactNode,
  *   queueCount?: number,
+ *   callPane?: React.ReactNode,   // video call: shown left of the map, map shrinks to the right (resizable)
+ *   mapOverlay?: React.ReactNode, // drawn over the shrunk map during a call
  * }} props
  */
 export function OfficerLayout({
@@ -38,6 +41,8 @@ export function OfficerLayout({
   onClearIncidents,
   panel,
   queueCount = 0,
+  callPane,
+  mapOverlay,
 }) {
   const { mode, mobileView, setMobileView } = useTacticalLayout({ incidentSelected: false });
 
@@ -52,8 +57,12 @@ export function OfficerLayout({
 
       <div className={styles.dispatcherLayout}>
         <div className={styles.dispatcherMapArea}>
-          {topBar}
-          <div className={styles.dispatcherMapCanvasWrap}>{map}</div>
+          {!callPane && topBar}
+          <div className={styles.dispatcherMapCanvasWrap}>
+            <CallSplit callPane={callPane} mapOverlay={mapOverlay}>
+              {map}
+            </CallSplit>
+          </div>
         </div>
 
         <aside className={`${styles.dispatcherSidebar} ${styles.dispatcherSidebarRoot} liquid-glass`}>

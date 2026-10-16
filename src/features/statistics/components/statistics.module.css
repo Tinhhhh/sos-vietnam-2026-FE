@@ -1,0 +1,445 @@
+/* Statistics dashboard: same dark tactical look as the officer console. */
+.page {
+  --st-bg: #060912;
+  --st-surface: #0e1424;
+  --st-surface-2: #141c31;
+  --st-line: #22304d;
+  --st-fg: #e8eef8;
+  --st-muted: #94a3b8;
+  --st-dim: #64748b;
+  --st-police: #38bdf8;
+  --st-csgt: #fbbf24;
+  --st-fire: #f87171;
+  --st-ok: #34d399;
+  --st-warn: #fbbf24;
+  --st-crit: #ff4d6a;
+  /* The officer console locks body scrolling, so this page scrolls inside its own box */
+  height: 100vh;
+  height: 100dvh;
+  overflow-y: auto;
+  box-sizing: border-box;
+  background: var(--st-bg);
+  color: var(--st-fg);
+  font-family:
+    'Be Vietnam Pro',
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    sans-serif;
+  padding: 16px clamp(12px, 3vw, 28px) 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.topBar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.titleBlock {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
+
+.back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--st-line);
+  background: var(--st-surface);
+  color: var(--st-fg);
+  font-size: 12.5px;
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.back:hover {
+  border-color: var(--st-police);
+}
+
+.title {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+.subtitle {
+  font-size: 12.5px;
+  color: var(--st-muted);
+}
+
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.segmented {
+  display: flex;
+  gap: 3px;
+  padding: 3px;
+  border-radius: 9px;
+  border: 1px solid var(--st-line);
+  background: var(--st-surface);
+}
+.segBtn {
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--st-muted);
+  background: none;
+  border: 0;
+  border-radius: 7px;
+  padding: 5px 11px;
+  cursor: pointer;
+}
+.segBtn[aria-pressed='true'] {
+  background: var(--st-surface-2);
+  color: var(--st-fg);
+  box-shadow: inset 0 0 0 1px var(--st-line);
+}
+
+.input,
+.select {
+  font: inherit;
+  font-size: 12px;
+  color: var(--st-fg);
+  background: var(--st-surface);
+  border: 1px solid var(--st-line);
+  border-radius: 8px;
+  padding: 5px 8px;
+  color-scheme: dark;
+}
+
+.notice {
+  border: 1px solid var(--st-line);
+  border-left: 3px solid var(--st-warn);
+  background: var(--st-surface);
+  border-radius: 0 10px 10px 0;
+  padding: 10px 14px;
+  font-size: 13px;
+  color: var(--st-muted);
+}
+.notice b {
+  color: var(--st-fg);
+}
+
+.kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+}
+
+.kpi {
+  background: var(--st-surface);
+  border: 1px solid var(--st-line);
+  border-radius: 12px;
+  padding: 12px 14px;
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+.kpiAlert {
+  border-color: rgba(255, 77, 106, 0.55);
+  box-shadow: inset 3px 0 0 var(--st-crit);
+}
+.kpiLabel {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--st-muted);
+}
+.kpiValue {
+  font-family: 'JetBrains Mono', ui-monospace, Consolas, monospace;
+  font-size: 26px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.15;
+}
+.kpiSub {
+  font-size: 11.5px;
+  color: var(--st-dim);
+}
+.up {
+  color: var(--st-crit);
+}
+.down {
+  color: var(--st-ok);
+}
+.pendingModule {
+  color: var(--st-dim);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  gap: 12px;
+}
+.wide {
+  grid-column: 1 / -1;
+}
+
+.panel {
+  background: var(--st-surface);
+  border: 1px solid var(--st-line);
+  border-radius: 12px;
+  padding: 14px;
+  display: grid;
+  gap: 10px;
+  align-content: start;
+  min-width: 0;
+}
+.panelTitle {
+  margin: 0;
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--st-muted);
+}
+.panelTitle small {
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 400;
+  font-size: 11.5px;
+  color: var(--st-dim);
+}
+.empty {
+  font-size: 12.5px;
+  color: var(--st-dim);
+  padding: 12px 0;
+}
+
+.chartBox {
+  width: 100%;
+  height: 220px;
+}
+
+.tableWrap {
+  overflow-x: auto;
+}
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+}
+.table th {
+  text-align: left;
+  font-size: 10.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--st-dim);
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--st-line);
+  white-space: nowrap;
+}
+.table td {
+  padding: 7px 8px;
+  border-bottom: 1px solid rgba(34, 48, 77, 0.6);
+  white-space: nowrap;
+}
+.num {
+  text-align: right !important;
+  font-family: 'JetBrains Mono', ui-monospace, Consolas, monospace;
+}
+
+.chip {
+  display: inline-block;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  border: 1px solid var(--st-line);
+}
+.chipOk {
+  color: var(--st-ok);
+  border-color: rgba(52, 211, 153, 0.45);
+}
+.chipBad {
+  color: var(--st-crit);
+  border-color: rgba(255, 77, 106, 0.5);
+}
+.chipWarn {
+  color: var(--st-warn);
+  border-color: rgba(251, 191, 36, 0.45);
+}
+
+.barCell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 120px;
+}
+.barTrack {
+  flex: 1;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--st-surface-2);
+  overflow: hidden;
+}
+.barFill {
+  height: 100%;
+  border-radius: 3px;
+  background: var(--st-police);
+}
+
+.heat {
+  display: grid;
+  grid-template-columns: 30px repeat(24, minmax(9px, 1fr));
+  gap: 2px;
+  min-width: 380px;
+  font-family: 'JetBrains Mono', ui-monospace, Consolas, monospace;
+  font-size: 10px;
+  color: var(--st-dim);
+}
+.heatCell {
+  aspect-ratio: 1;
+  border-radius: 2px;
+}
+.heatLabel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  font-size: 11.5px;
+  color: var(--st-muted);
+  align-items: center;
+}
+.swatch {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  margin-right: 6px;
+  vertical-align: -1px;
+}
+
+.escList {
+  display: grid;
+  gap: 8px;
+}
+.escItem {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 10px;
+  align-items: center;
+  background: var(--st-bg);
+  border: 1px solid var(--st-line);
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+.escId {
+  font-family: 'JetBrains Mono', ui-monospace, Consolas, monospace;
+  font-size: 11.5px;
+  color: var(--st-muted);
+}
+.escText {
+  font-size: 12.5px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.escTimer {
+  font-family: 'JetBrains Mono', ui-monospace, Consolas, monospace;
+  font-weight: 700;
+}
+
+@media (max-width: 520px) {
+  .escItem {
+    grid-template-columns: 1fr auto;
+  }
+  .escId {
+    display: none;
+  }
+}
+
+/* Share pie: donut + legend; hovering a slice or a legend row highlights it */
+.pieWrap {
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) minmax(150px, 1fr);
+  gap: 12px;
+  align-items: center;
+}
+.pieBox {
+  position: relative;
+  width: 100%;
+  height: 240px;
+}
+.pieCenter {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  text-align: center;
+  padding: 0 28%;
+  gap: 2px;
+}
+.pieCenter b {
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1.2;
+}
+.pieCenter span {
+  font-size: 11.5px;
+  color: var(--st-muted);
+}
+.pieLegend {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+.pieLegend li {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  font-size: 12.5px;
+  cursor: default;
+}
+.pieLegendActive {
+  border-color: var(--st-line) !important;
+  background: var(--st-surface-2);
+  font-weight: 700;
+}
+.pieLegendName {
+  min-width: 0;
+  /* long ward names wrap instead of being cut; full name also in the tooltip */
+  white-space: normal;
+  overflow-wrap: anywhere;
+  line-height: 1.3;
+}
+@media (max-width: 520px) {
+  .pieWrap {
+    grid-template-columns: 1fr;
+  }
+}

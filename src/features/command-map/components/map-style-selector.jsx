@@ -6,7 +6,7 @@ import styles from './map-style-selector.module.css';
 
 const DATASETS = [
   { key: 'boundaries', label: 'Địa giới 34 Tỉnh · 3.321 Xã/Phường' },
-  { key: 'rescue_stations', label: 'Trụ sở trực ban & cứu hộ' },
+  { key: 'rescue_stations', label: 'Trụ sở cơ quan & cứu hộ' },
 ];
 
 function formatTime(value) {
@@ -68,7 +68,7 @@ export function MapStyleSelector({
     {
       key: 'stations',
       icon: <SvgIcon name="building" color="emerald" />,
-      title: 'Trụ Sở Trực Ban & Cứu Hộ',
+      title: 'Trụ Sở Cơ Quan & Cứu Hộ',
       desc: 'Icon Công An, PCCC, Y Tế',
     },
   ];

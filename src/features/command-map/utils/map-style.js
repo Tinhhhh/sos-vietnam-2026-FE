@@ -124,24 +124,24 @@ export function buildBaseStyle({ wardsVisible, provincesVisible }) {
         filter: ['==', ['get', 'shapeName'], ''],
         paint: { 'line-color': '#fde047', 'line-width': 3.5, 'line-opacity': 1 },
       },
-      // Selected ward (legacy highlightWardBoundary)
-      {
-        id: 'ward-boundary-fill',
-        type: 'fill',
-        source: 'ward-boundary',
-        paint: { 'fill-color': '#facc15', 'fill-opacity': 0.12 },
-      },
+      // Selected ward (legacy highlightWardBoundary): amber glow, purple geofence fill, bright yellow stroke
       {
         id: 'ward-boundary-glow',
         type: 'line',
         source: 'ward-boundary',
-        paint: { 'line-color': '#f59e0b', 'line-width': 10, 'line-blur': 6, 'line-opacity': 0.7 },
+        paint: { 'line-color': '#f59e0b', 'line-width': 12, 'line-blur': 6, 'line-opacity': 0.85 },
+      },
+      {
+        id: 'ward-boundary-fill',
+        type: 'fill',
+        source: 'ward-boundary',
+        paint: { 'fill-color': '#a855f7', 'fill-opacity': 0.3 },
       },
       {
         id: 'ward-boundary-line',
         type: 'line',
         source: 'ward-boundary',
-        paint: { 'line-color': '#facc15', 'line-width': 3, 'line-opacity': 1 },
+        paint: { 'line-color': '#facc15', 'line-width': 3.5, 'line-opacity': 1 },
       },
     ],
   };

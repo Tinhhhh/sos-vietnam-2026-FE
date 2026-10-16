@@ -7,7 +7,13 @@ import { useToast } from '@/components/ui/toast/toast-context';
 import { useBoundaries } from '../hooks/use-boundaries';
 import { useDataStatus } from '../hooks/use-data-status';
 import { useWardDetails } from '../hooks/use-ward-details';
-import { distanceToFeatureKm, haversineKm, normalizeProvinceName, pointInFeature } from '../utils/geo-math';
+import {
+  bboxOf,
+  distanceToFeatureKm,
+  haversineKm,
+  normalizeProvinceName,
+  pointInFeature,
+} from '../utils/geo-math';
 import {
   EMPTY_FC,
   LAYERS,
@@ -18,6 +24,7 @@ import {
 } from '../utils/map-style';
 import { stationMatchesAgency } from '../utils/station-model';
 import { GeofenceDock } from './geofence-dock';
+import { IncidentMarkers } from './incident-markers';
 import { MapControls } from './map-controls';
 import { MapStyleSelector } from './map-style-selector';
 import styles from './map-view.module.css';
@@ -25,6 +32,7 @@ import { StationMarkers, createGpsBeacon } from './station-markers';
 import { WardHud } from './ward-hud';
 
 const WARDS_PREF_KEY = 'allWardsVisible';
+const EMPTY_INCIDENTS = [];
 const WARD_SCOPE_KEY = 'wardGridScope'; // 'focus' = province under the map centre, 'all' = whole country
 const COAST_SNAP_KM = 15; // centre this close to a province border still counts as that province
 const CITY_PROVINCES = new Set(['hà nội', 'hồ chí minh', 'cần thơ', 'đà nẵng', 'hải phòng', 'huế']);
@@ -107,20 +115,33 @@ function sortFacilities(list, firstId, origin) {
  * "Định vị GPS hiện trường": device position + beacon, its ward highlighted, and the
  * fix is the origin of the HUD distances.
  *
- * Imperative API (ref): focusUnit(), flyToStation(station)
+ * Imperative API (ref): focusUnit(), flyToStation(station), flyToIncident(incident)
  *
  * @param {{
  *   ref?: React.Ref,
  *   officer: { agency: string, level: string, province: string|null, ward: string|null },
  *   stations: object[],
+ *   incidents?: object[],            // active incidents of the officer's queue (SOS pins)
+ *   selectedIncidentId?: string|null,
+ *   onIncidentClick?: (incident) => void,
  *   onUnitLocated?: (coords: { lat: number, lng: number }) => void,
  * }} props
  */
-export function CommandMap({ ref, officer, stations, onUnitLocated }) {
+export function CommandMap({
+  ref,
+  officer,
+  stations,
+  incidents = EMPTY_INCIDENTS,
+  selectedIncidentId = null,
+  onIncidentClick,
+  onUnitLocated,
+}) {
   const containerRef = useRef(null);
   const mapRef = useRef(null);
   const styleReadyRef = useRef(false);
   const markersRef = useRef(null);
+  const incidentMarkersRef = useRef(null);
+  const onIncidentClickRef = useRef(onIncidentClick);
   const unitViewRef = useRef(null);
   const gpsMarkerRef = useRef(null);
   const toast = useToast();
@@ -189,6 +210,8 @@ export function CommandMap({ ref, officer, stations, onUnitLocated }) {
     return () => {
       markersRef.current?.clear();
       markersRef.current = null;
+      incidentMarkersRef.current?.clear();
+      incidentMarkersRef.current = null;
       gpsMarkerRef.current?.remove();
       gpsMarkerRef.current = null;
       map.remove();
@@ -211,6 +234,27 @@ export function CommandMap({ ref, officer, stations, onUnitLocated }) {
     map
       .getSource('ward-boundary')
       ?.setData(feature ? { type: 'FeatureCollection', features: [feature] } : EMPTY_FC);
+  }, []);
+
+  /** Legacy fitBounds on the selected ward: the whole polygon in view, clear of the HUD card (left). */
+  const fitWard = useCallback((feature) => {
+    const map = mapRef.current;
+    if (!map || !feature?.geometry) return;
+    const [minX, minY, maxX, maxY] = bboxOf(feature);
+    if (!Number.isFinite(minX)) return;
+    const { width, height } = map.getContainer().getBoundingClientRect();
+    const roomy = width > 900 && height > 500; // narrow map (phone, video call): small even padding
+    const padding = roomy
+      ? { top: 60, bottom: 90, left: 460, right: 60 }
+      : { top: 50, bottom: 70, left: 24, right: 24 };
+    map.stop();
+    map.fitBounds(
+      [
+        [minX, minY],
+        [maxX, maxY],
+      ],
+      { padding, maxZoom: 14.5, duration: 1000 },
+    );
   }, []);
 
   const showWard = useCallback(
@@ -256,6 +300,7 @@ export function CommandMap({ ref, officer, stations, onUnitLocated }) {
       const index = await ensureWards().catch(() => null);
       const ward = findWardOf(index?.get(normalizeProvinceName(station.province)), station);
       if (ward) {
+        fitWard(ward.feature);
         showWard(ward, station);
       } else {
         highlightWard(null);
@@ -268,7 +313,7 @@ export function CommandMap({ ref, officer, stations, onUnitLocated }) {
         });
       }
     },
-    [ensureWards, highlightProvince, highlightWard, provinces, showWard],
+    [ensureWards, fitWard, highlightProvince, highlightWard, provinces, showWard],
   );
 
   // Marker clicks need the latest showStation without re-creating markers.
@@ -340,6 +385,10 @@ export function CommandMap({ ref, officer, stations, onUnitLocated }) {
           duration: 900,
         });
         showStation(station);
+      },
+      flyToIncident(incident) {
+        if (incident.lat == null || incident.lng == null) return;
+        mapRef.current?.flyTo({ center: [incident.lng, incident.lat], zoom: 15.5, duration: 1200 });
       },
     }),
     [focusUnit, showStation, view.zoom],
@@ -463,6 +512,24 @@ export function CommandMap({ ref, officer, stations, onUnitLocated }) {
     markersRef.current.sync(visible);
   }, [loaded, layers.stations, view, agencyStations, detailMode, focusProvince]);
 
+  // ------------------------------------------------------- incident pins
+  useEffect(() => {
+    onIncidentClickRef.current = onIncidentClick;
+  });
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!loaded || !map) return;
+    if (!incidentMarkersRef.current) {
+      incidentMarkersRef.current = new IncidentMarkers(map, (inc) => onIncidentClickRef.current?.(inc));
+    }
+    incidentMarkersRef.current.sync(incidents);
+  }, [loaded, incidents]);
+
+  useEffect(() => {
+    incidentMarkersRef.current?.select(selectedIncidentId);
+  }, [selectedIncidentId, incidents]);
+
   // --------------------------------------------------------- dock actions
   const selectProvince = (name) => {
     const p = provinces?.find((x) => x.name === name);
@@ -478,8 +545,7 @@ export function CommandMap({ ref, officer, stations, onUnitLocated }) {
   const selectWard = (ward) => {
     setDockProvince(ward.province);
     setDockWard(ward);
-    mapRef.current?.stop();
-    mapRef.current?.flyTo({ center: ward.center, zoom: 14.5, pitch: 20, duration: 800 });
+    fitWard(ward.feature);
     showWard(ward);
   };
 
