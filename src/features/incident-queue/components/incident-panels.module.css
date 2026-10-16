@@ -3,6 +3,44 @@
  * Change the config and re-run instead of editing by hand; delete this header
  * once the file is taken over and edited manually.
  */
+/*  legacy css/style.css:1564  */
+.tracking-badge-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: var(--radius-full);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+.tracking-badge-status.pending {
+  background: rgba(255, 145, 0, 0.15);
+  border: 1px solid var(--rescue-orange);
+  color: #fbbf24;
+}
+.tracking-badge-status.dispatching {
+  background: rgba(0, 136, 255, 0.15);
+  border: 1px solid var(--police-blue);
+  color: #60a5fa;
+  animation: pulse-blue 2s infinite;
+}
+.tracking-badge-status.resolved {
+  background: rgba(16, 185, 129, 0.15);
+  border: 1px solid var(--hospital-green);
+  color: #34d399;
+}
+/*  legacy css/style.css:2525  */
+body:global(.theme-light) .queue-card {
+  background: #ffffff !important;
+  border-color: rgba(0, 0, 0, 0.1) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05) !important;
+  color: #0f172a !important;
+}
+body:global(.theme-light) .queue-card:hover {
+  border-color: #0284c7 !important;
+  box-shadow: 0 4px 14px rgba(0, 136, 255, 0.15) !important;
+}
 /*  legacy css/style.css:2640  */
 .sidebar-header {
   flex-shrink: 0;
@@ -51,6 +89,120 @@
   background: rgba(0, 236, 243, 0.65);
   border: 1.5px solid transparent;
   background-clip: padding-box;
+}
+.queue-card {
+  background: rgba(15, 23, 42, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  padding: 14px 16px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.queue-card:hover {
+  border-color: rgba(255, 255, 255, 0.25);
+  transform: translateY(-1px);
+}
+.queue-card.active {
+  border-color: var(--police-blue);
+  background: rgba(0, 136, 255, 0.1);
+  box-shadow: 0 0 20px var(--police-blue-glow);
+}
+.queue-card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+.queue-agency-tag {
+  font-size: 12px;
+  font-weight: 800;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+.queue-agency-tag.police {
+  background: rgba(0, 136, 255, 0.2);
+  color: #60a5fa;
+}
+.queue-agency-tag.hospital {
+  background: rgba(16, 185, 129, 0.2);
+  color: #34d399;
+}
+.queue-agency-tag.rescue {
+  background: rgba(255, 145, 0, 0.2);
+  color: #fbbf24;
+}
+.queue-time {
+  font-size: 11px;
+  color: var(--text-dim);
+}
+.queue-location {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-main);
+  margin-bottom: 4px;
+}
+.queue-incident-text {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-bottom: 12px;
+}
+.queue-card-actions {
+  display: flex;
+  gap: 8px;
+}
+.btn-gmaps-direct:hover {
+  background: rgba(56, 189, 248, 0.35) !important;
+  border-color: #38bdf8 !important;
+  color: #ffffff !important;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(56, 189, 248, 0.35);
+}
+/*  legacy css/style.css:2995  */
+body:global(.theme-police) .queue-card.active {
+  border-color: #0088ff !important;
+  background: rgba(0, 136, 255, 0.14) !important;
+  box-shadow:
+    0 8px 24px rgba(0, 136, 255, 0.25),
+    inset 0 1px 1px rgba(255, 255, 255, 0.2) !important;
+}
+body:global(.theme-csgt) .queue-card.active {
+  border-color: #f59e0b !important;
+  background: rgba(245, 158, 11, 0.14) !important;
+  box-shadow:
+    0 8px 24px rgba(245, 158, 11, 0.25),
+    inset 0 1px 1px rgba(255, 255, 255, 0.2) !important;
+}
+body:global(.theme-rescue) .queue-card.active {
+  border-color: #ac0015 !important;
+  background: rgba(172, 0, 21, 0.16) !important;
+  box-shadow:
+    0 8px 24px rgba(172, 0, 21, 0.3),
+    inset 0 1px 1px rgba(255, 255, 255, 0.2) !important;
+}
+body:global(.theme-hospital) .queue-card.active {
+  border-color: #10b981 !important;
+  background: rgba(16, 185, 129, 0.14) !important;
+  box-shadow:
+    0 8px 24px rgba(16, 185, 129, 0.25),
+    inset 0 1px 1px rgba(255, 255, 255, 0.2) !important;
+}
+body:global(.theme-admin) .queue-card.active {
+  border-color: #8b5cf6 !important;
+  background: rgba(139, 92, 246, 0.15) !important;
+  box-shadow:
+    0 8px 24px rgba(139, 92, 246, 0.25),
+    inset 0 1px 1px rgba(255, 255, 255, 0.2) !important;
+}
+.queue-card {
+  transition:
+    transform 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 0.2s ease,
+    background-color 0.2s ease !important;
+  will-change: transform;
+}
+.queue-card:active {
+  transform: scale(0.97) !important;
 }
 /*  legacy css/style.css:5338  */
 .queue-empty-cosmic-state {
@@ -311,6 +463,17 @@
 .panel-history-view {
   margin-right: 3px !important;
   margin-bottom: 8px !important;
+}
+@keyframes pulse-blue {
+  0% {
+    box-shadow: 0 0 0 0 rgba(0, 136, 255, 0.4);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(0, 136, 255, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(0, 136, 255, 0);
+  }
 }
 @keyframes rotateOrbitRing1 {
   from {

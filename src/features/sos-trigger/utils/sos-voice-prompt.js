@@ -13,7 +13,7 @@
 
 const VOICE_CONFIG_KEY = 'sos_voice_config';
 const PROMPT_TEXT =
-  'Hệ thống khẩn cấp ét-ô-ét đã kích hoạt. Xin giữ bình tĩnh, vui lòng chọn đơn vị bạn muốn báo trên màn hình. Sau đó, thông tin sẽ được chuyển tiếp ngay đến trực ban của đơn vị để điều phối lực lượng cứu hộ.';
+  'Hệ thống khẩn cấp ét-ô-ét đã kích hoạt. Xin giữ bình tĩnh, vui lòng chọn đơn vị bạn muốn báo trên màn hình. Sau đó, thông tin sẽ được chuyển tiếp ngay đến cán bộ của đơn vị để điều phối lực lượng cứu hộ.';
 
 // ── Region detection (ported from app.js detectVoiceRegion) ────────────────
 

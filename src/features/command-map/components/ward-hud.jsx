@@ -160,7 +160,7 @@ export function WardHud({ selection, origin, onPickFacility, onClose }) {
             flexWrap: 'wrap',
           }}
         >
-          <div style={{ color: '#22c55e', fontSize: 11, fontWeight: 700 }}>Số điện thoại trực ban:</div>
+          <div style={{ color: '#22c55e', fontSize: 11, fontWeight: 700 }}>Số điện thoại trực:</div>
           {phone ? (
             <a href={`tel:${cleanPhone}`} style={{ textDecoration: 'none', display: 'inline-block' }}>
               <div
@@ -192,8 +192,7 @@ export function WardHud({ selection, origin, onPickFacility, onClose }) {
           }}
         >
           <div style={{ marginBottom: 2 }}>
-            <b>- {isProvince ? 'Chỉ huy trực ban' : 'Trưởng CA'}:</b>{' '}
-            <span>{station?.officer || MISSING}</span>
+            <b>- {isProvince ? 'Chỉ huy' : 'Trưởng CA'}:</b> <span>{station?.officer || MISSING}</span>
           </div>
           <div style={{ marginBottom: 2 }}>
             <b>- Email:</b>{' '}

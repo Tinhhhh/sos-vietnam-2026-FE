@@ -2,16 +2,14 @@
  * One station shape for the whole console, whatever the backend returns.
  *   { id, name, agency, level, province, ward, address, phone, lat, lng,
  *     officer, email, services, facilityType }
- * agency: police | mobile-police | csgt | fire | hospital | traffic-rescue
+ * agency: police | csgt | fire | hospital
  * level:  province | ward | enterprise
  */
 const AGENCY_BY_TYPE = {
   POLICE: 'police',
-  MOBILE_POLICE: 'mobile-police',
   CSGT: 'csgt',
   FIRE: 'fire',
   HOSPITAL: 'hospital',
-  TRAFFIC_RESCUE: 'traffic-rescue',
 };
 
 const PROVINCE_WIDE_WARDS = new Set(['toàn thành phố', 'toàn tỉnh']);
@@ -48,8 +46,8 @@ const NON_OPERATIONAL = [
 ];
 
 /**
- * be-v2 does not store the unit level yet (the seed JSON has it). Until it does,
- * guess it from the name the way legacy did: ~98% right on the current data.
+ * be-v2 sends `level` null for stations the seed file has no admin level for
+ * (e.g. traffic rescue companies): guess it from the name the way legacy did.
  */
 function guessLevel(name, ward) {
   const n = name.toLowerCase();

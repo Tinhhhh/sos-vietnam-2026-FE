@@ -1,0 +1,342 @@
+/* Officer video call pane (left of the shrunk command map) + incoming call dialog. */
+
+.pane {
+  position: relative;
+  container-type: inline-size;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-width: 0;
+  background: #050a16;
+  border-right: 1px solid rgba(148, 163, 184, 0.18);
+  color: #f8fafc;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 14px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.15);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+.headerTitle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+.headerTitle small {
+  color: #94a3b8;
+  font-weight: 700;
+  letter-spacing: 0;
+}
+.headerMeta {
+  flex: 1;
+  min-width: 0;
+  text-align: right;
+  color: #94a3b8;
+  font-weight: 600;
+  letter-spacing: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.stage {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  background: #000;
+}
+.remote {
+  position: absolute;
+  inset: 0;
+}
+
+.overlayTop {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  right: 12px;
+  display: flex;
+  justify-content: space-between;
+  pointer-events: none;
+}
+.clock {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.6);
+  font-size: 15px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+.recDot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #ef4444;
+  animation: blink 1.2s infinite;
+}
+@keyframes blink {
+  50% {
+    opacity: 0.25;
+  }
+}
+.live {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  background: #dc2626;
+  font-size: 14px;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+}
+.liveWarn {
+  background: #b45309;
+}
+
+.pip {
+  position: absolute;
+  right: 14px;
+  bottom: 14px;
+  width: 26%;
+  min-width: 140px;
+  max-width: 240px;
+  aspect-ratio: 4 / 3;
+  border-radius: 10px;
+  border: 2px solid rgba(255, 255, 255, 0.7);
+  background: #0f172a;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.6);
+}
+.pipLabel {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 4px 6px;
+  background: rgba(0, 0, 0, 0.65);
+  font-size: 10.5px;
+  font-weight: 800;
+  text-align: center;
+  letter-spacing: 0.04em;
+}
+.avatar {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: #1e3a8a;
+  font-size: 24px;
+}
+
+.status {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 24px;
+  text-align: center;
+  background: rgba(2, 6, 23, 0.7);
+  font-size: 16px;
+  font-weight: 700;
+}
+.statusSub {
+  font-size: 13px;
+  font-weight: 500;
+  color: #cbd5e1;
+}
+.statusActions {
+  display: flex;
+  gap: 10px;
+}
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 18px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.08);
+  color: #f8fafc;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.pillGreen {
+  background: #16a34a;
+  border-color: #16a34a;
+}
+.pillRed {
+  background: #dc2626;
+  border-color: #dc2626;
+}
+
+.bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 10px 14px;
+  border-top: 1px solid rgba(148, 163, 184, 0.15);
+  background: #0b1220;
+}
+.ctrl {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  display: grid;
+  place-items: center;
+  font-size: 21px;
+  color: #f8fafc;
+  background: rgba(255, 255, 255, 0.08);
+  cursor: pointer;
+}
+.ctrl:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.ctrlOff {
+  background: #f8fafc;
+  color: #0f172a;
+}
+.ctrlOn {
+  background: #0284c7;
+  border-color: #38bdf8;
+}
+.hangup {
+  width: 52px;
+  height: 52px;
+  background: #dc2626;
+  border-color: #dc2626;
+  font-size: 25px;
+}
+.volume {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 8px;
+  color: #cbd5e1;
+  font-size: 20px;
+}
+.volume input {
+  width: 90px;
+  accent-color: #38bdf8;
+}
+
+/* Info card on top of the shrunk map (incident, coordinates, timer) */
+.mapCard {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 1000;
+  width: 210px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(5, 10, 22, 0.88);
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  color: #e2e8f0;
+  font-size: 11.5px;
+  line-height: 1.5;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.5);
+}
+.mapCard b {
+  color: #f8fafc;
+}
+.mapCardType {
+  margin-top: 6px;
+  font-weight: 800;
+  color: #fca5a5;
+  text-transform: uppercase;
+}
+.mapCardTimerLabel {
+  margin-top: 6px;
+  font-size: 10.5px;
+  color: #94a3b8;
+}
+.mapCardTimer {
+  font-size: 22px;
+  font-weight: 900;
+  color: #f87171;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Incoming call (citizen calls back) */
+.incoming {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 7000;
+  width: 320px;
+  padding: 16px;
+  border-radius: 18px;
+  background: #0b1220;
+  border: 1.5px solid #22c55e;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.7);
+  color: #f8fafc;
+  animation: pop 0.2s ease-out;
+}
+@keyframes pop {
+  from {
+    transform: translateY(10px) scale(0.97);
+    opacity: 0;
+  }
+}
+.incomingTitle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 15px;
+  font-weight: 800;
+}
+.incomingIcon {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: #16a34a;
+  font-size: 20px;
+  animation: shake 1.1s ease-in-out infinite;
+}
+@keyframes shake {
+  0%,
+  60%,
+  100% {
+    transform: rotate(0);
+  }
+  10%,
+  30%,
+  50% {
+    transform: rotate(-14deg);
+  }
+  20%,
+  40% {
+    transform: rotate(14deg);
+  }
+}
+.incomingSub {
+  margin: 8px 0 14px;
+  font-size: 12.5px;
+  color: #cbd5e1;
+}
+
+@container (max-width: 520px) {
+  .headerTitle small {
+    display: none;
+  }
+}

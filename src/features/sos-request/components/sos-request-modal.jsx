@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 
 import { Modal } from '@/components/ui/modal/modal';
 import { saveActiveIncident } from '@/stores/active-incident';
@@ -14,7 +14,9 @@ import formStyles from './sos-request-form.module.css';
 import styles from './sos-request-modal.module.css';
 
 const DEFAULT_REPORTER_NAME = 'Người dân cần cứu hộ';
-const PHONE_PATTERN = /^(\+?84|0)\d{8,10}$/;
+// Same rule as be-v2 (Incident.phone): 10 digits starting with 0
+const PHONE_PATTERN = /^0\d{9}$/;
+const PHONE_ERROR = 'Số điện thoại phải gồm đúng 10 chữ số, bắt đầu bằng 0 (ví dụ 0912345678).';
 const HOTLINE_HINT = 'Vui lòng gọi trực tiếp 113 / 114 / 115.';
 
 /**
@@ -30,6 +32,8 @@ export function SosRequestModal({ open, onClose, location, notify, onSubmitted }
   const [notes, setNotes] = useState('');
   const [reporterName, setReporterName] = useState('');
   const [reporterPhone, setReporterPhone] = useState('');
+  const [phoneError, setPhoneError] = useState(null);
+  const phoneInputRef = useRef(null);
   const [submitting, setSubmitting] = useState(false);
 
   const notifyWarning = useCallback((message) => notify(message, { tone: 'warning' }), [notify]);
@@ -49,8 +53,8 @@ export function SosRequestModal({ open, onClose, location, notify, onSubmitted }
     setTags([]); // tags belong to one force
   };
 
-  const toggleTag = (label) =>
-    setTags((list) => (list.includes(label) ? list.filter((t) => t !== label) : [...list, label]));
+  // Only one suggestion at a time: picking another replaces it, tapping the same one clears it
+  const toggleTag = (label) => setTags((list) => (list.includes(label) ? [] : [label]));
 
   const resetForm = () => {
     setTags([]);
@@ -59,9 +63,11 @@ export function SosRequestModal({ open, onClose, location, notify, onSubmitted }
   };
 
   const handleSubmit = async () => {
-    const phone = reporterPhone.replace(/[\s.-]/g, '');
+    const phone = reporterPhone;
     if (phone && !PHONE_PATTERN.test(phone)) {
-      notifyWarning('Số điện thoại chưa đúng định dạng (ví dụ 0912345678).');
+      setPhoneError(PHONE_ERROR);
+      phoneInputRef.current?.focus();
+      notifyWarning(PHONE_ERROR);
       return;
     }
 
@@ -181,15 +187,41 @@ export function SosRequestModal({ open, onClose, location, notify, onSubmitted }
                 Số điện thoại
               </label>
               <input
+                ref={phoneInputRef}
                 id="sosReporterPhone"
                 type="tel"
+                inputMode="numeric"
+                pattern="0[0-9]{9}"
                 className="input-field"
                 placeholder="09xxxxxxxx"
                 autoComplete="tel"
-                maxLength={20}
+                aria-invalid={!!phoneError}
+                aria-describedby={phoneError ? 'sosReporterPhoneError' : undefined}
+                style={
+                  phoneError
+                    ? { borderColor: '#f87171', boxShadow: '0 0 0 2px rgba(248, 113, 113, 0.25)' }
+                    : undefined
+                }
                 value={reporterPhone}
-                onChange={(e) => setReporterPhone(e.target.value)}
+                onChange={(e) => {
+                  // Digits only (typed or pasted "+84 912..." / "0912.345.678"): keep the first 10
+                  const digits = e.target.value.replace(/\D/g, '').slice(0, 10);
+                  setReporterPhone(digits);
+                  if (phoneError && (!digits || PHONE_PATTERN.test(digits))) setPhoneError(null);
+                }}
+                onBlur={() =>
+                  setPhoneError(reporterPhone && !PHONE_PATTERN.test(reporterPhone) ? PHONE_ERROR : null)
+                }
               />
+              {phoneError && (
+                <div
+                  id="sosReporterPhoneError"
+                  role="alert"
+                  style={{ marginTop: 6, fontSize: 12, lineHeight: 1.4, color: '#fca5a5' }}
+                >
+                  {phoneError}
+                </div>
+              )}
             </div>
           </div>
         </>

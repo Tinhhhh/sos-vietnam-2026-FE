@@ -129,6 +129,10 @@
 .custom-map-pin:hover .pin-core {
   transform: scale(1.2);
 }
+.pin-core.red {
+  background: linear-gradient(135deg, #ac0015, #7a000f);
+  box-shadow: 0 0 20px rgba(172, 0, 21, 0.88);
+}
 .pin-core.blue {
   background: linear-gradient(135deg, #00669a, #042348);
   box-shadow: 0 0 20px rgba(0, 236, 243, 0.85);
@@ -140,6 +144,20 @@
 .pin-core.orange {
   background: linear-gradient(135deg, #dfb077, #b58347);
   box-shadow: 0 0 20px rgba(223, 176, 119, 0.85);
+}
+.pin-ring-pulse {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 56px;
+  height: 56px;
+  margin-top: -28px;
+  margin-left: -28px;
+  border-radius: 50%;
+  border: 2px solid var(--sos-red, #ac0015);
+  animation: pulse-pin 2s infinite;
+  z-index: 1;
+  pointer-events: none;
 }
 .pin-tooltip {
   position: absolute;
@@ -266,6 +284,16 @@
   }
   50% {
     transform: translateY(-4px);
+  }
+}
+@keyframes pulse-pin {
+  0% {
+    transform: scale(0.6);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(2.2);
+    opacity: 0;
   }
 }
 @keyframes pulseHqPin {

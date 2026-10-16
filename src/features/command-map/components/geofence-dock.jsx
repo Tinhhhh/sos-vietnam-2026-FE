@@ -521,7 +521,7 @@ export function GeofenceDock({
                           textDecoration: 'none',
                           fontSize: 13,
                         }}
-                        title="Gọi trực ban"
+                        title="Gọi số trực"
                       >
                         📞
                       </a>

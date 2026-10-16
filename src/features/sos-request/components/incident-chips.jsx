@@ -1,7 +1,7 @@
 import { INCIDENT_SUGGESTIONS } from '../data/incident-suggestions';
 import styles from './incident-chips.module.css';
 
-/** Quick-pick incident tags for the chosen force (multi-select). */
+/** Quick-pick incident tags for the chosen force (single choice). */
 export function IncidentChips({ agencyId, selected, onToggle }) {
   const suggestions = INCIDENT_SUGGESTIONS[agencyId] || [];
 

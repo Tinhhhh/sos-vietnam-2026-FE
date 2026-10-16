@@ -9,8 +9,6 @@ const FILTERS = [
   { key: 'police', label: 'Công an khu vực' },
   { key: 'csgt', label: 'CSGT' },
   { key: 'fire', label: 'PCCC & CNCH' },
-  { key: 'hospital', label: '115' },
-  { key: 'traffic-rescue', label: 'Cứu Hộ' },
 ];
 
 /**

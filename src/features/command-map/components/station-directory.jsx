@@ -15,7 +15,6 @@ const AGENCY_LOOK = {
   csgt: { icon: '🚗', color: '#fbbf24' },
   fire: { icon: '🚒', color: '#f87171' },
   hospital: { icon: '🚑', color: '#34d399' },
-  'traffic-rescue': { icon: '🛠️', color: '#fb923c' },
 };
 
 /**

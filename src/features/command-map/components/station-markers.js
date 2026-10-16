@@ -6,7 +6,6 @@ const OTHER_AGENCY_PIN = {
   hospital: { icon: '🏥', color: styles.green },
   csgt: { icon: '🚓', color: styles.blue },
   fire: { icon: '🚒', color: styles.orange },
-  'traffic-rescue': { icon: '🛠️', color: styles.orange },
 };
 
 /** Legacy map-controller.js createStationMarker(): CAND emblem for police, coloured core for the rest. */
