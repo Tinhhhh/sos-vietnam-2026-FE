@@ -1,4 +1,5 @@
 // Port of legacy public/js/incident-dictionary.js (quick-pick incident chips per force).
+// Shared: the SOS form shows them as chips, the statistics page groups incidents by them.
 export const INCIDENT_SUGGESTIONS = {
   police: [
     '🚨 Bị cướp giật / Móc túi',
@@ -39,3 +40,13 @@ export const INCIDENT_SUGGESTIONS = {
     '🤰 Cấp cứu sản phụ chuyển dạ sinh nở',
   ],
 };
+
+/** Forces that receive SOS incidents (traffic rescue and hospital are directories only). */
+export const INCIDENT_CATEGORY_AGENCIES = ['police', 'csgt', 'fire'];
+
+/** "🚨 Bị cướp giật / Móc túi" -> "Bị cướp giật / Móc túi" (tags are stored with the chip's icon). */
+export function cleanIncidentLabel(label) {
+  return String(label || '')
+    .replace(/^[^\p{L}\p{N}]+/u, '')
+    .trim();
+}

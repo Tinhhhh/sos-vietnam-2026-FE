@@ -267,6 +267,46 @@
   color: #fca5a5;
 }
 
+/* "Yêu cầu chuyển lên cấp tỉnh": replaces the countdown once the officer is overdue */
+.provinceBtn {
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  border-color: rgba(248, 113, 113, 0.7);
+  background: rgba(127, 29, 29, 0.55);
+  animation: nudge 2s ease-in-out infinite;
+}
+.provinceBtnText {
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1.3;
+  color: #fecaca;
+}
+.provinceBtn:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+  animation: none;
+  border-color: rgba(255, 255, 255, 0.14);
+  background: rgba(15, 23, 42, 0.8);
+}
+.provinceBtn:disabled .provinceBtnText {
+  color: #cbd5e1;
+}
+@keyframes nudge {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(248, 113, 113, 0.45);
+  }
+  50% {
+    box-shadow: 0 0 0 6px rgba(248, 113, 113, 0);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .provinceBtn {
+    animation: none;
+  }
+}
+
 /* Cancel drop panel: opens upward above the bottom row */
 .cancelPanel {
   position: absolute;
@@ -473,4 +513,55 @@
 .ctrl:disabled {
   opacity: 0.4;
   cursor: not-allowed;
+}
+
+.lookupBox {
+  margin-top: 14px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(56, 189, 248, 0.45);
+  background: rgba(14, 165, 233, 0.1);
+  text-align: left;
+  max-width: 340px;
+  margin-inline: auto;
+}
+
+.lookupLabel {
+  font-size: 12px;
+  font-weight: 700;
+  color: #7dd3fc;
+}
+
+.lookupRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 4px 0 6px;
+}
+
+.lookupCode {
+  font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace;
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  color: #f8fafc;
+}
+
+.lookupCopy {
+  padding: 6px 12px;
+  border-radius: 9px;
+  border: 1px solid rgba(56, 189, 248, 0.6);
+  background: transparent;
+  color: #e0f2fe;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.lookupHint {
+  font-size: 12px;
+  line-height: 1.45;
+  color: #94a3b8;
 }

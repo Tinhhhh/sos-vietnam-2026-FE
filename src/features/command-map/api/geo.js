@@ -6,7 +6,9 @@ import { api } from '@/lib/api-client';
  * Polygons are static files in public/assets/geo (same files be-v2 seeds its DB
  * from). Lists come from be-v2:
  *   GET /api/v1/geo/provinces              -> data: [{ code, name, name_en, center_lat, center_lng }]
- *   GET /api/v1/geo/wards?provinceCode     -> data: [{ id, malk, name, province_code, province_name, sap_nhap_tu, center_lat, center_lng }]
+ *   GET /api/v1/geo/provinces/{provinceId}/wards
+ *                                          -> data: [{ id, malk, name, province_id, province, sap_nhap_tu, center_lat, center_lng }]
+ *                                             sorted by name; 404 for an unknown province (provinceId = provinces.code)
  *
  * Read-only data status (OFFICER/ADMIN):
  *   GET /api/v1/geo/data-status
@@ -29,8 +31,8 @@ export async function getProvinces() {
   return body?.data || [];
 }
 
-export async function getWardsOfProvince(provinceCode) {
-  const body = await api.get('/api/v1/geo/wards', { params: { provinceCode } });
+export async function getWardsOfProvince(provinceId) {
+  const body = await api.get(`/api/v1/geo/provinces/${encodeURIComponent(provinceId)}/wards`);
   return body?.data || [];
 }
 

@@ -4,8 +4,8 @@ import { api } from '@/lib/api-client';
  * Backend contracts used by the location feature.
  *
  * be-v2 today:   GET /api/v1/geo/resolve?lat&lng
- *                 -> { http_status, message, data: { ward, province, province_code, sap_nhap_tu } }
- *                 province_code = null khi toạ độ nằm ngoài ranh giới đã có dữ liệu.
+ *                 -> { http_status, message, data: { ward, ward_id, province, province_id, sap_nhap_tu } }
+ *                 province_id = null khi toạ độ nằm ngoài ranh giới đã có dữ liệu.
  * Not yet in be-v2 (legacy server.js had them; the UI falls back gracefully):
  *   GET /api/v1/geocode/reverse?lat&lng -> { ok, address }
  *   GET /api/v1/geocode/ip              -> { ok, lat, lng, address, city }
@@ -29,7 +29,7 @@ export async function getIpLocation() {
 export async function resolveJurisdiction({ lat, lng }) {
   const body = await api.get('/api/v1/geo/resolve', { params: { lat, lng } });
   const area = body?.data;
-  // Without province_code the backend only returns its "outside boundaries" placeholder.
-  if (!area?.province_code) return null;
+  // Without province_id the backend only returns its "outside boundaries" placeholder.
+  if (!area?.province_id) return null;
   return { ward: area.ward || '', province: area.province || '' };
 }

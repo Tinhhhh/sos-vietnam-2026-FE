@@ -228,8 +228,8 @@ export function StatisticsPage({ officer, backHref }) {
             <Panel title="Theo giờ trong ngày" hint="giờ Việt Nam">
               <HourChart byHour={data.byHour} />
             </Panel>
-            <Panel title="Theo loại sự cố" hint="nhãn người dân chọn">
-              <TagList byTag={data.byTag} />
+            <Panel title="Theo loại sự cố" hint="nhóm người dân chọn khi báo">
+              <TagList byTag={data.byTag} agency={data.scope.agency} />
             </Panel>
             {viewLevel !== 'ward' && (
               <Panel title="Giờ cao điểm" hint="thứ × giờ">

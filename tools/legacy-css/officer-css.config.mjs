@@ -90,47 +90,7 @@ export default {
   ],
 
   outputs: [
-    // ---- layout ---------------------------------------------------------
-    {
-      mode: 'module',
-      file: 'src/components/layouts/officer-layout/officer-layout.module.css',
-      classes: [
-        'dispatcher-layout',
-        'dispatcher-map-area',
-        'dispatcher-map-canvas-wrap',
-        'dispatcher-sidebar',
-        'sidebar-header-new',
-        'sidebar-title-group',
-        'sidebar-main-title',
-        'sidebar-header-actions',
-        'sidebar-view-all-btn',
-        'sidebar-tabs-nav',
-        'sidebar-tab-btn',
-        'tab-btn-text',
-        'tactical-detail-panel',
-        'tactical-detail-header',
-        'tactical-detail-title',
-        'tac-dot',
-        'tactical-detail-body',
-        'tactical-detail-empty',
-        'tac-empty-ring',
-        'tactical-tabbar',
-        'tac-tab-badge',
-      ],
-      states: ['is-active', 'has-incident', 'is-visible'],
-      ids: {
-        dispatcherSidebar: 'dispatcher-sidebar-root',
-        sidebarTabsNav: 'sidebar-tabs-nav-root',
-        tabBtnIncidents: 'tab-btn-incidents',
-        tabBtnHistory: 'tab-btn-history',
-        tabBtnStations: 'tab-btn-stations',
-        tabBtnEnterprises: 'tab-btn-enterprises',
-        tabBtnHospitals: 'tab-btn-hospitals',
-        tacticalDetailPanel: 'tactical-detail-panel-root',
-        tacticalDetailEmpty: 'tactical-detail-empty-root',
-        tacticalTabbar: 'tactical-tabbar-root',
-      },
-    },
+    // ---- layout: officer-layout/officer-console.module.css is hand-written (18/10/2026), not generated
 
     // ---- officer header -------------------------------------------------
     {
