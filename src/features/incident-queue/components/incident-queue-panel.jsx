@@ -4,10 +4,12 @@ import { CallIcon } from '@/components/ui/call-icons/call-icons';
 import { useToast } from '@/components/ui/toast/toast-context';
 import { useNow } from '@/hooks/use-now';
 
-import { claimIncident, releaseIncident } from '../api/incidents';
+import { claimIncident, escalateIncident, releaseIncident, requestDispatch } from '../api/incidents';
 import { TYPE_LOOK, formatCountdown, secondsToEscalation } from '../utils/incident-model';
+import { PAGE_SIZE } from '../utils/list-paging';
 import callStyles from './call-button.module.css';
 import { HandoverDialog } from './handover-dialog';
+import { Pager, RangeTabs } from './list-controls';
 import styles from './incident-panels.module.css';
 
 const AGENCY_TAG_CLASS = {
@@ -19,9 +21,8 @@ const AGENCY_TAG_CLASS = {
 
 const STATUS_LABEL = {
   PENDING: 'Chờ tiếp nhận',
-  ACCEPTED: 'Đã tiếp nhận',
   VERIFYING: 'Đang xác minh',
-  DISPATCHED: 'Đang điều phối',
+  RESOLVING: 'Đang điều động xử lý',
 };
 
 const actionButtonStyle = (bg, border, color) => ({
@@ -58,8 +59,9 @@ const badgeStyle = (bg, fg, border = 'transparent') => ({
 });
 
 /**
- * Sidebar tab "Sự Cố" (legacy #panelIncidentsView + renderQueue()): live queue of the
- * officer's unit, with claim / release / hand over. Like booking a ride: the first
+ * Window "Hàng đợi sự cố" (legacy #panelIncidentsView + renderQueue()): live queue of the
+ * officer's unit, with claim / release / hand over. The whole live queue is in memory (STOMP
+ * updates), so the 1 / 7 / 30 day filter and the pages (PAGE_SIZE cards) are applied here. Like booking a ride: the first
  * officer to press "Tiếp nhận" holds the incident, the others still see it locked.
  * An officer holds at most one incident at a time.
  *
@@ -92,6 +94,18 @@ export function IncidentQueuePanel({
   const holding = incidents.find((i) => i.heldByMe) || null;
   const [busyId, setBusyId] = useState(null);
   const [handoverOf, setHandoverOf] = useState(null);
+  const [days, setDays] = useState(null); // null = every open incident
+  const [page, setPage] = useState(0);
+
+  const since = days ? now - days * 24 * 3600 * 1000 : null;
+  const inRange = since ? incidents.filter((i) => !i.createdAt || i.createdAt.getTime() >= since) : incidents;
+  const totalPages = Math.max(1, Math.ceil(inRange.length / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages - 1); // the list shrinks when incidents are closed
+  const pageItems = inRange.slice(safePage * PAGE_SIZE, safePage * PAGE_SIZE + PAGE_SIZE);
+  const changeRange = (d) => {
+    setDays(d);
+    setPage(0);
+  };
 
   const run = async (inc, action, success) => {
     setBusyId(inc.id);
@@ -114,6 +128,25 @@ export function IncidentQueuePanel({
     claim: (inc) => run(inc, () => claimIncident(inc.id), `Đã tiếp nhận ca ${inc.id}`),
     release: (inc) => run(inc, () => releaseIncident(inc.id), `Đã trả ca ${inc.id} về hàng đợi chung`),
     handover: (inc) => setHandoverOf(inc),
+    // Verified with the citizen: ask for forces to be dispatched (VERIFYING -> RESOLVING)
+    dispatch: (inc) =>
+      run(inc, () => requestDispatch(inc.id), `Đã gửi yêu cầu điều động lực lượng cho ca ${inc.id}`),
+    // Cannot handle it at ward level: hand it to the province right now
+    escalate: async (inc) => {
+      if (!window.confirm(`Chuyển ca ${inc.id} lên cấp tỉnh/thành phố ngay? Bạn sẽ không giữ ca này nữa.`))
+        return;
+      setBusyId(inc.id);
+      try {
+        await escalateIncident(inc.id);
+        toast.show(`Đã chuyển ca ${inc.id} lên cấp tỉnh/thành phố`, { tone: 'success' });
+        onRetry();
+      } catch (err) {
+        toast.show(err.message, { tone: 'error' });
+        if (err.status === 409) onRetry();
+      } finally {
+        setBusyId(null);
+      }
+    },
     // Red phone: calling = taking the case (two officers never call the same citizen)
     call: async (inc) => {
       if (!onCall) return;
@@ -152,7 +185,9 @@ export function IncidentQueuePanel({
         }}
       >
         <span>
-          Đang chờ xử lý: <b style={{ color: '#f8fafc' }}>{incidents.length}</b>
+          Đang mở: <b style={{ color: '#f8fafc' }}>{incidents.length}</b>
+          {' · '}chờ tiếp nhận:{' '}
+          <b style={{ color: '#fca5a5' }}>{incidents.filter((i) => i.status === 'PENDING').length}</b>
         </span>
         <span
           style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
@@ -171,7 +206,15 @@ export function IncidentQueuePanel({
         </span>
       </div>
 
-      {status === 'ready' && incidents.length > 0 ? (
+      <div style={{ padding: '0 4px 8px' }}>
+        <RangeTabs value={days} onChange={changeRange} allowAll />
+      </div>
+
+      {status === 'ready' && incidents.length > 0 && inRange.length === 0 ? (
+        <div style={{ flex: 1, padding: '32px 12px', textAlign: 'center', color: '#94a3b8', fontSize: 13 }}>
+          Không có ca nào đang mở được báo trong {days} ngày qua.
+        </div>
+      ) : status === 'ready' && incidents.length > 0 ? (
         <div
           className={styles.incidentQueueList}
           style={{
@@ -184,7 +227,7 @@ export function IncidentQueuePanel({
             paddingRight: 2,
           }}
         >
-          {incidents.map((inc) => (
+          {pageItems.map((inc) => (
             <QueueCard
               key={inc.id}
               incident={inc}
@@ -201,6 +244,10 @@ export function IncidentQueuePanel({
         </div>
       ) : (
         <WaitingShield status={status} error={error} onRetry={onRetry} />
+      )}
+
+      {status === 'ready' && incidents.length > 0 && (
+        <Pager page={safePage} totalPages={totalPages} total={inRange.length} onPage={setPage} />
       )}
 
       <HandoverDialog
@@ -325,25 +372,51 @@ function ClaimControls({ incident: inc, holding, busy, canCall, actions }) {
     fn(inc);
   };
   if (inc.heldByMe) {
+    const verifying = inc.status === 'VERIFYING';
+    const canEscalate = inc.level === 'ward' && !inc.escalatedAt;
     return (
       <span style={{ display: 'inline-flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
         <span style={badgeStyle('rgba(52, 211, 153, 0.18)', '#6ee7b7', 'rgba(52, 211, 153, 0.5)')}>
-          ✅ Bạn đang xử lý
+          {verifying ? '🔎 Bạn đang xác minh' : '🚓 Đang điều động lực lượng'}
         </span>
         <CallButton
           disabled={busy || !canCall}
           title="Gọi video cho người báo"
           onClick={stop(actions.call)}
         />
-        <button
-          type="button"
-          disabled={busy}
-          style={actionButtonStyle('rgba(148, 163, 184, 0.15)', '#94a3b8', '#e2e8f0')}
-          title="Trả ca về hàng đợi chung cho cán bộ khác nhận (đồng hồ leo thang tính tiếp)"
-          onClick={stop(actions.release)}
-        >
-          ↩ Trả về hàng đợi
-        </button>
+        {verifying && (
+          <button
+            type="button"
+            disabled={busy}
+            style={actionButtonStyle('rgba(52, 211, 153, 0.18)', '#34d399', '#d1fae5')}
+            title="Đã xác minh với người báo: gửi yêu cầu điều động lực lượng tới hiện trường"
+            onClick={stop(actions.dispatch)}
+          >
+            🚓 Yêu cầu điều động
+          </button>
+        )}
+        {canEscalate && (
+          <button
+            type="button"
+            disabled={busy}
+            style={actionButtonStyle('rgba(255, 42, 75, 0.15)', '#ff6b81', '#fecdd3')}
+            title="Cấp xã không xử lý được: chuyển ca lên cấp tỉnh/thành phố ngay"
+            onClick={stop(actions.escalate)}
+          >
+            ⚡ Chuyển lên tỉnh
+          </button>
+        )}
+        {verifying && (
+          <button
+            type="button"
+            disabled={busy}
+            style={actionButtonStyle('rgba(148, 163, 184, 0.15)', '#94a3b8', '#e2e8f0')}
+            title="Trả ca về hàng đợi chung cho cán bộ khác nhận (đồng hồ leo thang tính tiếp)"
+            onClick={stop(actions.release)}
+          >
+            ↩ Trả về hàng đợi
+          </button>
+        )}
         <button
           type="button"
           disabled={busy}
@@ -362,7 +435,7 @@ function ClaimControls({ incident: inc, holding, busy, canCall, actions }) {
         style={badgeStyle('rgba(100, 116, 139, 0.2)', '#cbd5e1', '#64748b')}
         title="Ca đã có cán bộ khác tiếp nhận"
       >
-        🔒 Đang xử lý: {inc.handler.fullName}
+        🔒 {inc.status === 'RESOLVING' ? 'Đang điều động' : 'Đang xác minh'}: {inc.handler.fullName}
       </span>
     );
   }

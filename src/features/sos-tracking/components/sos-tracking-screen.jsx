@@ -7,7 +7,7 @@ import { useNow } from '@/hooks/use-now';
 import { END_REASON_TEXT, VIDEO_PROFILES } from '@/lib/webrtc/call-session';
 import { getIceServers } from '@/lib/webrtc/ice-servers';
 
-import { cancelIncident } from '../api/tracking';
+import { cancelIncident, requestProvince } from '../api/tracking';
 import { useIncidentTracking } from '../hooks/use-incident-tracking';
 import { CLOSED_STATUSES, TYPE_TEXT, receivingUnit } from '../utils/tracking-model';
 import { CancelControl } from './cancel-control';
@@ -69,6 +69,22 @@ function TrackingContent({ initialIncident, token, notify, onClosed }) {
   useEffect(() => {
     if (closed) hangUp();
   }, [closed, hangUp]);
+
+  const [requesting, setRequesting] = useState(false);
+  const askProvince = async () => {
+    if (!window.confirm('Chuyển tin báo lên cấp tỉnh/thành phố? Cán bộ xã/phường sẽ không giữ ca này nữa.'))
+      return;
+    setRequesting(true);
+    try {
+      const updated = await requestProvince(incident.id, token);
+      if (updated) tracking.setIncident(updated);
+      notify('Đã chuyển tin báo lên cấp tỉnh/thành phố. Vui lòng giữ máy.', { tone: 'success' });
+    } catch (err) {
+      notify(`Không chuyển được: ${err.message}`, { tone: 'error' });
+    } finally {
+      setRequesting(false);
+    }
+  };
 
   const confirmCancel = async (reason) => {
     setCancelling(true);
@@ -142,7 +158,11 @@ function TrackingContent({ initialIncident, token, notify, onClosed }) {
             call={call}
             peerName={call?.peer?.name}
           />
-          <div className={styles.incidentId}>Mã tin báo: {incident.id}</div>
+          {incident.lookupCode ? (
+            <LookupCode code={incident.lookupCode} />
+          ) : (
+            <div className={styles.incidentId}>Mã tin báo: {incident.id}</div>
+          )}
         </div>
 
         {incoming && (
@@ -191,11 +211,45 @@ function TrackingContent({ initialIncident, token, notify, onClosed }) {
       {!closed && (
         <div className={styles.bottom}>
           <CancelControl busy={cancelling} onConfirm={confirmCancel} />
-          <WaitTimer incident={incident} now={now} />
+          <WaitTimer incident={incident} now={now} busy={requesting} onRequestProvince={askProvince} />
         </div>
       )}
     </div>
   );
+}
+
+/** Shown once the incident is RESOLVED: code + last 4 phone digits re-open the record via "Tra Cứu". */
+function LookupCode({ code }) {
+  const [copied, setCopied] = useState(false);
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(code);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      setCopied(false);
+    }
+  };
+  return (
+    <div className={styles.lookupBox}>
+      <div className={styles.lookupLabel}>Mã tra cứu của bạn</div>
+      <div className={styles.lookupRow}>
+        <span className={styles.lookupCode}>{code}</span>
+        <button type="button" className={styles.lookupCopy} onClick={copy}>
+          {copied ? 'Đã chép' : 'Sao chép'}
+        </button>
+      </div>
+      <div className={styles.lookupHint}>
+        Lưu lại mã này. Bấm "Tra Cứu" ở trang chủ, nhập mã và 4 số cuối số điện thoại để xem lại thông tin cứu
+        hộ.
+      </div>
+    </div>
+  );
+}
+
+/** "Cán bộ Nguyễn Văn A"; account names that already start with "Cán bộ" are not doubled. */
+function officerTitle(name) {
+  return /^cán bộ/i.test(name) ? name : `Cán bộ ${name}`;
 }
 
 function StatusText({ incident, unit, incoming, call, peerName }) {
@@ -212,9 +266,12 @@ function StatusText({ incident, unit, incoming, call, peerName }) {
   } else if (incident.status === 'RESOLVED') {
     title = 'Sự việc đã được xử lý xong';
     sub = 'Cảm ơn bạn đã báo tin.';
+  } else if (incident.status === 'RESOLVING') {
+    title = 'Lực lượng đang được điều động tới hiện trường';
+    sub = `${unit}${incident.handler ? ` · ${officerTitle(incident.handler.fullName)}` : ''}. Giữ an toàn và giữ máy.`;
   } else if (incident.handler) {
-    title = `Cán bộ ${incident.handler.fullName} đã tiếp nhận`;
-    sub = `${unit}. Cán bộ sẽ gọi video cho bạn, hoặc bạn có thể gọi trước.`;
+    title = `${officerTitle(incident.handler.fullName)} đang xác minh tin báo`;
+    sub = `${unit}. Cán bộ sẽ gọi video để xác minh, hoặc bạn có thể gọi trước.`;
   } else {
     title = `Đang kết nối tới ${unit}...`;
     sub = incident.escalatedAt

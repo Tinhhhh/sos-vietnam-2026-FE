@@ -1,4 +1,4 @@
-import { INCIDENT_SUGGESTIONS } from '../data/incident-suggestions';
+import { INCIDENT_SUGGESTIONS } from '@/config/incident-suggestions';
 import styles from './incident-chips.module.css';
 
 /** Quick-pick incident tags for the chosen force (single choice). */

@@ -6,6 +6,7 @@ import { CitizenLayout } from '@/components/layouts/citizen-layout/citizen-layou
 import { useToast } from '@/components/ui/toast/toast-context';
 import { paths } from '@/config/paths';
 import { FamilySosModal } from '@/features/family-sos/components/family-sos-modal';
+import { IncidentLookupModal } from '@/features/incident-lookup';
 import { useGeolocation } from '@/features/location/hooks/use-geolocation';
 import { SurvivalGuideModal } from '@/features/survival-guide/components/survival-guide-modal';
 
@@ -27,7 +28,8 @@ export function CitizenRoot() {
           onInstallApp={() => toast.show('Cài lối tắt (PWA) sẽ có ở module PWA.', { tone: 'info' })}
           onOpenFamilySos={() => setOpenModal('family')}
           onOpenSurvivalGuide={() => setOpenModal('guide')}
-          dispatcherHref={paths.dispatcher.root.getHref()}
+          onOpenLookup={() => setOpenModal('lookup')}
+          dispatcherHref={paths.officer.login.getHref()}
         />
       }
       overlay={
@@ -39,6 +41,7 @@ export function CitizenRoot() {
             notify={toast.show}
           />
           <SurvivalGuideModal open={openModal === 'guide'} onClose={closeModal} />
+          <IncidentLookupModal open={openModal === 'lookup'} onClose={closeModal} />
         </>
       }
     >

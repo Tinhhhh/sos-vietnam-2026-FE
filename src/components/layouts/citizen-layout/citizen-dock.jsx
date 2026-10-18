@@ -1,7 +1,13 @@
 import styles from './citizen-dock.module.css';
 
 /** Bottom floating "liquid glass" dock of the citizen portal. */
-export function CitizenDock({ onInstallApp, onOpenFamilySos, onOpenSurvivalGuide, dispatcherHref }) {
+export function CitizenDock({
+  onInstallApp,
+  onOpenFamilySos,
+  onOpenSurvivalGuide,
+  onOpenLookup,
+  dispatcherHref,
+}) {
   return (
     <header className={styles.headerNavCenter}>
       <nav className={`${styles.navCenterPill} liquid-glass`} aria-label="Tiện ích">
@@ -52,6 +58,19 @@ export function CitizenDock({ onInstallApp, onOpenFamilySos, onOpenSurvivalGuide
             <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
           </svg>{' '}
           Cẩm Nang
+        </button>
+
+        <button
+          type="button"
+          className={styles.navPillItem}
+          title="Xem lại thông tin cứu hộ bằng mã tra cứu"
+          onClick={onOpenLookup}
+        >
+          <svg className="svg-ico ico-md ico-blue" viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="11" cy="11" r="7" />
+            <path d="M21 21l-4.35-4.35" />
+          </svg>{' '}
+          Tra Cứu
         </button>
 
         <a

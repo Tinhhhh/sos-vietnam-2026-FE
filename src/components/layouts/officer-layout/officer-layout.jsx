@@ -1,161 +1,291 @@
+import { useEffect, useRef, useState } from 'react';
+
 import { SvgIcon } from '@/components/ui/svg-icon/svg-icon';
 
-import { CallSplit } from './call-split';
-import styles from './officer-layout.module.css';
-import { useTacticalLayout } from './use-tactical-layout';
+import styles from './officer-console.module.css';
 
-const TAB_ID_CLASS = {
-  incidents: styles.tabBtnIncidents,
-  history: styles.tabBtnHistory,
-  stations: styles.tabBtnStations,
-  enterprises: styles.tabBtnEnterprises,
-  hospitals: styles.tabBtnHospitals,
-};
+const SIDE_KEY = 'callMapWidth';
+const MIN_SIDE = 280;
+const MIN_CALL = 380;
+const DEFAULT_SIDE_RATIO = 0.34; // GPS widget about a third of the stage, on the right
+const ACTIONS_KEY = 'consoleActionsHidden';
+
+function readActionsHidden() {
+  try {
+    return localStorage.getItem(ACTIONS_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+function readSideWidth() {
+  try {
+    const v = Number(localStorage.getItem(SIDE_KEY));
+    return Number.isFinite(v) && v > 0 ? v : null;
+  } catch {
+    return null;
+  }
+}
 
 /**
- * Officer console shell (legacy dispatcher.html .dispatcher-layout):
- * header, map area (top bar + map), right sidebar with tabs, detail panel
- * (3-zone layout) and the mobile tab bar.
+ * Officer console shell (national dispatch layout):
+ *
+ *   [ header                                                       ]
+ *   [rail] [ action bar: tiles that open the console windows        ]
+ *   [rail] [ stage: map full size | during a call: call  ║  GPS map ]
+ *
+ * The map element keeps one place in the tree, so MapLibre is not re-created when a call starts:
+ * CSS moves its cell to the right column (the "real-time GPS tracking" widget) and the call pane
+ * takes the main cell. The border between them can be dragged (width remembered per browser).
+ * `window` is drawn over the stage (queue, history, directories...).
  *
  * @param {{
  *   header: React.ReactNode,
- *   topBar: React.ReactNode,
+ *   rail: React.ReactNode,
+ *   actions: React.ReactNode,
  *   map: React.ReactNode,
- *   tabs: { key: string, label: React.ReactNode, icon: React.ReactNode, title?: string }[],
- *   activeTab: string,
- *   onTabChange: (key: string) => void,
- *   onClearIncidents?: () => void,
- *   panel: React.ReactNode,
- *   queueCount?: number,
- *   callPane?: React.ReactNode,   // video call: shown left of the map, map shrinks to the right (resizable)
- *   mapOverlay?: React.ReactNode, // drawn over the shrunk map during a call
+ *   mapTitle: React.ReactNode,
+ *   callPane?: React.ReactNode,
+ *   mapOverlay?: React.ReactNode,
+ *   window?: React.ReactNode,
  * }} props
  */
 export function OfficerLayout({
   header,
-  topBar,
+  rail,
+  actions,
   map,
-  tabs,
-  activeTab,
-  onTabChange,
-  onClearIncidents,
-  panel,
-  queueCount = 0,
+  mapTitle,
   callPane,
   mapOverlay,
+  window: consoleWindow,
 }) {
-  const { mode, mobileView, setMobileView } = useTacticalLayout({ incidentSelected: false });
+  const inCall = !!callPane;
+  const stageRef = useRef(null);
+  const [sideWidth, setSideWidth] = useState(readSideWidth);
+  const [dragging, setDragging] = useState(false);
+  // The tile bar can be folded away (arrow at its right end) to give the map more room
+  const [actionsHidden, setActionsHidden] = useState(readActionsHidden);
+  const toggleActions = () =>
+    setActionsHidden((hidden) => {
+      try {
+        localStorage.setItem(ACTIONS_KEY, hidden ? '0' : '1');
+      } catch {
+        // storage blocked: only lasts this session
+      }
+      return !hidden;
+    });
 
-  const goMobile = (view) => {
-    setMobileView(view);
-    if (view === 'queue' && activeTab !== 'incidents' && activeTab !== 'history') onTabChange('incidents');
+  useEffect(() => {
+    if (!inCall || sideWidth != null || !stageRef.current) return;
+    setSideWidth(Math.round(stageRef.current.clientWidth * DEFAULT_SIDE_RATIO));
+  }, [inCall, sideWidth]);
+
+  const clamp = (w) => {
+    const total = stageRef.current?.clientWidth || 0;
+    return Math.round(Math.min(Math.max(w, MIN_SIDE), Math.max(MIN_SIDE, total - MIN_CALL)));
+  };
+
+  const startDrag = (e) => {
+    e.preventDefault();
+    const stage = stageRef.current;
+    if (!stage) return;
+    setDragging(true);
+    const move = (ev) => setSideWidth(clamp(stage.getBoundingClientRect().right - ev.clientX));
+    const up = () => {
+      setDragging(false);
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+      setSideWidth((w) => {
+        try {
+          localStorage.setItem(SIDE_KEY, String(w));
+        } catch {
+          // storage blocked: width only lasts this session
+        }
+        return w;
+      });
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+  };
+
+  const onKey = (e) => {
+    if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+    e.preventDefault();
+    setSideWidth((w) => clamp((w || 0) + (e.key === 'ArrowLeft' ? 40 : -40)));
   };
 
   return (
-    <>
+    <div className={styles.console}>
       {header}
-
-      <div className={styles.dispatcherLayout}>
-        <div className={styles.dispatcherMapArea}>
-          {!callPane && topBar}
-          <div className={styles.dispatcherMapCanvasWrap}>
-            <CallSplit callPane={callPane} mapOverlay={mapOverlay}>
-              {map}
-            </CallSplit>
+      <div className={styles.body}>
+        <nav className={styles.rail} aria-label="Thanh công cụ cán bộ">
+          {rail}
+        </nav>
+        <div className={styles.workspace}>
+          <div className={`${styles.actionsRow} ${actionsHidden ? styles.actionsHidden : ''}`}>
+            {!actionsHidden && <div className={styles.actions}>{actions}</div>}
+            <button
+              type="button"
+              className={styles.actionsToggle}
+              aria-expanded={!actionsHidden}
+              aria-label={actionsHidden ? 'Hiện thanh chức năng' : 'Ẩn thanh chức năng'}
+              title={actionsHidden ? 'Hiện thanh chức năng' : 'Ẩn thanh chức năng'}
+              onClick={toggleActions}
+            >
+              <SvgIcon
+                name="chevronUp"
+                size="sm"
+                style={actionsHidden ? { transform: 'rotate(180deg)' } : undefined}
+              />
+            </button>
+          </div>
+          <div
+            ref={stageRef}
+            className={`${styles.stage} ${inCall ? styles.inCall : ''} ${dragging ? styles.dragging : ''}`}
+            style={inCall && sideWidth ? { '--side-width': `${sideWidth}px` } : undefined}
+          >
+            {inCall && (
+              <section key="call" className={`${styles.panel} ${styles.callCell}`}>
+                {callPane}
+              </section>
+            )}
+            <section key="map" className={`${styles.panel} ${styles.mapCell}`}>
+              <header className={styles.panelHeader}>
+                <span className={styles.panelTitle}>
+                  <SvgIcon name={inCall ? 'target' : 'map'} color="blue" />
+                  {mapTitle}
+                </span>
+                {inCall && <span className={styles.panelBadge}>GPS</span>}
+              </header>
+              <div className={styles.mapBody}>
+                {map}
+                {inCall && mapOverlay}
+              </div>
+              {inCall && (
+                <div
+                  role="separator"
+                  aria-orientation="vertical"
+                  aria-label="Kéo để đổi độ rộng bản đồ"
+                  tabIndex={0}
+                  className={styles.handle}
+                  onPointerDown={startDrag}
+                  onKeyDown={onKey}
+                />
+              )}
+            </section>
+            {consoleWindow}
           </div>
         </div>
-
-        <aside className={`${styles.dispatcherSidebar} ${styles.dispatcherSidebarRoot} liquid-glass`}>
-          <div className={styles.sidebarHeaderNew}>
-            <div className={styles.sidebarTitleGroup}>
-              <h2 className={styles.sidebarMainTitle}>Danh Sách Sự Cố</h2>
-            </div>
-            <div className={styles.sidebarHeaderActions}>
-              <button
-                type="button"
-                className={styles.sidebarViewAllBtn}
-                title="Xóa / Dọn dẹp danh sách sự cố"
-                style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}
-                onClick={onClearIncidents}
-              >
-                <SvgIcon name="trash" color="red" /> Xóa
-              </button>
-            </div>
-          </div>
-
-          <div className={`${styles.sidebarTabsNav} ${styles.sidebarTabsNavRoot}`}>
-            {tabs.map((tab) => (
-              <button
-                key={tab.key}
-                type="button"
-                title={tab.title}
-                className={`${styles.sidebarTabBtn} ${TAB_ID_CLASS[tab.key] || ''} ${activeTab === tab.key ? styles.isActive : ''}`}
-                onClick={() => onTabChange(tab.key)}
-              >
-                {tab.icon}
-                <span className={styles.tabBtnText}>{tab.label}</span>
-              </button>
-            ))}
-          </div>
-
-          {panel}
-        </aside>
-
-        <section
-          className={`${styles.tacticalDetailPanel} ${styles.tacticalDetailPanelRoot}`}
-          aria-label="Chi tiết hồ sơ sự cố"
-        >
-          <div className={styles.tacticalDetailHeader}>
-            <h2 className={styles.tacticalDetailTitle}>
-              <span className={styles.tacDot} /> CHI TIẾT SỰ CỐ TÁC CHIẾN
-            </h2>
-          </div>
-          <div className={styles.tacticalDetailBody}>
-            <div className={`${styles.tacticalDetailEmpty} ${styles.tacticalDetailEmptyRoot}`}>
-              <div className={styles.tacEmptyRing}>
-                <SvgIcon name="clock" size="lg" />
-              </div>
-              <strong>Chưa chọn sự cố</strong>
-              <span>Nhấp vào sự cố trong danh sách hoặc trên bản đồ để chỉ huy điều phối.</span>
-            </div>
-          </div>
-        </section>
       </div>
+    </div>
+  );
+}
 
-      {mode === 'mobile' && (
-        <nav
-          className={`${styles.tacticalTabbar} ${styles.tacticalTabbarRoot}`}
-          aria-label="Điều hướng bảng điều hành"
-        >
-          <button
-            type="button"
-            className={mobileView === 'map' ? styles.isActive : ''}
-            onClick={() => goMobile('map')}
-          >
-            <SvgIcon name="map" size="sm" />
-            <span>Bản đồ</span>
-          </button>
-          <button
-            type="button"
-            className={mobileView === 'queue' ? styles.isActive : ''}
-            onClick={() => goMobile('queue')}
-          >
-            <SvgIcon name="alert" size="sm" />
-            <span>Sự cố</span>
-            <em className={`${styles.tacTabBadge} ${queueCount > 0 ? styles.isVisible : ''}`}>
-              {queueCount}
-            </em>
-          </button>
-          <button
-            type="button"
-            className={mobileView === 'detail' ? styles.isActive : ''}
-            onClick={() => goMobile('detail')}
-          >
-            <SvgIcon name="file" size="sm" />
-            <span>Chi tiết</span>
-          </button>
-        </nav>
-      )}
-    </>
+/** One rail button (icon + short label). `tone="danger"` for logout. */
+export function RailButton({ icon, label, title, active, tone, onClick, buttonRef, badge }) {
+  return (
+    <button
+      ref={buttonRef}
+      type="button"
+      title={title || label}
+      className={`${styles.railBtn} ${active ? styles.railActive : ''} ${tone === 'danger' ? styles.railDanger : ''}`}
+      onClick={onClick}
+    >
+      <SvgIcon name={icon} size="sm" />
+      <span className={styles.railLabel}>{label}</span>
+      {badge ? <em className={styles.railBadge}>{badge}</em> : null}
+    </button>
+  );
+}
+
+export function RailSpacer() {
+  return <div className={styles.railSpacer} />;
+}
+
+/**
+ * Action-bar tile like the reference design: coloured border, title + subtitle.
+ * @param {{ tone?: 'red'|'amber'|'orange'|'blue'|'cyan'|'purple'|'green', active?: boolean, count?: number }} props
+ */
+export function ActionTile({ icon, title, subtitle, tone = 'blue', active, count, onClick }) {
+  return (
+    <button
+      type="button"
+      className={`${styles.tile} ${styles[`tone_${tone}`] || ''} ${active ? styles.tileActive : ''}`}
+      aria-pressed={!!active}
+      onClick={onClick}
+    >
+      <span className={styles.tileIcon}>
+        <SvgIcon name={icon} size="sm" />
+      </span>
+      <span className={styles.tileText}>
+        <span className={styles.tileTitle}>{title}</span>
+        <span className={styles.tileSub}>{subtitle}</span>
+      </span>
+      {count > 0 && <em className={styles.tileCount}>{count}</em>}
+    </button>
+  );
+}
+
+/**
+ * Window over the stage (incident queue, history, directories). Drag it by its title bar
+ * (it stays inside the stage); Esc or × closes it. On phones it covers the whole stage.
+ */
+export function ConsoleWindow({ title, icon, onClose, children }) {
+  const [offset, setOffset] = useState({ x: 0, y: 0 });
+  const ref = useRef(null);
+
+  useEffect(() => {
+    const onKeyDown = (e) => {
+      if (e.key !== 'Escape') return;
+      if (e.target.closest?.('input, textarea, select, [role="dialog"]')) return;
+      onClose();
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [onClose]);
+
+  const startDrag = (e) => {
+    if (e.button !== 0 || e.target.closest('button')) return;
+    const el = ref.current;
+    const stage = el?.parentElement;
+    if (!el || !stage) return;
+    e.preventDefault();
+    const start = { px: e.clientX, py: e.clientY, x: offset.x, y: offset.y };
+    const rect = el.getBoundingClientRect();
+    const box = stage.getBoundingClientRect();
+    const min = { x: start.x + box.left - rect.left, y: start.y + box.top - rect.top };
+    const max = { x: start.x + box.right - rect.right, y: start.y + box.bottom - rect.top - 48 };
+    const move = (ev) => {
+      const x = Math.min(Math.max(start.x + ev.clientX - start.px, min.x), Math.max(min.x, max.x));
+      const y = Math.min(Math.max(start.y + ev.clientY - start.py, min.y), Math.max(min.y, max.y));
+      setOffset({ x, y });
+    };
+    const up = () => {
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+  };
+
+  return (
+    <section
+      ref={ref}
+      className={styles.window}
+      style={{ transform: `translate(${offset.x}px, ${offset.y}px)` }}
+      aria-label={typeof title === 'string' ? title : undefined}
+    >
+      <header className={styles.windowBar} onPointerDown={startDrag}>
+        <span className={styles.windowTitle}>
+          {icon}
+          {title}
+        </span>
+        <button type="button" className={styles.windowClose} aria-label="Đóng cửa sổ" onClick={onClose}>
+          <SvgIcon name="x" size="sm" />
+        </button>
+      </header>
+      <div className={styles.windowBody}>{children}</div>
+    </section>
   );
 }

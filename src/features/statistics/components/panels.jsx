@@ -17,6 +17,12 @@ import {
   YAxis,
 } from 'recharts';
 
+import {
+  INCIDENT_CATEGORY_AGENCIES,
+  INCIDENT_SUGGESTIONS,
+  cleanIncidentLabel,
+} from '@/config/incident-suggestions';
+
 import { formatChange, formatDuration, formatNumber, formatRate, shortDay } from '../utils/format';
 import { AGENCY_LOOK } from '../utils/slices';
 import styles from './statistics.module.css';
@@ -183,26 +189,78 @@ export function DayChart({ byDay }) {
   );
 }
 
-export function TagList({ byTag }) {
-  if (!byTag.length) return <div className={styles.empty}>Chưa có sự cố trong khoảng này.</div>;
-  const max = Math.max(...byTag.map((t) => t.count));
+/**
+ * Incidents per category: exactly the suggestion groups the SOS form offers for the force(s) in
+ * scope (without their icons), zero rows included; no suggestion picked or a tag outside the list = "Khác".
+ * @param {{ byTag: { tag: string | null, count: number }[], agency?: string | null }} props
+ *   agency: 'police' | 'csgt' | 'fire'; empty = every force (admin, all forces)
+ */
+export function TagList({ byTag, agency }) {
+  const agencies = agency ? [agency] : INCIDENT_CATEGORY_AGENCIES;
+  const counts = new Map();
+  byTag.forEach((t) => {
+    const key = t.tag ? cleanIncidentLabel(t.tag) : '';
+    counts.set(key, (counts.get(key) || 0) + t.count);
+  });
+
+  const used = new Set();
+  const groups = agencies.map((a) => ({
+    agency: a,
+    rows: (INCIDENT_SUGGESTIONS[a] || []).map((label) => {
+      const name = cleanIncidentLabel(label);
+      used.add(name);
+      return { name, count: counts.get(name) || 0 };
+    }),
+  }));
+  let other = 0;
+  counts.forEach((count, name) => {
+    if (!used.has(name)) other += count;
+  });
+
+  const max = Math.max(1, other, ...groups.flatMap((g) => g.rows.map((r) => r.count)));
+  const row = (key, name, count) => (
+    <tr key={key}>
+      <td style={{ whiteSpace: 'normal' }}>{name}</td>
+      <td style={{ width: '45%' }}>
+        <div className={styles.barCell}>
+          <div className={styles.barTrack}>
+            <div className={styles.barFill} style={{ width: `${(count / max) * 100}%` }} />
+          </div>
+        </div>
+      </td>
+      <td className={styles.num}>{formatNumber(count)}</td>
+    </tr>
+  );
+
   return (
     <div className={styles.tableWrap}>
       <table className={styles.table}>
         <tbody>
-          {byTag.map((t) => (
-            <tr key={t.tag}>
-              <td style={{ whiteSpace: 'normal' }}>{t.tag}</td>
-              <td style={{ width: '50%' }}>
-                <div className={styles.barCell}>
-                  <div className={styles.barTrack}>
-                    <div className={styles.barFill} style={{ width: `${(t.count / max) * 100}%` }} />
-                  </div>
-                </div>
-              </td>
-              <td className={styles.num}>{formatNumber(t.count)}</td>
+          {groups.map((g) => [
+            groups.length > 1 && (
+              <tr key={`h-${g.agency}`}>
+                <td
+                  colSpan={3}
+                  style={{
+                    paddingTop: 10,
+                    fontSize: 11,
+                    fontWeight: 800,
+                    color: '#94a3b8',
+                    textTransform: 'uppercase',
+                  }}
+                >
+                  {AGENCY_LOOK[g.agency]?.label || g.agency}
+                </td>
+              </tr>
+            ),
+            ...g.rows.map((r) => row(`${g.agency}-${r.name}`, r.name, r.count)),
+          ])}
+          {groups.length > 1 && (
+            <tr>
+              <td colSpan={3} style={{ paddingTop: 10 }} />
             </tr>
-          ))}
+          )}
+          {row('other', 'Khác', other)}
         </tbody>
       </table>
     </div>

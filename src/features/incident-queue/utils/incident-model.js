@@ -72,3 +72,33 @@ export function formatCountdown(seconds) {
   const s = seconds % 60;
   return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
 }
+
+/**
+ * Closed incident in the history window (GET /incidents/history):
+ *   { id, type, agency, level, status, statusLabel, province, ward, address, tags, citizenName, phone,
+ *     createdAt, acceptedAt, closedAt, cancelReason, cancelReasonLabel, handlerName, dispatchCount }
+ */
+export function normalizeHistoryItem(raw) {
+  if (!raw?.id) return null;
+  return {
+    id: raw.id,
+    type: raw.emergency_type || 'POLICE',
+    agency: AGENCY_BY_TYPE[raw.routed_agency] || 'police',
+    level: raw.routed_level ? String(raw.routed_level).toLowerCase() : null,
+    status: raw.status,
+    statusLabel: raw.status_label || raw.status,
+    province: raw.province || '',
+    ward: raw.ward || '',
+    address: raw.address || '',
+    tags: Array.isArray(raw.incident_tags) ? raw.incident_tags : [],
+    citizenName: raw.citizen_name || '',
+    phone: raw.phone || '',
+    createdAt: toDate(raw.created_at),
+    acceptedAt: toDate(raw.accepted_at),
+    closedAt: toDate(raw.closed_at),
+    cancelReason: raw.cancel_reason || null,
+    cancelReasonLabel: raw.cancel_reason_label || null,
+    handlerName: raw.handler_name || null,
+    dispatchCount: raw.dispatch_count || 0,
+  };
+}

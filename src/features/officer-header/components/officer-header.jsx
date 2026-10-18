@@ -5,139 +5,115 @@ import { SvgIcon } from '@/components/ui/svg-icon/svg-icon';
 
 import { useVnClock } from '../hooks/use-vn-clock';
 import { useWeather } from '../hooks/use-weather';
+import ui from './console-header.module.css';
 import styles from './officer-header.module.css';
 
 /**
- * Officer console header (legacy dispatcher.html <header class="header-nav">):
- * brand pill, VN clock, weather, unit location, duty officer pill, gear menu.
+ * Officer console header (flat bar, national dispatch design): crest + system title on the left;
+ * VN clock, weather, unit location, incident bell (pending count, opens the queue window) and
+ * the signed-in officer on the right. Settings / logout live in the console's left rail (SettingsMenu).
  *
  * @param {{
  *   officer: ReturnType<import('@/features/auth').buildOfficerProfile>,
  *   unitCoords?: { lat: number, lng: number } | null,
  *   onLocateUnit?: () => void,
- *   onOpenAdmin?: () => void,
  *   onOpenOfficerInfo?: () => void,
- *   onLogout: () => void,
+ *   pendingCount?: number,
+ *   onOpenQueue?: () => void,
  * }} props
  */
 export function OfficerHeader({
   officer,
   unitCoords,
   onLocateUnit,
-  onOpenAdmin,
   onOpenOfficerInfo,
-  onLogout,
+  pendingCount = 0,
+  onOpenQueue,
 }) {
   const clock = useVnClock();
   const weather = useWeather(unitCoords);
+  const bellLabel = pendingCount > 0 ? `${pendingCount} ca đang chờ tiếp nhận` : 'Hàng đợi sự cố';
 
   return (
-    <header className={styles.headerNav}>
-      <div className={`${styles.headerNavLeftPill} liquid-glass`}>
-        <div className={styles.headerNationalCrest}>
-          <img src="/assets/icons/khien.png" className={styles.headerCrestImg} alt="Huy hiệu tác chiến" />
-        </div>
-        <div className={styles.headerTitleWrap}>
-          <div className={styles.headerMainTitle}>{officer.brandTitle}</div>
-          <div className={styles.headerSubTitle}>TỔNG HỢP - GIÁM SÁT - ĐIỀU PHỐI</div>
+    <header className={ui.bar}>
+      <div className={ui.brand}>
+        <img src="/assets/icons/khien.png" className={ui.crest} alt="Huy hiệu Công an nhân dân" />
+        <div className={ui.titles}>
+          <div className={ui.title}>Hệ Thống Điều Phối Khẩn Cấp Quốc Gia 24/7</div>
+          <div className={ui.subtitle}>Vietnam National Emergency Dispatch System</div>
         </div>
       </div>
 
-      <div className={styles.headerNavRightWidgets}>
-        <div className={`${styles.headerWidgetPill} ${styles.vnLiveClock} liquid-glass`}>
-          <SvgIcon name="clock" color="blue" className={styles.widgetIcon} />
-          <div className={styles.widgetText}>
-            <span className={`${styles.widgetPrimary} ${styles.clockTimeVal}`}>
-              <span className={styles.clockTimeDigits}>{clock.time}</span>{' '}
-              <span className={styles.clockTimeZone}>(VN)</span>
-            </span>
-            <span className={`${styles.widgetSecondary} ${styles.clockDateVal}`}>{clock.date}</span>
-          </div>
+      <div className={ui.right}>
+        <div className={`${ui.info} ${ui.clock}`}>
+          <SvgIcon name="clock" color="blue" />
+          <span className={ui.infoText}>
+            <span className={ui.infoMain}>{clock.time} (VN)</span>
+            <span className={ui.infoSub}>{clock.date}</span>
+          </span>
         </div>
 
-        <WeatherPill weather={weather} />
+        <WeatherInfo weather={weather} />
 
-        <div
-          className={`${styles.headerWidgetPill} ${styles.clickableLocationPill} ${styles.locationWidget} liquid-glass`}
-          title="Đơn vị công tác (Bấm để xem trên bản đồ)"
+        <button
+          type="button"
+          className={`${ui.info} ${ui.unit}`}
+          title="Đơn vị công tác (bấm để xem trên bản đồ)"
           onClick={onLocateUnit}
         >
-          <span className={styles.widgetIcon}>
-            <SvgIcon name="pin" color="amber" />
+          <SvgIcon name="pin" color="amber" />
+          <span className={ui.infoText}>
+            <span className={ui.infoMain}>
+              {officer.unitName}
+              <i className={ui.liveDot} aria-hidden="true" />
+            </span>
+            <span className={ui.infoSub}>{officer.unitSub}</span>
           </span>
-          <div className={styles.widgetText}>
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 4,
-                minWidth: 0,
-                whiteSpace: 'nowrap',
-                overflow: 'hidden',
-              }}
-            >
-              <span className={styles.widgetPrimary}>{officer.unitName}</span>
-              <span className={styles.gpsLiveDot} style={{ flexShrink: 0 }} />
-            </div>
-            <span className={styles.widgetSecondary}>{officer.unitSub}</span>
-          </div>
-        </div>
+        </button>
 
-        <div
-          className={`${styles.headerWidgetPill} ${styles.clickableOfficerPill} ${styles.headerDutyShiftPill} liquid-glass`}
-          title="Cán bộ đang đăng nhập (Bấm để xem hồ sơ)"
-          style={{ cursor: 'pointer', borderColor: 'rgba(56, 189, 248, 0.45)', display: 'flex' }}
+        <button
+          type="button"
+          className={ui.iconBtn}
+          title={bellLabel}
+          aria-label={bellLabel}
+          onClick={onOpenQueue}
+        >
+          <SvgIcon name="bell" size="sm" />
+          {pendingCount > 0 && <em className={ui.badge}>{pendingCount > 99 ? '99+' : pendingCount}</em>}
+        </button>
+
+        <button
+          type="button"
+          className={ui.profile}
+          title="Cán bộ đang đăng nhập (bấm để xem hồ sơ)"
           onClick={onOpenOfficerInfo}
         >
-          <span className={styles.widgetIcon} style={{ color: '#38bdf8' }}>
-            <SvgIcon name="user" color="blue" />
+          <span className={ui.avatar} aria-hidden="true">
+            {initials(officer.fullName)}
           </span>
-          <div className={styles.widgetText}>
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 4,
-                minWidth: 0,
-                whiteSpace: 'nowrap',
-                overflow: 'hidden',
-              }}
-            >
-              <span className={styles.widgetPrimary} style={{ color: '#38bdf8', fontWeight: 700 }}>
-                {officer.fullName}
-              </span>
-              <span
-                className={styles.headerDutyBadge}
-                style={{
-                  fontSize: 8.5,
-                  fontWeight: 800,
-                  background: '#10b981',
-                  color: '#fff',
-                  padding: '1px 5px',
-                  borderRadius: 4,
-                  flexShrink: 0,
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                CÁN BỘ
-              </span>
-            </div>
-            <span className={styles.widgetSecondary}>Đang trực tuyến</span>
-          </div>
-        </div>
-
-        <GearMenu
-          isAdmin={officer.isAdmin}
-          onOpenAdmin={onOpenAdmin}
-          onOpenOfficerInfo={onOpenOfficerInfo}
-          onLogout={onLogout}
-        />
+          <span className={ui.profileText}>
+            <span className={ui.infoMain}>{officer.fullName}</span>
+            <span className={ui.infoSub}>
+              {officer.isAdmin ? 'Quản trị hệ thống' : 'Cán bộ · Đang trực tuyến'}
+            </span>
+          </span>
+          <i className={ui.chevron} aria-hidden="true" />
+        </button>
       </div>
     </header>
   );
 }
 
-function WeatherPill({ weather }) {
+/** "Nguyễn Văn An" -> "NA" (first letter of the first and last word). */
+function initials(name) {
+  const words = (name || '').trim().split(/\s+/).filter(Boolean);
+  if (words.length === 0) return 'CB';
+  const first = words[0][0];
+  const last = words.length > 1 ? words[words.length - 1][0] : '';
+  return (first + last).toUpperCase();
+}
+
+function WeatherInfo({ weather }) {
   const w = weather.weather;
   const isNight = w ? !w.is_day : true;
   let primary = '--°C';
@@ -150,24 +126,27 @@ function WeatherPill({ weather }) {
   }
 
   return (
-    <div
-      className={`${styles.headerWidgetPill} ${styles.clickableWeatherPill} ${styles.weatherWidget} liquid-glass`}
-      title="Thời tiết tại đơn vị (Bấm để làm mới)"
-      style={{ cursor: 'pointer' }}
+    <button
+      type="button"
+      className={`${ui.info} ${ui.weather}`}
+      title="Thời tiết tại đơn vị (bấm để làm mới)"
       onClick={weather.refresh}
     >
-      <span className={styles.widgetIcon}>
-        <SvgIcon name={isNight ? 'moon' : 'sun'} color={isNight ? 'purple' : 'amber'} />
+      <SvgIcon name={isNight ? 'moon' : 'sun'} color={isNight ? 'purple' : 'amber'} />
+      <span className={ui.infoText}>
+        <span className={ui.infoMain}>{primary}</span>
+        <span className={ui.infoSub}>{secondary}</span>
       </span>
-      <div className={styles.widgetText}>
-        <span className={styles.widgetPrimary}>{primary}</span>
-        <span className={styles.widgetSecondary}>{secondary}</span>
-      </div>
-    </div>
+    </button>
   );
 }
 
-function GearMenu({ isAdmin, onOpenAdmin, onOpenOfficerInfo, onLogout }) {
+/**
+ * Settings popover (admin tools, officer profile, logout). The trigger is supplied by the caller
+ * (the console rail button): renderTrigger({ ref, onClick, open }). The menu opens to the right
+ * of the trigger, or below it on narrow screens.
+ */
+export function SettingsMenu({ isAdmin, onOpenAdmin, onOpenOfficerInfo, onLogout, renderTrigger }) {
   const [pos, setPos] = useState(null); // null = closed
   const btnRef = useRef(null);
   const menuRef = useRef(null);
@@ -188,7 +167,19 @@ function GearMenu({ isAdmin, onOpenAdmin, onOpenOfficerInfo, onLogout }) {
       return;
     }
     const rect = btnRef.current.getBoundingClientRect();
-    setPos({ top: rect.bottom + 10, right: window.innerWidth - rect.right });
+    const menuHeight = 260;
+    if (window.innerWidth <= 992) {
+      // rail is at the bottom on phones: open above the button
+      setPos({
+        bottom: window.innerHeight - rect.top + 10,
+        left: Math.max(8, Math.min(rect.left, window.innerWidth - 300)),
+      });
+    } else {
+      setPos({
+        top: Math.max(8, Math.min(rect.top, window.innerHeight - menuHeight - 8)),
+        left: rect.right + 10,
+      });
+    }
   };
 
   const pick = (fn) => () => {
@@ -197,18 +188,8 @@ function GearMenu({ isAdmin, onOpenAdmin, onOpenOfficerInfo, onLogout }) {
   };
 
   return (
-    <div className={styles.headerIconButtons}>
-      <div style={{ position: 'relative' }} className={styles.gearSettingsWrap}>
-        <button
-          ref={btnRef}
-          type="button"
-          className={`${styles.headerCircleBtn} liquid-glass`}
-          title="Cài đặt hệ thống & Quản trị an ninh"
-          onClick={toggle}
-        >
-          <SvgIcon name="gear" size="sm" color="white" />
-        </button>
-      </div>
+    <>
+      {renderTrigger({ ref: btnRef, onClick: toggle, open: !!pos })}
 
       {pos &&
         createPortal(
@@ -219,9 +200,10 @@ function GearMenu({ isAdmin, onOpenAdmin, onOpenOfficerInfo, onLogout }) {
               display: 'flex',
               position: 'fixed',
               zIndex: 99999,
-              top: pos.top,
-              right: pos.right,
-              left: 'auto',
+              top: pos.top ?? 'auto',
+              bottom: pos.bottom ?? 'auto',
+              left: pos.left,
+              right: 'auto',
             }}
           >
             {isAdmin && (
@@ -291,6 +273,6 @@ function GearMenu({ isAdmin, onOpenAdmin, onOpenOfficerInfo, onLogout }) {
           </div>,
           document.body,
         )}
-    </div>
+    </>
   );
 }

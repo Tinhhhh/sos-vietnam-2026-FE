@@ -1,7 +1,8 @@
 /**
  * What the citizen's waiting screen needs about their own incident.
  *   { id, type, agency, level, status, province, ward, createdAt, escalateAt, escalatedAt,
- *     acceptedAt, cancelledAt, cancelReason, cancelReasonLabel, handler: { fullName, unitName } | null }
+ *     acceptedAt, cancelledAt, cancelReason, cancelReasonLabel, handler: { fullName, unitName } | null,
+ *     lookupCode: 'K7M2-QX9P' | null (only once RESOLVED) }
  * cancelReason: MISTAKE | RESOLVED_SELF | CALLED_HOTLINE | OTHER (citizen) | NO_RESPONDER (auto, waited too long)
  * agency / level keep the be-v2 enum names (POLICE | CSGT | FIRE | HOSPITAL, WARD | PROVINCE | NATIONAL).
  */
@@ -39,6 +40,7 @@ export function normalizeTracking(raw) {
     cancelledAt: toDate(raw.cancelled_at),
     cancelReason: raw.cancel_reason || null,
     cancelReasonLabel: raw.cancel_reason_label || null,
+    lookupCode: raw.lookup_code || null,
     handler: raw.handler
       ? { fullName: raw.handler.full_name || 'Cán bộ', unitName: raw.handler.unit_name || null }
       : null,
@@ -55,11 +57,21 @@ export function receivingUnit(inc) {
 }
 
 /**
- * Police at ward level, not yet taken: count down to the hand-over to the province.
- * Everything else (CSGT, PCCC, province police, already taken): time waited since the report.
+ * What the box next to "Huỷ báo cáo" shows (ward-level police incidents have a 15-minute deadline):
+ * - countdown   PENDING / VERIFYING before the deadline (PENDING then moves up by itself)
+ * - request     VERIFYING past the deadline: the officer took it but did not dispatch forces yet,
+ *               the citizen may ask to move it to the province (officer took it and went silent)
+ * - locked      RESOLVING: forces are on the way, the request button is greyed out
+ * - elapsed     everything else (CSGT, PCCC, province level, already escalated): time waited
  */
-export function timerMode(inc) {
-  return inc.status === 'PENDING' && inc.escalateAt && !inc.escalatedAt ? 'countdown' : 'elapsed';
+export function timerMode(inc, now) {
+  const wardDeadline = inc.level === 'WARD' && inc.escalateAt && !inc.escalatedAt;
+  if (!wardDeadline) return 'elapsed';
+  if (inc.status === 'RESOLVING') return 'locked';
+  const overdue = inc.escalateAt.getTime() <= now;
+  if (inc.status === 'VERIFYING') return overdue ? 'request' : 'countdown';
+  if (inc.status === 'PENDING') return 'countdown';
+  return 'elapsed';
 }
 
 /** mm:ss, or h:mm:ss after an hour. */

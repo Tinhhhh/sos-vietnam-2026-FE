@@ -10,10 +10,19 @@ import { normalizeTracking } from '../utils/tracking-model';
  *     -> data: { id, emergency_type, status, routed_agency, routed_level, province, ward,
  *                created_at, escalate_at, escalated_at, accepted_at, cancelled_at,
  *                cancel_reason, cancel_reason_label,
- *                handler: { full_name, unit_name } | null }
+ *                handler: { full_name, unit_name } | null,
+ *                lookup_code: 'K7M2-QX9P' | null  (only once RESOLVED; citizen re-reads the record with it
+ *                + last 4 phone digits via POST /incidents/lookup) }
  *
  *   POST /api/v1/incidents/{id}/cancel        header X-SOS-Access-Token, body { reason?: CancelReason }
  *     -> data: <same as tracking>, status CANCELLED. Allowed until the incident is closed.
+ *
+ *   POST /api/v1/incidents/{id}/escalate      header X-SOS-Access-Token
+ *     -> data: <same as tracking>, moved to the province (PENDING, no handler). Only while VERIFYING past
+ *        escalate_at (an officer took it but has not dispatched forces); 409 otherwise.
+ *
+ * Status: PENDING -> VERIFYING (officer took it, checking) -> RESOLVING (forces dispatched) -> RESOLVED;
+ *         CANCELLED (citizen / auto after 60 min with nobody).
  *
  * STOMP (CONNECT headers X-SOS-Access-Token + X-SOS-Incident-Id):
  *   SUBSCRIBE /user/queue/incident  -> { event: 'INCIDENT_UPDATED' | 'INCIDENT_ESCALATED' | 'INCIDENT_CANCELLED',
@@ -36,6 +45,15 @@ const tokenHeader = (token) => ({ headers: { 'X-SOS-Access-Token': token } });
 
 export async function getTracking(id, token) {
   const body = await api.get(`/api/v1/incidents/${encodeURIComponent(id)}/tracking`, tokenHeader(token));
+  return normalizeTracking(body?.data);
+}
+
+export async function requestProvince(id, token) {
+  const body = await api.post(
+    `/api/v1/incidents/${encodeURIComponent(id)}/escalate`,
+    null,
+    tokenHeader(token),
+  );
   return normalizeTracking(body?.data);
 }
 

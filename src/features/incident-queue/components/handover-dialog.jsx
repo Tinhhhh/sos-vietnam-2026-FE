@@ -11,6 +11,8 @@ import { getHandoverCandidates } from '../api/incidents';
  *
  * @param {{ incident: object|null, onClose: () => void, onConfirm: (toAccountId: string, note: string) => Promise<void> }} props
  */
+const MIN_REASON = 5;
+
 export function HandoverDialog({ incident, onClose, onConfirm }) {
   const open = Boolean(incident);
   const [state, setState] = useState({ status: 'idle', candidates: [], error: null });
@@ -33,8 +35,10 @@ export function HandoverDialog({ incident, onClose, onConfirm }) {
     };
   }, [incident]);
 
+  // Giao ca bắt buộc ghi lý do (lưu vào lịch sử giữ ca); BE cũng kiểm tra
+  const reasonOk = note.trim().length >= MIN_REASON;
   const submit = async () => {
-    if (!chosen) return;
+    if (!chosen || !reasonOk) return;
     setSending(true);
     try {
       await onConfirm(chosen, note.trim());
@@ -91,15 +95,23 @@ export function HandoverDialog({ incident, onClose, onConfirm }) {
           ))}
         </div>
 
+        <label htmlFor="handover-note" style={{ fontSize: 12.5, fontWeight: 700, color: '#e2e8f0' }}>
+          Lý do giao ca <span style={{ color: '#f87171' }}>*</span>
+        </label>
         <textarea
           id="handover-note"
           className="textarea-field"
-          rows={2}
+          rows={3}
           maxLength={255}
-          placeholder="Ghi chú bàn giao (không bắt buộc)"
+          required
+          aria-required="true"
+          placeholder="Ví dụ: hết ca trực, cần đi hiện trường khác, chuyển cán bộ gần hiện trường hơn..."
           value={note}
           onChange={(e) => setNote(e.target.value)}
         />
+        {note.length > 0 && !reasonOk && (
+          <div style={{ fontSize: 12, color: '#fca5a5' }}>Lý do cần ít nhất {MIN_REASON} ký tự.</div>
+        )}
 
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
           <button type="button" className="btn-refresh-loc" onClick={onClose}>
@@ -108,8 +120,9 @@ export function HandoverDialog({ incident, onClose, onConfirm }) {
           <button
             type="button"
             className="btn-submit-sos"
-            style={{ width: 'auto', padding: '8px 16px', opacity: chosen && !sending ? 1 : 0.5 }}
-            disabled={!chosen || sending}
+            style={{ width: 'auto', padding: '8px 16px', opacity: chosen && reasonOk && !sending ? 1 : 0.5 }}
+            disabled={!chosen || !reasonOk || sending}
+            title={!reasonOk ? 'Nhập lý do giao ca trước' : undefined}
             onClick={submit}
           >
             {sending ? 'Đang giao...' : 'Giao ca'}

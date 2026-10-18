@@ -54,7 +54,8 @@ export async function getDashboardSummary({ from, to, province, agency }) {
       fakeAlarmCount: num(k.fake_alarm_count),
       resolvedCount: num(k.resolved_count),
     },
-    byTag: (d.by_tag || []).map((t) => ({ tag: t.tag || 'Chưa chọn loại', count: Number(t.count) || 0 })),
+    // tag null = the citizen picked no suggestion (counted as "Khác" on the page)
+    byTag: (d.by_tag || []).map((t) => ({ tag: t.tag || null, count: Number(t.count) || 0 })),
     byHour: Array.from({ length: 24 }, (_, h) => Number(d.by_hour?.[h]) || 0),
     byDay: (d.by_day || []).map((x) => ({
       date: x.date,
