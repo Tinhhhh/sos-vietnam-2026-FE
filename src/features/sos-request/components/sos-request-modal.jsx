@@ -120,6 +120,7 @@ export function SosRequestModal({ open, onClose, location, notify, onSubmitted }
     <Modal
       open={open}
       onClose={close}
+      solid
       title={
         <>
           <svg className="svg-ico ico-lg ico-red" viewBox="0 0 24 24" aria-hidden="true">

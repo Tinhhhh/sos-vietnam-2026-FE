@@ -23,6 +23,7 @@ import { buildOfficerProfile, useAuth } from '@/features/auth';
 import { CommandMap, ServiceDirectoryPanel, StationDirectory, useStations } from '@/features/command-map';
 import { CallMapCard, IncomingCallDialog, OfficerCallView, useOfficerCall } from '@/features/incident-call';
 import {
+  IncidentDetailDialog,
   IncidentHistoryPanel,
   IncidentQueuePanel,
   TYPE_LOOK,
@@ -51,6 +52,7 @@ export function OfficerDashboardRoute() {
   const [openWindow, setOpenWindow] = useState('incidents');
   const [unitCoords, setUnitCoords] = useState(null);
   const [selectedIncidentId, setSelectedIncidentId] = useState(null);
+  const [detailId, setDetailId] = useState(null); // "Chi tiết" box
 
   // The socket reads the token on every (re)connect, so it picks up refreshed tokens.
   const tokenRef = useRef(accessToken);
@@ -134,6 +136,7 @@ export function OfficerDashboardRoute() {
             setOpenWindow(null); // the call takes the main panel
           }}
           inCall={!!call && call.state !== 'ended'}
+          onOpenDetail={setDetailId}
         />
       ),
     },
@@ -145,6 +148,7 @@ export function OfficerDashboardRoute() {
           agency={officer.agency}
           onExportExcel={later('incidents')}
           onClear={later('incidents')}
+          onOpenDetail={setDetailId}
         />
       ),
     },
@@ -329,6 +333,7 @@ export function OfficerDashboardRoute() {
           ) : null
         }
       />
+      <IncidentDetailDialog incidentId={detailId} onClose={() => setDetailId(null)} />
       {call?.state === 'incoming' && (
         <IncomingCallDialog
           call={call}

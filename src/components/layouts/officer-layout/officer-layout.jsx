@@ -239,10 +239,12 @@ export function ConsoleWindow({ title, icon, onClose, children }) {
     const onKeyDown = (e) => {
       if (e.key !== 'Escape') return;
       if (e.target.closest?.('input, textarea, select, [role="dialog"]')) return;
+      if (document.querySelector('.modal-backdrop.is-open')) return; // the modal on top closes first
       onClose();
     };
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
+    // Capture phase: runs before the modal's own Esc handler, while the modal is still open
+    window.addEventListener('keydown', onKeyDown, true);
+    return () => window.removeEventListener('keydown', onKeyDown, true);
   }, [onClose]);
 
   const startDrag = (e) => {

@@ -6,7 +6,7 @@ import { useNow } from '@/hooks/use-now';
 
 import { claimIncident, escalateIncident, releaseIncident, requestDispatch } from '../api/incidents';
 import { TYPE_LOOK, formatCountdown, secondsToEscalation } from '../utils/incident-model';
-import { PAGE_SIZE } from '../utils/list-paging';
+import { DETAIL_BUTTON_STYLE, PAGE_SIZE } from '../utils/list-paging';
 import callStyles from './call-button.module.css';
 import { HandoverDialog } from './handover-dialog';
 import { Pager, RangeTabs } from './list-controls';
@@ -72,6 +72,7 @@ const badgeStyle = (bg, fg, border = 'transparent') => ({
  *   onChange: (inc) => void,   // incident returned by claim / release, applied right away
  *   onCall?: (inc) => void,    // start a video call with the citizen (incident already held by me)
  *   inCall?: boolean,          // a call is already open: call buttons are disabled
+ *   onOpenDetail?: (id) => void, // "Chi tiết" box (info, photos / videos, claim history)
  * }} props
  */
 export function IncidentQueuePanel({
@@ -86,6 +87,7 @@ export function IncidentQueuePanel({
   onChange,
   onCall,
   inCall = false,
+  onOpenDetail,
 }) {
   const toast = useToast();
   // Every card shows a countdown or the time waited, so tick while there is any card
@@ -239,6 +241,7 @@ export function IncidentQueuePanel({
               canCall={!!onCall && !inCall}
               actions={actions}
               onSelect={onSelect}
+              onOpenDetail={onOpenDetail}
             />
           ))}
         </div>
@@ -276,6 +279,7 @@ function QueueCard({
   canCall,
   actions,
   onSelect,
+  onOpenDetail,
 }) {
   const look = TYPE_LOOK[inc.type] || TYPE_LOOK.POLICE;
   const time = inc.createdAt
@@ -316,6 +320,19 @@ function QueueCard({
           <CountdownBadge seconds={secondsLeft} />
         ) : (
           <ElapsedBadge incident={inc} now={now} />
+        )}
+        {onOpenDetail && (
+          <button
+            type="button"
+            style={DETAIL_BUTTON_STYLE}
+            title="Xem chi tiết ca, ảnh / video người dân gửi"
+            onClick={(e) => {
+              e.stopPropagation();
+              onOpenDetail(inc.id);
+            }}
+          >
+            ⓘ Chi tiết
+          </button>
         )}
       </div>
 
