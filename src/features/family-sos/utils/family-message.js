@@ -16,9 +16,10 @@ export function saveFamilyPhones(phones) {
 
 /** SMS text sent to relatives: time, address, GPS and a Google Maps link. */
 export function buildFamilyMessage({ coords, address }) {
-  const lat = Number(coords.lat).toFixed(5);
-  const lng = Number(coords.lng).toFixed(5);
-  const mapUrl = `https://maps.google.com/?q=${lat},${lng}`;
+  // No fix yet (GPS / IP unavailable): say so instead of sending a made-up position
+  const lat = coords ? Number(coords.lat).toFixed(5) : null;
+  const lng = coords ? Number(coords.lng).toFixed(5) : null;
+  const mapUrl = coords ? `https://maps.google.com/?q=${lat},${lng}` : 'chưa xác định được vị trí';
   const timeVN = new Date().toLocaleTimeString('vi-VN', {
     hour: '2-digit',
     minute: '2-digit',
@@ -29,7 +30,7 @@ export function buildFamilyMessage({ coords, address }) {
     `[🚨 SOS KHẨN CẤP VIỆT NAM - ${timeVN}]\n` +
     `Tôi đang gặp sự cố nguy hiểm cần trợ giúp gấp!\n` +
     `📍 Vị trí: ${address || 'Chưa xác định'}\n` +
-    `🌐 Tọa độ GPS: ${lat}, ${lng}\n` +
+    (coords ? `🌐 Tọa độ GPS: ${lat}, ${lng}\n` : '🌐 Tọa độ GPS: chưa lấy được, hãy gọi lại cho tôi\n') +
     `🗺️ Xem bản đồ trực tiếp: ${mapUrl}`;
 
   return { body, mapUrl };

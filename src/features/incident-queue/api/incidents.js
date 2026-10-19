@@ -1,6 +1,8 @@
 import { api } from '@/lib/api-client';
 
-import { normalizeHistoryItem, normalizeIncident } from '../utils/incident-model';
+import { env } from '@/config/env';
+
+import { cleanTags, normalizeHistoryItem, normalizeIncident } from '../utils/incident-model';
 
 /*
  * Incident queue of the officer's unit (be-v2 picks the unit from the JWT:
@@ -21,6 +23,15 @@ import { normalizeHistoryItem, normalizeIncident } from '../utils/incident-model
  *          incident_tags, citizen_name, phone, created_at, accepted_at, closed_at, cancel_reason,
  *          cancel_reason_label, handler_name, dispatch_count }
  *     days 1-90 (default 7), q = search id / citizen / phone / address / ward, agency (ADMIN only).
+ *
+ *   GET /api/v1/incidents/{id}   (same scope as the queue, 403 outside it)
+ *     -> data: { id, emergency_type(_label), status(_label), incident_tags, description, citizen_name, phone, address,
+ *                ward, province, latitude, longitude, accuracy, routed_agency, routed_level, handling_unit,
+ *                created_at, accepted_at, escalate_at, escalated_at, cancelled_at, cancel_reason(_label), updated_at,
+ *                media: [{ type: IMAGE|VIDEO|AUDIO|CALL_RECORDING, url, original_name, content_type, size }],
+ *                dispatches: [{ station_name, agency_label, phone, dispatched_by, note, dispatched_at }],
+ *                claims: [{ officer_name, claimed_at, released_at, end_reason_label, handed_to_name, note }] }
+ *     media url = GET /api/v1/incidents/{id}/media/{file} (public, R2 redirects to a signed link)
  *
  *   POST /api/v1/incidents/{id}/claim                -> data: <incident>   409 = taken / already holding one
  *   POST /api/v1/incidents/{id}/release  body?: { to_account_id?, note? }
@@ -102,4 +113,86 @@ export async function getIncidentHistory({ days, q, agency, pageNo, pageSize }) 
     total: page.total_elements || 0,
     totalPages: page.total_pages || 0,
   };
+}
+
+const toDate = (v) => (v ? new Date(v) : null);
+
+/** Everything the "Chi tiết" box shows about one incident (dates as Date, media urls absolute). */
+export async function getIncidentDetail(id) {
+  const body = await api.get(`/api/v1/incidents/${encodeURIComponent(id)}`);
+  const d = body?.data;
+  if (!d) return null;
+  return {
+    id: d.id,
+    type: d.emergency_type,
+    typeLabel: d.emergency_type_label,
+    status: d.status,
+    statusLabel: d.status_label,
+    tags: cleanTags(d.incident_tags),
+    description: d.description || '',
+    citizenName: d.citizen_name || '',
+    phone: d.phone || '',
+    address: d.address || '',
+    ward: d.ward || '',
+    province: d.province || '',
+    lat: d.latitude,
+    lng: d.longitude,
+    accuracy: d.accuracy,
+    handlingUnit: d.handling_unit,
+    createdAt: toDate(d.created_at),
+    acceptedAt: toDate(d.accepted_at),
+    escalateAt: toDate(d.escalate_at),
+    escalatedAt: toDate(d.escalated_at),
+    cancelledAt: toDate(d.cancelled_at),
+    cancelReasonLabel: d.cancel_reason_label || null,
+    updatedAt: toDate(d.updated_at),
+    media: (d.media || []).map((m) => ({
+      type: m.type,
+      url: `${env.API_URL}${m.url}`,
+      name: m.original_name || '',
+      contentType: m.content_type || '',
+      size: m.size || 0,
+    })),
+    dispatches: (d.dispatches || []).map((x) => ({
+      stationName: x.station_name,
+      agencyLabel: x.agency_label,
+      phone: x.phone,
+      dispatchedBy: x.dispatched_by,
+      note: x.note,
+      dispatchedAt: toDate(x.dispatched_at),
+    })),
+    claims: (d.claims || []).map((c) => ({
+      officerName: c.officer_name,
+      claimedAt: toDate(c.claimed_at),
+      releasedAt: toDate(c.released_at),
+      endReasonLabel: c.end_reason_label,
+      handedToName: c.handed_to_name,
+      note: c.note,
+    })),
+  };
+}
+
+/*
+ * GET /api/v1/officers/status  (OFFICER: own unit incl. self; ADMIN: every active officer)
+ *   -> data: [{ account_id, full_name, email, phone, agency_type, unit_level, unit_label, province, ward,
+ *               online, busy, is_me, held_incident: { id, status, status_label, emergency_type } | null }]
+ *   online = has the command console open (STOMP), busy = holds an incident.
+ */
+export async function getOfficerStatus() {
+  const body = await api.get('/api/v1/officers/status');
+  return (body?.data || []).map((o) => ({
+    accountId: o.account_id,
+    fullName: o.full_name || 'Cán bộ',
+    email: o.email,
+    phone: o.phone || '',
+    unitLabel: o.unit_label || '',
+    ward: o.ward || '',
+    province: o.province || '',
+    online: o.online === true,
+    busy: o.busy === true,
+    isMe: o.is_me === true,
+    heldIncident: o.held_incident
+      ? { id: o.held_incident.id, status: o.held_incident.status, statusLabel: o.held_incident.status_label }
+      : null,
+  }));
 }

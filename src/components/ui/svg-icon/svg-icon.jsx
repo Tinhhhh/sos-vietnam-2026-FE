@@ -193,6 +193,22 @@ const PATHS = {
       <line x1="6" y1="20" x2="6" y2="14" />
     </>
   ),
+  // Photo: rounded frame, sun, two hills
+  image: (
+    <>
+      <rect x="3" y="3" width="18" height="18" rx="3.5" />
+      <circle cx="15.5" cy="8.5" r="1.8" />
+      <path d="M3 15.5l4.6-4.5a1.5 1.5 0 0 1 2 0L15 16" />
+      <path d="M13 14l1.9-1.9a1.5 1.5 0 0 1 2 0L21 16" />
+    </>
+  ),
+  // Video camera
+  video: (
+    <>
+      <rect x="2" y="6" width="14" height="12" rx="2.5" />
+      <path d="M16 10.5l5-3v9l-5-3z" />
+    </>
+  ),
 };
 
 export function SvgIcon({ name, size = 'xs', color, className = '', style }) {

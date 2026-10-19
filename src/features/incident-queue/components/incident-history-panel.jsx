@@ -4,7 +4,7 @@ import { SvgIcon } from '@/components/ui/svg-icon/svg-icon';
 
 import { getIncidentHistory } from '../api/incidents';
 import { TYPE_LOOK } from '../utils/incident-model';
-import { PAGE_SIZE } from '../utils/list-paging';
+import { DETAIL_BUTTON_STYLE, PAGE_SIZE } from '../utils/list-paging';
 import styles from './incident-panels.module.css';
 import { Pager, RangeTabs } from './list-controls';
 
@@ -33,10 +33,10 @@ const fmt = (d) => (d ? TIME.format(d) : '--');
  * GET /incidents/history, PAGE_SIZE per page, filtered by 1 / 7 / 30 days, search and (command
  * centre only) force.
  *
- * @param {{ agency: string, onExportExcel?: () => void, onClear?: () => void }} props
- *   agency = officer agency key ('all' for the command centre).
+ * @param {{ agency: string, onExportExcel?: () => void, onClear?: () => void, onOpenDetail?: (id) => void }} props
+ *   agency = officer agency key ('all' for the command centre); onOpenDetail opens the "Chi tiết" box.
  */
-export function IncidentHistoryPanel({ agency, onExportExcel, onClear }) {
+export function IncidentHistoryPanel({ agency, onExportExcel, onClear, onOpenDetail }) {
   const isAdmin = agency === 'all';
   const [days, setDays] = useState(7);
   const [filter, setFilter] = useState('all');
@@ -187,7 +187,7 @@ export function IncidentHistoryPanel({ agency, onExportExcel, onClear }) {
             text={query ? `Không khớp với "${query}".` : 'Ca hoàn tất hoặc bị huỷ sẽ được lưu ở đây.'}
           />
         ) : (
-          state.items.map((item) => <HistoryCard key={item.id} item={item} />)
+          state.items.map((item) => <HistoryCard key={item.id} item={item} onOpenDetail={onOpenDetail} />)
         )}
         {state.status === 'loading' && state.items.length === 0 && (
           <div style={{ padding: 24, textAlign: 'center', color: '#94a3b8', fontSize: 12 }}>Đang tải...</div>
@@ -205,7 +205,7 @@ export function IncidentHistoryPanel({ agency, onExportExcel, onClear }) {
   );
 }
 
-function HistoryCard({ item }) {
+function HistoryCard({ item, onOpenDetail }) {
   const look = TYPE_LOOK[item.type] || TYPE_LOOK.POLICE;
   const status = STATUS_LOOK[item.status] || STATUS_LOOK.CANCELLED;
   const location =
@@ -237,11 +237,21 @@ function HistoryCard({ item }) {
         {item.cancelReasonLabel && (
           <span style={{ fontSize: 11, color: '#94a3b8' }}>{item.cancelReasonLabel}</span>
         )}
+        {onOpenDetail && (
+          <button
+            type="button"
+            style={DETAIL_BUTTON_STYLE}
+            title="Xem chi tiết ca, ảnh / video người dân gửi"
+            onClick={() => onOpenDetail(item.id)}
+          >
+            Chi tiết
+          </button>
+        )}
       </div>
       {item.tags.length > 0 && (
         <div style={{ fontSize: 12.5, fontWeight: 700, color: '#f1f5f9' }}>{item.tags.join(', ')}</div>
       )}
-      <div style={{ fontSize: 12, color: '#cbd5e1', marginTop: 2 }}>📍 {location}</div>
+      <div style={{ fontSize: 12, color: '#cbd5e1', marginTop: 2 }}>{location}</div>
       <div
         style={{
           display: 'flex',
@@ -252,9 +262,9 @@ function HistoryCard({ item }) {
           color: '#94a3b8',
         }}
       >
-        <span>👤 {item.citizenName || 'Người dân'}</span>
-        {item.handlerName && <span>👮 {item.handlerName}</span>}
-        {item.dispatchCount > 0 && <span>🚓 {item.dispatchCount} đơn vị điều động</span>}
+        <span>Người báo: {item.citizenName || 'Người dân'}</span>
+        {item.handlerName && <span>Cán bộ: {item.handlerName}</span>}
+        {item.dispatchCount > 0 && <span>{item.dispatchCount} đơn vị điều động</span>}
         <span>Đóng: {fmt(item.closedAt)}</span>
       </div>
     </div>

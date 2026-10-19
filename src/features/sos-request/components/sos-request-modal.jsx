@@ -8,6 +8,7 @@ import { DEFAULT_AGENCY_ID, findAgency } from '../data/agencies';
 import { useMediaAttachments } from '../hooks/use-media-attachments';
 import { AgencyPicker } from './agency-picker';
 import { IncidentChips } from './incident-chips';
+import loc from './location-check.module.css';
 import { MediaPicker } from './media-picker';
 import { ServiceDirectoryNotice } from './service-directory-notice';
 import formStyles from './sos-request-form.module.css';
@@ -18,15 +19,20 @@ const DEFAULT_REPORTER_NAME = 'Người dân cần cứu hộ';
 const PHONE_PATTERN = /^0\d{9}$/;
 const PHONE_ERROR = 'Số điện thoại phải gồm đúng 10 chữ số, bắt đầu bằng 0 (ví dụ 0912345678).';
 const HOTLINE_HINT = 'Vui lòng gọi trực tiếp 113 / 114 / 115.';
+const NO_LOCATION_ERROR =
+  'Chưa có vị trí của bạn: bật định vị (GPS) cho trình duyệt hoặc chọn vị trí trên bản đồ trước khi gửi.';
 
 /**
  * "Bạn cần trợ giúp gì?" — pick a force, describe the incident, attach
  * scene media and send the SOS with the citizen's GPS position.
  *
- * @param {{ open: boolean, onClose: () => void, location: object,
+ * Never sends a made-up position: without a GPS / IP / map-picked fix (location.hasFix) the
+ * submit button is locked and the citizen is asked to turn location on or pick the spot on the map.
+ *
+ * @param {{ open: boolean, onClose: () => void, location: object, onPickLocation?: () => void,
  *           notify: Function, onSubmitted: (result: { incident: object, mediaError?: string }) => void }} props
  */
-export function SosRequestModal({ open, onClose, location, notify, onSubmitted }) {
+export function SosRequestModal({ open, onClose, location, onPickLocation, notify, onSubmitted }) {
   const [agencyId, setAgencyId] = useState(DEFAULT_AGENCY_ID);
   const [tags, setTags] = useState([]);
   const [notes, setNotes] = useState('');
@@ -63,6 +69,10 @@ export function SosRequestModal({ open, onClose, location, notify, onSubmitted }
   };
 
   const handleSubmit = async () => {
+    if (!location.hasFix) {
+      notifyWarning(NO_LOCATION_ERROR);
+      return;
+    }
     const phone = reporterPhone;
     if (phone && !PHONE_PATTERN.test(phone)) {
       setPhoneError(PHONE_ERROR);
@@ -120,6 +130,7 @@ export function SosRequestModal({ open, onClose, location, notify, onSubmitted }
     <Modal
       open={open}
       onClose={close}
+      solid
       title={
         <>
           <svg className="svg-ico ico-lg ico-red" viewBox="0 0 24 24" aria-hidden="true">
@@ -246,11 +257,15 @@ export function SosRequestModal({ open, onClose, location, notify, onSubmitted }
         </div>
       </div>
 
+      {!agency.directory && <LocationCheck location={location} onPickLocation={onPickLocation} />}
+
       {!agency.directory && (
         <button
           type="button"
           className={`btn-submit-sos${submitting ? ` ${formStyles.submitBusy}` : ''}`}
-          disabled={submitting || media.processing}
+          disabled={submitting || media.processing || !location.hasFix}
+          title={location.hasFix ? undefined : 'Cần vị trí của bạn trước khi gửi'}
+          style={location.hasFix ? undefined : { opacity: 0.45, cursor: 'not-allowed', filter: 'grayscale(0.6)' }}
           onClick={handleSubmit}
         >
           {submitting ? (
@@ -300,5 +315,49 @@ export function SosRequestModal({ open, onClose, location, notify, onSubmitted }
         </button>
       )}
     </Modal>
+  );
+}
+
+/** Where the SOS will be sent from, or why it cannot be sent yet. */
+function LocationCheck({ location, onPickLocation }) {
+  if (location.hasFix) {
+    const label = location.jurisdiction?.label || location.address;
+    return (
+      <div className={loc.ok}>
+        <span>
+          📍 Gửi từ: <b>{label || `${location.coords.lat.toFixed(5)}, ${location.coords.lng.toFixed(5)}`}</b>
+          {location.status === 'manual' ? ' (bạn chọn trên bản đồ)' : ''}
+        </span>
+        {onPickLocation && (
+          <button type="button" className={loc.link} onClick={onPickLocation}>
+            Sai vị trí? Chọn lại
+          </button>
+        )}
+      </div>
+    );
+  }
+  const locating = location.status === 'locating';
+  return (
+    <div className={loc.warn} role="alert">
+      <div className={loc.warnTitle}>
+        {locating ? '⏳ Đang lấy vị trí của bạn...' : '⚠️ Chưa lấy được vị trí của bạn'}
+      </div>
+      {!locating && (
+        <div className={loc.warnText}>
+          Cán bộ cần vị trí chính xác để tới cứu. Hãy bật định vị (GPS) cho trình duyệt rồi thử lại, hoặc tự
+          chọn vị trí trên bản đồ. Nếu khẩn cấp, gọi ngay 113 / 114 / 115.
+        </div>
+      )}
+      <div className={loc.warnActions}>
+        <button type="button" className={loc.btn} onClick={location.refresh} disabled={locating}>
+          📡 Thử lấy lại vị trí
+        </button>
+        {onPickLocation && (
+          <button type="button" className={loc.btnPrimary} onClick={onPickLocation}>
+            🗺️ Chọn trên bản đồ
+          </button>
+        )}
+      </div>
+    </div>
   );
 }

@@ -23,8 +23,10 @@ import { buildOfficerProfile, useAuth } from '@/features/auth';
 import { CommandMap, ServiceDirectoryPanel, StationDirectory, useStations } from '@/features/command-map';
 import { CallMapCard, IncomingCallDialog, OfficerCallView, useOfficerCall } from '@/features/incident-call';
 import {
+  IncidentDetailDialog,
   IncidentHistoryPanel,
   IncidentQueuePanel,
+  OfficerStatusPanel,
   TYPE_LOOK,
   playIncidentAlert,
   stopIncidentAlert,
@@ -35,7 +37,6 @@ import { OfficerHeader, SettingsMenu } from '@/features/officer-header';
 
 const LATER = {
   officer: 'Hồ sơ cán bộ thuộc module Quản trị (làm sau).',
-  officerStatus: 'Trạng thái cán bộ xã (trực tuyến / ngoại tuyến / đang nhận ca) thuộc module sau (làm sau).',
   incidents: 'Xoá / xuất danh sách sự cố thuộc module Lịch sử & Thống kê (làm sau).',
   directory: 'Quản lý danh bạ thuộc module Quản trị (làm sau).',
 };
@@ -51,6 +52,7 @@ export function OfficerDashboardRoute() {
   const [openWindow, setOpenWindow] = useState('incidents');
   const [unitCoords, setUnitCoords] = useState(null);
   const [selectedIncidentId, setSelectedIncidentId] = useState(null);
+  const [detailId, setDetailId] = useState(null); // "Chi tiết" box
 
   // The socket reads the token on every (re)connect, so it picks up refreshed tokens.
   const tokenRef = useRef(accessToken);
@@ -134,6 +136,7 @@ export function OfficerDashboardRoute() {
             setOpenWindow(null); // the call takes the main panel
           }}
           inCall={!!call && call.state !== 'ended'}
+          onOpenDetail={setDetailId}
         />
       ),
     },
@@ -145,6 +148,7 @@ export function OfficerDashboardRoute() {
           agency={officer.agency}
           onExportExcel={later('incidents')}
           onClear={later('incidents')}
+          onOpenDetail={setDetailId}
         />
       ),
     },
@@ -165,6 +169,16 @@ export function OfficerDashboardRoute() {
       title: 'Doanh nghiệp cứu hộ',
       icon: <SvgIcon name="car" color="amber" />,
       body: <ServiceDirectoryPanel kind="enterprises" onAdminAction={later('directory')} />,
+    },
+    officers: {
+      title: 'Cán bộ đơn vị',
+      icon: <SvgIcon name="users" color="blue" />,
+      body: (
+        <OfficerStatusPanel
+          holding={queue.incidents.find((i) => i.heldByMe) || null}
+          onChange={queue.upsert}
+        />
+      ),
     },
     hospitals: {
       title: 'Bệnh viện & cấp cứu 115',
@@ -246,8 +260,9 @@ export function OfficerDashboardRoute() {
       <RailButton
         icon="users"
         label="Cán bộ"
-        title="Trạng thái cán bộ xã: trực tuyến / ngoại tuyến / đang nhận ca"
-        onClick={later('officerStatus')}
+        title="Cán bộ của đơn vị: trực tuyến / ngoại tuyến / đang giữ ca, giao ca"
+        active={openWindow === 'officers'}
+        onClick={() => toggleWindow('officers')}
       />
       <SettingsMenu
         isAdmin={officer.isAdmin}
@@ -328,6 +343,13 @@ export function OfficerDashboardRoute() {
             </ConsoleWindow>
           ) : null
         }
+      />
+      <IncidentDetailDialog
+        incidentId={detailId}
+        onClose={() => setDetailId(null)}
+        live={detailId ? queue.incidents.find((i) => i.id === detailId) || null : null}
+        holding={queue.incidents.find((i) => i.heldByMe) || null}
+        onChange={queue.upsert}
       />
       {call?.state === 'incoming' && (
         <IncomingCallDialog
