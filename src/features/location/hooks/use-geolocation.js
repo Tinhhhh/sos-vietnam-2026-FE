@@ -3,11 +3,6 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { getIpLocation, getReverseGeocode, resolveJurisdiction } from '../api/geocode';
 import { distanceMeters, GpsKalmanFilter } from '../utils/gps-kalman-filter';
 
-const HANOI_CENTER = { lat: 21.0285, lng: 105.8542 };
-// Legacy last-resort position when both GPS and IP lookup fail.
-const LEGACY_FALLBACK = { lat: 10.0465, lng: 105.7865 };
-const LEGACY_FALLBACK_ADDRESS = 'Quận Ninh Kiều, TP. Cần Thơ, Việt Nam';
-
 const REFINE_WINDOW_MS = 20000;
 const GOOD_ACCURACY_M = 15;
 const REGEOCODE_MIN_MOVE_M = 25;
@@ -37,12 +32,15 @@ async function addressFor(coords) {
  * Citizen position: one high-accuracy fix, then 20 s of Kalman-smoothed
  * refinement, then the ward/province lookup. Port of legacy LocationService.
  *
- * status: 'locating' | 'gps' | 'ip' | 'fallback'
+ * status: 'locating' | 'gps' | 'ip' | 'manual' (picked on the map) | 'unavailable'
+ * When neither GPS nor the IP lookup works there is NO position (coords null): an SOS must
+ * never go out with a made-up location. The citizen turns location on (refresh) or picks the
+ * spot on the map (setManual). `hasFix` says whether coords can be sent.
  */
 export function useGeolocation() {
   const [state, setState] = useState({
     status: 'locating',
-    coords: HANOI_CENTER,
+    coords: null,
     accuracy: null,
     address: '',
     jurisdiction: null,
@@ -83,9 +81,20 @@ export function useGeolocation() {
       fix.address = await addressFor(fix.coords);
     } else {
       const ip = await getIpLocation().catch(() => null);
-      fix = ip
-        ? { status: 'ip', coords: ip.coords, accuracy: 500, address: ip.address }
-        : { status: 'fallback', coords: LEGACY_FALLBACK, accuracy: null, address: LEGACY_FALLBACK_ADDRESS };
+      if (!ip) {
+        if (isCurrent()) {
+          setState((s) => ({
+            ...s,
+            status: 'unavailable',
+            coords: null,
+            accuracy: null,
+            address: '',
+            jurisdiction: null,
+          }));
+        }
+        return;
+      }
+      fix = { status: 'ip', coords: ip.coords, accuracy: 500, address: ip.address };
     }
     if (!isCurrent()) return;
     setState({ ...fix, jurisdiction: null });
@@ -140,6 +149,26 @@ export function useGeolocation() {
     );
   }, [stopWatching]);
 
+  /** Position chosen by the citizen on the map (GPS / IP unavailable or wrong). */
+  const setManual = useCallback(
+    async (coords) => {
+      const runId = ++runIdRef.current;
+      stopWatching();
+      setState({
+        status: 'manual',
+        coords,
+        accuracy: null,
+        address: coordsLabel(coords),
+        jurisdiction: null,
+      });
+      const area = await resolveJurisdiction(coords).catch(() => null);
+      if (runId !== runIdRef.current || !area) return;
+      const label = [area.ward, area.province].filter(Boolean).join(', ');
+      setState((s) => ({ ...s, jurisdiction: { ...area, label }, address: label || s.address }));
+    },
+    [stopWatching],
+  );
+
   const refresh = useCallback(() => {
     setState((s) => ({ ...s, status: 'locating', jurisdiction: null }));
     locate();
@@ -153,5 +182,6 @@ export function useGeolocation() {
     };
   }, [locate, stopWatching]);
 
-  return { ...state, refresh };
+  const hasFix = !!state.coords && state.status !== 'unavailable';
+  return { ...state, hasFix, refresh, setManual };
 }

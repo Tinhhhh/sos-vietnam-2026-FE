@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 
 import { Modal } from '@/components/ui/modal/modal';
+import { useToast } from '@/components/ui/toast/toast-context';
 
-import { getIncidentDetail } from '../api/incidents';
+import { claimIncident, getIncidentDetail, requestDispatch } from '../api/incidents';
 import styles from './incident-detail.module.css';
 
 const TIME = new Intl.DateTimeFormat('vi-VN', {
@@ -26,26 +27,49 @@ const STATUS_TONE = {
  * "Chi tiết" box of one incident (queue and history windows): info, photos / videos / audio the
  * citizen sent (click a photo to enlarge), dispatched units and who took / released the case.
  *
- * @param {{ incidentId: string|null, onClose: () => void }} props
+ * Footer (queue only, `live` = the live queue card): "Tiếp nhận ca" while nobody holds it,
+ * "Yêu cầu điều động" while the officer is verifying it. History cases have no footer.
+ *
+ * @param {{ incidentId: string|null, onClose: () => void,
+ *           live?: object|null, holding?: object|null, onChange?: (incident) => void }} props
+ *   live = the incident from the queue (heldByMe, canHandle...), holding = the case the officer holds.
  */
-export function IncidentDetailDialog({ incidentId, onClose }) {
+export function IncidentDetailDialog({ incidentId, onClose, live, holding, onChange }) {
+  const toast = useToast();
   // Result of the last request; it belongs to `key` (a stale one shows as loading)
   const [result, setResult] = useState({ key: null, data: null, error: null });
+  const [reload, setReload] = useState(0);
   const [preview, setPreview] = useState(null);
-  const loading = !!incidentId && result.key !== incidentId;
-  const data = result.key === incidentId ? result.data : null;
-  const error = result.key === incidentId ? result.error : null;
+  const [busy, setBusy] = useState(false);
+  const requestKey = incidentId ? `${incidentId}|${reload}` : null;
+  const loading = !!incidentId && result.key !== requestKey && !result.data;
+  const data = result.data && result.data.id === incidentId ? result.data : null;
+  const error = result.key === requestKey ? result.error : null;
 
   useEffect(() => {
     if (!incidentId) return undefined;
     let alive = true;
     getIncidentDetail(incidentId)
-      .then((d) => alive && setResult({ key: incidentId, data: d, error: null }))
-      .catch((err) => alive && setResult({ key: incidentId, data: null, error: err.message }));
+      .then((d) => alive && setResult({ key: requestKey, data: d, error: null }))
+      .catch((err) => alive && setResult({ key: requestKey, data: null, error: err.message }));
     return () => {
       alive = false;
     };
-  }, [incidentId]);
+  }, [incidentId, requestKey]);
+
+  const act = async (fn, success) => {
+    setBusy(true);
+    try {
+      const updated = await fn(incidentId);
+      if (updated) onChange?.(updated);
+      toast.show(success, { tone: 'success' });
+      setReload((n) => n + 1);
+    } catch (err) {
+      toast.show(err.message, { tone: 'error' });
+    } finally {
+      setBusy(false);
+    }
+  };
 
   const close = () => {
     setPreview(null);
@@ -63,6 +87,15 @@ export function IncidentDetailDialog({ incidentId, onClose }) {
       {loading && <div className={styles.note}>Đang tải chi tiết...</div>}
       {error && <div className={styles.error}>Không tải được chi tiết ca: {error}</div>}
       {data && <DetailBody data={data} onPreview={setPreview} />}
+      {data && live && (
+        <DetailFooter
+          live={live}
+          holding={holding}
+          busy={busy}
+          onClaim={() => act(claimIncident, `Đã tiếp nhận ca ${incidentId}`)}
+          onDispatch={() => act(requestDispatch, `Đã gửi yêu cầu điều động cho ca ${incidentId}`)}
+        />
+      )}
 
       {preview && (
         <div className={styles.lightbox} role="dialog" aria-label="Xem ảnh" onClick={() => setPreview(null)}>
@@ -214,7 +247,7 @@ function MediaItem({ item, onPreview }) {
   }
   return (
     <div className={styles.audio}>
-      <span>{item.type === 'CALL_RECORDING' ? '📞 Ghi âm cuộc gọi' : '🎙️ Ghi âm'}</span>
+      <span>{item.type === 'CALL_RECORDING' ? 'Ghi âm cuộc gọi' : 'Ghi âm'}</span>
       <audio src={item.url} controls preload="metadata" />
     </div>
   );
@@ -227,4 +260,36 @@ function Section({ title, children }) {
       {children}
     </section>
   );
+}
+
+/** Next step for this case, at the bottom of the box. */
+function DetailFooter({ live, holding, busy, onClaim, onDispatch }) {
+  if (live.heldByMe && live.status === 'VERIFYING') {
+    return (
+      <div className={styles.footer}>
+        <span className={styles.footerHint}>
+          Đã xác minh với người báo? Gửi yêu cầu điều động lực lượng tới hiện trường.
+        </span>
+        <button type="button" className={styles.footerDispatch} disabled={busy} onClick={onDispatch}>
+          {busy ? 'Đang gửi...' : 'Yêu cầu điều động'}
+        </button>
+      </div>
+    );
+  }
+  if (live.status === 'PENDING' && !live.handler && live.canHandle) {
+    const blocked = holding && holding.id !== live.id;
+    return (
+      <div className={styles.footer}>
+        <span className={styles.footerHint}>
+          {blocked
+            ? `Bạn đang giữ ca ${holding.id}: hoàn tất hoặc trả ca đó trước khi nhận ca mới.`
+            : 'Ca chưa có cán bộ nhận. Tiếp nhận để xác minh với người báo.'}
+        </span>
+        <button type="button" className={styles.footerClaim} disabled={busy || blocked} onClick={onClaim}>
+          {busy ? 'Đang nhận...' : 'Tiếp nhận ca'}
+        </button>
+      </div>
+    );
+  }
+  return null;
 }

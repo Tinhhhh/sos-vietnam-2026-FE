@@ -244,14 +244,14 @@ function HistoryCard({ item, onOpenDetail }) {
             title="Xem chi tiết ca, ảnh / video người dân gửi"
             onClick={() => onOpenDetail(item.id)}
           >
-            ⓘ Chi tiết
+            Chi tiết
           </button>
         )}
       </div>
       {item.tags.length > 0 && (
         <div style={{ fontSize: 12.5, fontWeight: 700, color: '#f1f5f9' }}>{item.tags.join(', ')}</div>
       )}
-      <div style={{ fontSize: 12, color: '#cbd5e1', marginTop: 2 }}>📍 {location}</div>
+      <div style={{ fontSize: 12, color: '#cbd5e1', marginTop: 2 }}>{location}</div>
       <div
         style={{
           display: 'flex',
@@ -262,9 +262,9 @@ function HistoryCard({ item, onOpenDetail }) {
           color: '#94a3b8',
         }}
       >
-        <span>👤 {item.citizenName || 'Người dân'}</span>
-        {item.handlerName && <span>👮 {item.handlerName}</span>}
-        {item.dispatchCount > 0 && <span>🚓 {item.dispatchCount} đơn vị điều động</span>}
+        <span>Người báo: {item.citizenName || 'Người dân'}</span>
+        {item.handlerName && <span>Cán bộ: {item.handlerName}</span>}
+        {item.dispatchCount > 0 && <span>{item.dispatchCount} đơn vị điều động</span>}
         <span>Đóng: {fmt(item.closedAt)}</span>
       </div>
     </div>

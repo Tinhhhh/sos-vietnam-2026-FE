@@ -1,0 +1,82 @@
+/* Location check above the SOS submit button (hand-written; sos-request-modal.module.css is generated). */
+.ok {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  margin: 14px 0 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  background: rgba(16, 185, 129, 0.08);
+  font-size: 13px;
+  color: #d1fae5;
+}
+
+.link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #7dd3fc;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 700;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.warn {
+  margin: 14px 0 10px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1.5px solid rgba(245, 158, 11, 0.6);
+  background: rgba(245, 158, 11, 0.1);
+}
+
+.warnTitle {
+  font-size: 14px;
+  font-weight: 800;
+  color: #fcd34d;
+}
+
+.warnText {
+  margin-top: 4px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #fde68a;
+}
+
+.warnActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.btn,
+.btnPrimary {
+  padding: 9px 14px;
+  border-radius: 10px;
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.btn {
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  background: rgba(15, 23, 42, 0.8);
+  color: #e2e8f0;
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: progress;
+}
+
+.btnPrimary {
+  border: 0;
+  background: #f59e0b;
+  color: #111827;
+}

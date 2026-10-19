@@ -2,7 +2,7 @@ import { api } from '@/lib/api-client';
 
 import { env } from '@/config/env';
 
-import { normalizeHistoryItem, normalizeIncident } from '../utils/incident-model';
+import { cleanTags, normalizeHistoryItem, normalizeIncident } from '../utils/incident-model';
 
 /*
  * Incident queue of the officer's unit (be-v2 picks the unit from the JWT:
@@ -128,7 +128,7 @@ export async function getIncidentDetail(id) {
     typeLabel: d.emergency_type_label,
     status: d.status,
     statusLabel: d.status_label,
-    tags: d.incident_tags || [],
+    tags: cleanTags(d.incident_tags),
     description: d.description || '',
     citizenName: d.citizen_name || '',
     phone: d.phone || '',
@@ -170,4 +170,29 @@ export async function getIncidentDetail(id) {
       note: c.note,
     })),
   };
+}
+
+/*
+ * GET /api/v1/officers/status  (OFFICER: own unit incl. self; ADMIN: every active officer)
+ *   -> data: [{ account_id, full_name, email, phone, agency_type, unit_level, unit_label, province, ward,
+ *               online, busy, is_me, held_incident: { id, status, status_label, emergency_type } | null }]
+ *   online = has the command console open (STOMP), busy = holds an incident.
+ */
+export async function getOfficerStatus() {
+  const body = await api.get('/api/v1/officers/status');
+  return (body?.data || []).map((o) => ({
+    accountId: o.account_id,
+    fullName: o.full_name || 'Cán bộ',
+    email: o.email,
+    phone: o.phone || '',
+    unitLabel: o.unit_label || '',
+    ward: o.ward || '',
+    province: o.province || '',
+    online: o.online === true,
+    busy: o.busy === true,
+    isMe: o.is_me === true,
+    heldIncident: o.held_incident
+      ? { id: o.held_incident.id, status: o.held_incident.status, statusLabel: o.held_incident.status_label }
+      : null,
+  }));
 }

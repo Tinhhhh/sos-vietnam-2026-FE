@@ -149,6 +149,26 @@
   background: #000;
 }
 
+/*
+ * legacy-global.css (generated) hides the controls of EVERY <video> (meant for the background
+ * video). Citizen videos must be playable: give the native controls back with a more specific
+ * selector (class + pseudo beats type + pseudo, both !important).
+ */
+.video::-webkit-media-controls,
+.video::-webkit-media-controls-enclosure,
+.video::-webkit-media-controls-panel,
+.video::-webkit-media-controls-play-button,
+.video::-webkit-media-controls-start-playback-button,
+.video::-webkit-media-controls-overlay-play-button,
+.video::-webkit-media-controls-fullscreen-button,
+.video::-webkit-media-controls-current-time-display,
+.video::-webkit-media-controls-time-remaining-display,
+.video::-webkit-media-controls-timeline,
+.video::-webkit-media-controls-mute-button,
+.video::-webkit-media-controls-volume-slider {
+  display: revert !important;
+}
+
 .audio {
   grid-column: 1 / -1;
   display: flex;
@@ -251,4 +271,52 @@
   .video {
     grid-column: 1 / -1;
   }
+}
+
+/* Next-step bar at the bottom of the box */
+.footer {
+  position: sticky;
+  bottom: -30px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 18px -22px -30px;
+  padding: 14px 22px;
+  border-top: 1px solid rgba(148, 163, 184, 0.2);
+  background: #0c1222;
+}
+
+.footerHint {
+  flex: 1 1 260px;
+  font-size: 13px;
+  color: #94a3b8;
+}
+
+.footerClaim,
+.footerDispatch {
+  padding: 11px 22px;
+  border-radius: 10px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+  border: 0;
+}
+
+.footerClaim {
+  background: #eab308;
+  color: #1c1917;
+}
+
+.footerDispatch {
+  background: #10b981;
+  color: #04241a;
+}
+
+.footerClaim:disabled,
+.footerDispatch:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }

@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { lazy, Suspense, useCallback, useState } from 'react';
 import { useOutletContext } from 'react-router';
 
 import { useToast } from '@/components/ui/toast/toast-context';
@@ -7,6 +7,11 @@ import { SosRequestModal } from '@/features/sos-request/components/sos-request-m
 import { SosTrackingScreen } from '@/features/sos-tracking';
 import { SosHero } from '@/features/sos-trigger/components/sos-hero';
 import { clearActiveIncident, loadActiveIncident } from '@/stores/active-incident';
+
+// MapLibre only loads when the citizen opens the map picker
+const LocationPicker = lazy(() =>
+  import('@/features/location/components/location-picker').then((m) => ({ default: m.LocationPicker })),
+);
 
 /**
  * "/" — SOS trigger screen (legacy #sosTriggerView) + the SOS request form.
@@ -19,6 +24,8 @@ export function CitizenHomeRoute() {
   const [requestOpen, setRequestOpen] = useState(false);
   const [active, setActive] = useState(() => loadActiveIncident());
   const closeRequest = useCallback(() => setRequestOpen(false), []);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const openPicker = useCallback(() => setPickerOpen(true), []);
 
   const handleSubmitted = ({ incident, mediaError }) => {
     setRequestOpen(false);
@@ -40,15 +47,30 @@ export function CitizenHomeRoute() {
 
   return (
     <div>
-      <LocationBanner geo={geo} />
+      <LocationBanner geo={geo} onPickOnMap={openPicker} />
       <SosHero onTrigger={() => setRequestOpen(true)} />
       <SosRequestModal
         open={requestOpen}
         onClose={closeRequest}
         location={geo}
+        onPickLocation={openPicker}
         notify={toast.show}
         onSubmitted={handleSubmitted}
       />
+      {pickerOpen && (
+        <Suspense fallback={null}>
+          <LocationPicker
+            open
+            initial={geo.coords}
+            onClose={() => setPickerOpen(false)}
+            onPick={(coords) => {
+              geo.setManual(coords);
+              setPickerOpen(false);
+              toast.show('Đã đặt vị trí theo điểm bạn chọn trên bản đồ.', { tone: 'success' });
+            }}
+          />
+        </Suspense>
+      )}
       {active && (
         <SosTrackingScreen
           key={active.incident.id}

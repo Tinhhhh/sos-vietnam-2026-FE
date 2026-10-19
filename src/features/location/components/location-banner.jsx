@@ -2,18 +2,20 @@ import styles from './location-banner.module.css';
 import badgeStyles from './jurisdiction-badge.module.css';
 
 function coordsText({ status, coords, accuracy }) {
-  if (status === 'locating') return 'Độ chính xác: Đang dò tìm vệ tinh';
+  if (status === 'locating' && !coords) return 'Độ chính xác: Đang dò tìm vệ tinh';
+  if (!coords) return 'Chưa có toạ độ — bật định vị hoặc chọn vị trí trên bản đồ';
   const base = `Tọa độ: ${coords.lat.toFixed(5)}, ${coords.lng.toFixed(5)}`;
-  if (status === 'fallback') return `${base} (vị trí mặc định — chưa lấy được GPS)`;
-  return `${base} (±${accuracy}m)`;
+  if (status === 'manual') return `${base} (bạn chọn trên bản đồ)`;
+  return accuracy ? `${base} (±${accuracy}m)` : base;
 }
 
 /**
  * "VỊ TRÍ GPS VỆ TINH CỦA BẠN" glass banner.
- * @param {{ geo: ReturnType<import('../hooks/use-geolocation').useGeolocation> }} props
+ * @param {{ geo: ReturnType<import('../hooks/use-geolocation').useGeolocation>, onPickOnMap?: () => void }} props
  */
-export function LocationBanner({ geo }) {
-  const isLocating = geo.status === 'locating';
+export function LocationBanner({ geo, onPickOnMap }) {
+  const isLocating = geo.status === 'locating' && !geo.coords;
+  const unavailable = geo.status === 'unavailable';
 
   return (
     <div className={`${styles.locationBanner} liquid-glass`}>
@@ -29,6 +31,8 @@ export function LocationBanner({ geo }) {
           <div className={styles.locAddress}>
             {isLocating ? (
               'Đang định vị GPS vệ tinh...'
+            ) : unavailable ? (
+              <span style={{ color: '#fbbf24', fontWeight: 700 }}>⚠️ Không lấy được vị trí của bạn</span>
             ) : geo.jurisdiction ? (
               <>
                 <span>📍</span> {geo.address}{' '}
@@ -41,6 +45,16 @@ export function LocationBanner({ geo }) {
           <div className={styles.locCoords}>{coordsText(geo)}</div>
         </div>
       </div>
+      {onPickOnMap && (
+        <button
+          type="button"
+          className="btn-refresh-loc liquid-glass"
+          title="Tự chọn vị trí của bạn trên bản đồ"
+          onClick={onPickOnMap}
+        >
+          🗺️ Chọn trên bản đồ
+        </button>
+      )}
       <button
         type="button"
         className="btn-refresh-loc liquid-glass"

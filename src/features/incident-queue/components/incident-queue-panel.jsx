@@ -1,6 +1,7 @@
 import { useState } from 'react';
 
 import { CallIcon } from '@/components/ui/call-icons/call-icons';
+import { SvgIcon } from '@/components/ui/svg-icon/svg-icon';
 import { useToast } from '@/components/ui/toast/toast-context';
 import { useNow } from '@/hooks/use-now';
 
@@ -127,7 +128,11 @@ export function IncidentQueuePanel({
   };
 
   const actions = {
-    claim: (inc) => run(inc, () => claimIncident(inc.id), `Đã tiếp nhận ca ${inc.id}`),
+    // Taking the case opens its detail box right away (info, photos / videos, next step)
+    claim: async (inc) => {
+      const ok = await run(inc, () => claimIncident(inc.id), `Đã tiếp nhận ca ${inc.id}`);
+      if (ok) onOpenDetail?.(inc.id);
+    },
     release: (inc) => run(inc, () => releaseIncident(inc.id), `Đã trả ca ${inc.id} về hàng đợi chung`),
     handover: (inc) => setHandoverOf(inc),
     // Verified with the citizen: ask for forces to be dispatched (VERIFYING -> RESOLVING)
@@ -290,7 +295,6 @@ function QueueCard({
     inc.address ||
     [inc.ward, inc.province].filter(Boolean).join(', ') ||
     (inc.lat != null ? `Toạ độ GPS: ${inc.lat.toFixed(5)}, ${inc.lng.toFixed(5)}` : 'Chưa xác định vị trí');
-  const destination = inc.lat != null ? `${inc.lat},${inc.lng}` : null;
 
   return (
     <div
@@ -331,19 +335,23 @@ function QueueCard({
               onOpenDetail(inc.id);
             }}
           >
-            ⓘ Chi tiết
+            Chi tiết
           </button>
         )}
       </div>
 
       <div className={styles.queueLocation} style={{ marginBottom: 6 }}>
-        📍 {location}
+        {location}
       </div>
 
       <div className={styles.queueIncidentText} style={{ marginBottom: 8 }}>
         Sự cố: <b>{inc.tags.length ? inc.tags.join(', ') : 'Chưa chọn loại'}</b>
         {inc.description ? ` — ${inc.description}` : ''}
-        {inc.mediaCount > 0 && <span style={{ marginLeft: 6 }}>· 📷 {inc.mediaCount} tệp</span>}
+        <MediaBadges
+          images={inc.imageCount}
+          videos={inc.videoCount}
+          other={inc.mediaCount - inc.imageCount - inc.videoCount}
+        />
       </div>
 
       {(inc.citizenName || inc.phone) && (
@@ -365,12 +373,6 @@ function QueueCard({
         style={{ justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}
       >
         <ClaimControls incident={inc} holding={holding} busy={busy} canCall={canCall} actions={actions} />
-        {destination && (
-          <span style={{ display: 'inline-flex', gap: 6 }}>
-            <DirectionLink destination={destination} mode="driving" label="Ô tô ↗" color="#38bdf8" />
-            <DirectionLink destination={destination} mode="two_wheeler" label="Xe máy ↗" color="#34d399" />
-          </span>
-        )}
       </div>
     </div>
   );
@@ -391,59 +393,63 @@ function ClaimControls({ incident: inc, holding, busy, canCall, actions }) {
   if (inc.heldByMe) {
     const verifying = inc.status === 'VERIFYING';
     const canEscalate = inc.level === 'ward' && !inc.escalatedAt;
+    const buttons = [
+      verifying && {
+        key: 'dispatch',
+        label: 'Yêu cầu điều động',
+        title: 'Đã xác minh với người báo: gửi yêu cầu điều động lực lượng tới hiện trường',
+        look: ['rgba(52, 211, 153, 0.18)', '#34d399', '#d1fae5'],
+        onClick: actions.dispatch,
+      },
+      canEscalate && {
+        key: 'escalate',
+        label: 'Chuyển lên tỉnh',
+        title: 'Cấp xã không xử lý được: chuyển ca lên cấp tỉnh/thành phố ngay',
+        look: ['rgba(255, 42, 75, 0.15)', '#ff6b81', '#fecdd3'],
+        onClick: actions.escalate,
+      },
+      verifying && {
+        key: 'release',
+        label: 'Trả về hàng đợi',
+        title: 'Trả ca về hàng đợi chung cho cán bộ khác nhận (đồng hồ leo thang tính tiếp)',
+        look: ['rgba(148, 163, 184, 0.15)', '#94a3b8', '#e2e8f0'],
+        onClick: actions.release,
+      },
+      {
+        key: 'handover',
+        label: 'Giao ca',
+        title: 'Giao thẳng cho một cán bộ khác cùng đơn vị',
+        look: ['rgba(56, 189, 248, 0.15)', '#38bdf8', '#bae6fd'],
+        onClick: actions.handover,
+      },
+    ].filter(Boolean);
     return (
-      <span style={{ display: 'inline-flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
-        <span style={badgeStyle('rgba(52, 211, 153, 0.18)', '#6ee7b7', 'rgba(52, 211, 153, 0.5)')}>
-          {verifying ? '🔎 Bạn đang xác minh' : '🚓 Đang điều động lực lượng'}
-        </span>
-        <CallButton
-          disabled={busy || !canCall}
-          title="Gọi video cho người báo"
-          onClick={stop(actions.call)}
-        />
-        {verifying && (
-          <button
-            type="button"
-            disabled={busy}
-            style={actionButtonStyle('rgba(52, 211, 153, 0.18)', '#34d399', '#d1fae5')}
-            title="Đã xác minh với người báo: gửi yêu cầu điều động lực lượng tới hiện trường"
-            onClick={stop(actions.dispatch)}
-          >
-            🚓 Yêu cầu điều động
-          </button>
-        )}
-        {canEscalate && (
-          <button
-            type="button"
-            disabled={busy}
-            style={actionButtonStyle('rgba(255, 42, 75, 0.15)', '#ff6b81', '#fecdd3')}
-            title="Cấp xã không xử lý được: chuyển ca lên cấp tỉnh/thành phố ngay"
-            onClick={stop(actions.escalate)}
-          >
-            ⚡ Chuyển lên tỉnh
-          </button>
-        )}
-        {verifying && (
-          <button
-            type="button"
-            disabled={busy}
-            style={actionButtonStyle('rgba(148, 163, 184, 0.15)', '#94a3b8', '#e2e8f0')}
-            title="Trả ca về hàng đợi chung cho cán bộ khác nhận (đồng hồ leo thang tính tiếp)"
-            onClick={stop(actions.release)}
-          >
-            ↩ Trả về hàng đợi
-          </button>
-        )}
-        <button
-          type="button"
-          disabled={busy}
-          style={actionButtonStyle('rgba(56, 189, 248, 0.15)', '#38bdf8', '#bae6fd')}
-          title="Giao thẳng cho một cán bộ khác cùng đơn vị"
-          onClick={stop(actions.handover)}
-        >
-          🤝 Giao ca
-        </button>
-      </span>
+      <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+          <span style={badgeStyle('rgba(52, 211, 153, 0.18)', '#6ee7b7', 'rgba(52, 211, 153, 0.5)')}>
+            {verifying ? 'Bạn đang xác minh' : 'Đang điều động lực lượng'}
+          </span>
+          <CallButton
+            disabled={busy || !canCall}
+            title="Gọi video cho người báo"
+            onClick={stop(actions.call)}
+          />
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 6 }}>
+          {buttons.map((btn) => (
+            <button
+              key={btn.key}
+              type="button"
+              disabled={busy}
+              style={{ ...actionButtonStyle(...btn.look), justifyContent: 'center', width: '100%' }}
+              title={btn.title}
+              onClick={stop(btn.onClick)}
+            >
+              {btn.label}
+            </button>
+          ))}
+        </div>
+      </div>
     );
   }
   if (inc.handler) {
@@ -452,19 +458,24 @@ function ClaimControls({ incident: inc, holding, busy, canCall, actions }) {
         style={badgeStyle('rgba(100, 116, 139, 0.2)', '#cbd5e1', '#64748b')}
         title="Ca đã có cán bộ khác tiếp nhận"
       >
-        🔒 {inc.status === 'RESOLVING' ? 'Đang điều động' : 'Đang xác minh'}: {inc.handler.fullName}
+        {inc.status === 'RESOLVING' ? 'Đang điều động' : 'Đang xác minh'}: {inc.handler.fullName}
       </span>
     );
   }
   if (inc.canHandle && inc.status === 'PENDING') {
     const blocked = holding && holding.id !== inc.id;
     return (
-      <span style={{ display: 'inline-flex', gap: 8, alignItems: 'center' }}>
+      // Claim button ~80% of the row, the call button takes the rest
+      <div style={{ width: '100%', display: 'flex', gap: 8, alignItems: 'center' }}>
         <button
           type="button"
           disabled={busy || blocked}
           style={{
             ...actionButtonStyle('rgba(234, 179, 8, 0.22)', '#eab308', '#fef08a'),
+            flex: '0 0 80%',
+            justifyContent: 'center',
+            padding: '8px 10px',
+            fontSize: 12.5,
             opacity: busy || blocked ? 0.5 : 1,
             cursor: busy || blocked ? 'not-allowed' : 'pointer',
           }}
@@ -475,19 +486,21 @@ function ClaimControls({ incident: inc, holding, busy, canCall, actions }) {
           }
           onClick={stop(actions.claim)}
         >
-          {busy ? 'Đang nhận...' : '⏳ TIẾP NHẬN NGAY'}
+          {busy ? 'Đang nhận...' : 'TIẾP NHẬN NGAY'}
         </button>
-        <CallButton
-          ringing
-          disabled={busy || blocked || !canCall}
-          title={
-            blocked
-              ? `Bạn đang giữ ca ${holding.id}: hoàn tất hoặc trả ca đó trước`
-              : 'Tiếp nhận ca và gọi video ngay cho người báo'
-          }
-          onClick={stop(actions.call)}
-        />
-      </span>
+        <span style={{ flex: 1, display: 'flex', justifyContent: 'center' }}>
+          <CallButton
+            ringing
+            disabled={busy || blocked || !canCall}
+            title={
+              blocked
+                ? `Bạn đang giữ ca ${holding.id}: hoàn tất hoặc trả ca đó trước`
+                : 'Tiếp nhận ca và gọi video ngay cho người báo'
+            }
+            onClick={stop(actions.call)}
+          />
+        </span>
+      </div>
     );
   }
   return (
@@ -501,16 +514,16 @@ function LevelBadge({ incident: inc, officerLevel }) {
   if (inc.escalatedAt) {
     return (
       <span style={badgeStyle('rgba(255, 42, 75, 0.2)', '#ff6b81', '#ff2a4b')}>
-        ⚡ ĐÃ LEO THANG TỈNH/TP{!inc.canHandle && officerLevel === 'ward' ? ' · Tỉnh đang thụ lý' : ''}
+        ĐÃ LEO THANG TỈNH/TP{!inc.canHandle && officerLevel === 'ward' ? ' · Tỉnh đang thụ lý' : ''}
       </span>
     );
   }
   if (inc.level === 'province') {
-    return <span style={badgeStyle('rgba(139, 92, 246, 0.2)', '#c4b5fd')}>🏛️ CẤP TỈNH/TP</span>;
+    return <span style={badgeStyle('rgba(139, 92, 246, 0.2)', '#c4b5fd')}>CẤP TỈNH/TP</span>;
   }
   return (
     <span style={badgeStyle('rgba(0, 136, 255, 0.2)', '#60a5fa')}>
-      📍 CẤP XÃ/PHƯỜNG{inc.ward ? ` (${inc.ward})` : ''}
+      CẤP XÃ/PHƯỜNG{inc.ward ? ` (${inc.ward})` : ''}
       {!inc.canHandle ? ' · Xã đang thụ lý' : ''}
     </span>
   );
@@ -566,32 +579,6 @@ function formatElapsed(seconds) {
   return h > 0 ? `${h}:${mmss}` : mmss;
 }
 
-function DirectionLink({ destination, mode, label, color }) {
-  return (
-    <a
-      href={`https://www.google.com/maps/dir/?api=1&destination=${destination}&travelmode=${mode}`}
-      target="_blank"
-      rel="noopener noreferrer"
-      onClick={(e) => e.stopPropagation()}
-      className={styles.btnGmapsDirect}
-      style={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        background: `${color}2e`,
-        border: `1px solid ${color}`,
-        color,
-        padding: '3px 7px',
-        borderRadius: 6,
-        fontSize: 10,
-        fontWeight: 800,
-        textDecoration: 'none',
-      }}
-    >
-      {label}
-    </a>
-  );
-}
-
 const SHIELD_TEXT = {
   loading: ['Đang tải hàng đợi sự cố...', 'Vui lòng chờ trong giây lát.'],
   ready: [
@@ -645,5 +632,42 @@ function WaitingShield({ status, error, onRetry }) {
         </button>
       )}
     </div>
+  );
+}
+
+/** Photo / video counts of a card: coloured icons that stand out on the dark card. */
+export function MediaBadges({ images = 0, videos = 0, other = 0 }) {
+  if (!images && !videos && !other) return null;
+  const chip = (color, bg) => ({
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 4,
+    marginLeft: 8,
+    padding: '1px 7px',
+    borderRadius: 6,
+    background: bg,
+    color,
+    fontSize: 11.5,
+    fontWeight: 800,
+    verticalAlign: 'middle',
+  });
+  return (
+    <>
+      {images > 0 && (
+        <span style={chip('#38bdf8', 'rgba(56, 189, 248, 0.16)')} title={`${images} ảnh hiện trường`}>
+          <SvgIcon name="image" size="sm" style={{ color: '#38bdf8' }} /> {images}
+        </span>
+      )}
+      {videos > 0 && (
+        <span style={chip('#f472b6', 'rgba(244, 114, 182, 0.16)')} title={`${videos} video hiện trường`}>
+          <SvgIcon name="video" size="sm" style={{ color: '#f472b6' }} /> {videos}
+        </span>
+      )}
+      {other > 0 && (
+        <span style={chip('#a3e635', 'rgba(163, 230, 53, 0.14)')} title={`${other} ghi âm`}>
+          {other} ghi âm
+        </span>
+      )}
+    </>
   );
 }

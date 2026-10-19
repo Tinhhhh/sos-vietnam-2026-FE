@@ -26,6 +26,7 @@ import {
   IncidentDetailDialog,
   IncidentHistoryPanel,
   IncidentQueuePanel,
+  OfficerStatusPanel,
   TYPE_LOOK,
   playIncidentAlert,
   stopIncidentAlert,
@@ -36,7 +37,6 @@ import { OfficerHeader, SettingsMenu } from '@/features/officer-header';
 
 const LATER = {
   officer: 'Hồ sơ cán bộ thuộc module Quản trị (làm sau).',
-  officerStatus: 'Trạng thái cán bộ xã (trực tuyến / ngoại tuyến / đang nhận ca) thuộc module sau (làm sau).',
   incidents: 'Xoá / xuất danh sách sự cố thuộc module Lịch sử & Thống kê (làm sau).',
   directory: 'Quản lý danh bạ thuộc module Quản trị (làm sau).',
 };
@@ -170,6 +170,16 @@ export function OfficerDashboardRoute() {
       icon: <SvgIcon name="car" color="amber" />,
       body: <ServiceDirectoryPanel kind="enterprises" onAdminAction={later('directory')} />,
     },
+    officers: {
+      title: 'Cán bộ đơn vị',
+      icon: <SvgIcon name="users" color="blue" />,
+      body: (
+        <OfficerStatusPanel
+          holding={queue.incidents.find((i) => i.heldByMe) || null}
+          onChange={queue.upsert}
+        />
+      ),
+    },
     hospitals: {
       title: 'Bệnh viện & cấp cứu 115',
       icon: <SvgIcon name="building" color="emerald" />,
@@ -250,8 +260,9 @@ export function OfficerDashboardRoute() {
       <RailButton
         icon="users"
         label="Cán bộ"
-        title="Trạng thái cán bộ xã: trực tuyến / ngoại tuyến / đang nhận ca"
-        onClick={later('officerStatus')}
+        title="Cán bộ của đơn vị: trực tuyến / ngoại tuyến / đang giữ ca, giao ca"
+        active={openWindow === 'officers'}
+        onClick={() => toggleWindow('officers')}
       />
       <SettingsMenu
         isAdmin={officer.isAdmin}
@@ -333,7 +344,13 @@ export function OfficerDashboardRoute() {
           ) : null
         }
       />
-      <IncidentDetailDialog incidentId={detailId} onClose={() => setDetailId(null)} />
+      <IncidentDetailDialog
+        incidentId={detailId}
+        onClose={() => setDetailId(null)}
+        live={detailId ? queue.incidents.find((i) => i.id === detailId) || null : null}
+        holding={queue.incidents.find((i) => i.heldByMe) || null}
+        onChange={queue.upsert}
+      />
       {call?.state === 'incoming' && (
         <IncomingCallDialog
           call={call}

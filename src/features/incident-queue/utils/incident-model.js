@@ -1,7 +1,9 @@
+import { cleanIncidentLabel } from '@/config/incident-suggestions';
+
 /**
  * One incident shape for the officer console.
  *   { id, type, agency, level, status, province, ward, address, lat, lng, tags, description,
- *     citizenName, phone, mediaCount, createdAt, escalateAt, escalatedAt,
+ *     citizenName, phone, mediaCount, imageCount, videoCount, createdAt, escalateAt, escalatedAt,
  *     handler: { accountId, fullName } | null, heldByMe, canHandle }
  * Dates are Date objects (null when missing). agency uses the console keys
  * (police | csgt | fire | hospital), level is 'ward' | 'province' | 'national'.
@@ -30,6 +32,9 @@ export const AGENCY_LABEL = {
 
 const toDate = (v) => (v ? new Date(v) : null);
 
+/** Tags without the chip emoji ("🔥 Cháy nhà dân" -> "Cháy nhà dân"). */
+export const cleanTags = (tags) => (Array.isArray(tags) ? tags.map(cleanIncidentLabel).filter(Boolean) : []);
+
 export function normalizeIncident(raw) {
   if (!raw?.id) return null;
   const lat = Number(raw.latitude);
@@ -45,11 +50,13 @@ export function normalizeIncident(raw) {
     address: raw.address || '',
     lat: raw.latitude != null && Number.isFinite(lat) ? lat : null,
     lng: raw.longitude != null && Number.isFinite(lng) ? lng : null,
-    tags: Array.isArray(raw.incident_tags) ? raw.incident_tags : [],
+    tags: cleanTags(raw.incident_tags),
     description: raw.description || '',
     citizenName: raw.citizen_name || '',
     phone: raw.phone || '',
     mediaCount: raw.media_count || 0,
+    imageCount: raw.image_count || 0,
+    videoCount: raw.video_count || 0,
     createdAt: toDate(raw.created_at),
     escalateAt: toDate(raw.escalate_at),
     escalatedAt: toDate(raw.escalated_at),
@@ -90,7 +97,7 @@ export function normalizeHistoryItem(raw) {
     province: raw.province || '',
     ward: raw.ward || '',
     address: raw.address || '',
-    tags: Array.isArray(raw.incident_tags) ? raw.incident_tags : [],
+    tags: cleanTags(raw.incident_tags),
     citizenName: raw.citizen_name || '',
     phone: raw.phone || '',
     createdAt: toDate(raw.created_at),
