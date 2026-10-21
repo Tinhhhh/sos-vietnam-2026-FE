@@ -2,8 +2,10 @@ import { lazy, Suspense, useCallback, useState } from 'react';
 import { useOutletContext } from 'react-router';
 
 import { useToast } from '@/components/ui/toast/toast-context';
-import { LocationBanner } from '@/features/location/components/location-banner';
+import { CitizenTopBar } from '@/components/layouts/citizen-layout/citizen-top-bar';
+import { paths } from '@/config/paths';
 import { SosRequestModal } from '@/features/sos-request/components/sos-request-modal';
+import { SupplementMediaButton } from '@/features/sos-request/components/supplement-media-button';
 import { CitizenDispatchButton } from '@/features/incident-dispatch';
 import { CitizenDocumentButton } from '@/features/incident-report';
 import { SosTrackingScreen } from '@/features/sos-tracking';
@@ -50,7 +52,7 @@ export function CitizenHomeRoute() {
 
   return (
     <div>
-      <LocationBanner geo={geo} onPickOnMap={openPicker} />
+      <CitizenTopBar geo={geo} onPickOnMap={openPicker} officerHref={paths.officer.login.getHref()} />
       <SosHero onTrigger={() => setRequestOpen(true)} />
       <SosRequestModal
         open={requestOpen}
@@ -82,6 +84,15 @@ export function CitizenHomeRoute() {
           notify={toast.show}
           onClosed={handleTrackingClosed}
           dispatchSlot={(p) => <CitizenDispatchButton {...p} />}
+          mediaSlot={({ incident, token }) => (
+            <SupplementMediaButton
+              incidentId={incident.id}
+              token={token}
+              notify={toast.show}
+              className="btn-refresh-loc"
+              style={{ margin: '10px auto 0', padding: '8px 16px', fontWeight: 700, display: 'flex' }}
+            />
+          )}
           documentSlot={({ incident, token }) => (
             <CitizenDocumentButton
               access={{ incidentId: incident.id, token }}

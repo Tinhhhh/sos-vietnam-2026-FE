@@ -11,7 +11,9 @@ const MIN_REASON = 5;
  * (the reason resets with each opening).
  *
  * @param {{ title: string, message: React.ReactNode, confirmLabel: string, placeholder?: string,
- *           busy?: boolean, onConfirm: (reason: string) => void, onClose: () => void }} props
+ *           busy?: boolean, extra?: React.ReactNode, canConfirm?: boolean,
+ *           onConfirm: (reason: string) => void, onClose: () => void }} props
+ *   extra: more fields above the reason (e.g. the force to transfer to); canConfirm: those fields are valid
  */
 export function ConfirmReasonDialog({
   title,
@@ -19,6 +21,8 @@ export function ConfirmReasonDialog({
   confirmLabel,
   placeholder,
   busy = false,
+  extra = null,
+  canConfirm = true,
   onConfirm,
   onClose,
 }) {
@@ -34,6 +38,7 @@ export function ConfirmReasonDialog({
     >
       <div className={styles.body}>
         <div className={styles.message}>{message}</div>
+        {extra}
         <label className={styles.label} htmlFor="confirm-reason">
           Lý do *
         </label>
@@ -57,7 +62,7 @@ export function ConfirmReasonDialog({
           <button
             type="button"
             className={styles.danger}
-            disabled={busy || short}
+            disabled={busy || short || !canConfirm}
             onClick={() => onConfirm(reason.trim())}
           >
             {busy ? 'Đang gửi...' : confirmLabel}

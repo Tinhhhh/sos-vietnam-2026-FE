@@ -172,6 +172,7 @@ function LookupResult({ data, onBack, document }) {
           ['Cán bộ nhận ca', person(data.handler)],
           ['Nhận ca lúc', fmt(data.handler?.at || data.accepted_at)],
           ['Chuyển lên tỉnh lúc', fmt(data.escalated_at)],
+          ['Lý do chuyển tỉnh', data.escalation_reason_label],
         ]}
       />
 

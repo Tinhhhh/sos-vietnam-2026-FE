@@ -1,3 +1,4 @@
+import desk from './citizen-desktop.module.css';
 import styles from './citizen-dock.module.css';
 
 /** Bottom floating "liquid glass" dock of the citizen portal. */
@@ -75,7 +76,7 @@ export function CitizenDock({
 
         <a
           href={dispatcherHref}
-          className={`${styles.navPillItem} ${styles.btnPillDispatcherLink}`}
+          className={`${styles.navPillItem} ${styles.btnPillDispatcherLink} ${desk.hidden}`}
           target="_blank"
           rel="noopener"
         >

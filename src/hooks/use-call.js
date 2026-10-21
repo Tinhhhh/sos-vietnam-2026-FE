@@ -86,6 +86,25 @@ export function useCall({ send, getIceServers, videoProfile, facingMode = 'user'
     (signal) => {
       const current = sessionRef.current;
       if (signal.action === 'ring') {
+        // Both sides pressed "call" at the same time (each is ringing the other): connect instead of
+        // rejecting each other. Both compare the two call ids the same way, so exactly one call survives:
+        // the side whose own call id is larger drops it and answers the other one.
+        const glare =
+          current?.role === 'caller' &&
+          current.state === 'ringing' &&
+          current.callId !== signal.call_id &&
+          signal.incident_id === metaRef.current?.incidentId;
+        if (glare) {
+          if (current.callId < signal.call_id) return; // ours wins: the other side will answer it
+          const meta = metaRef.current;
+          sessionRef.current = null; // no "call ended" flash for the dropped call
+          current.hangUp();
+          createSession(signal.call_id, 'callee', {
+            ...meta,
+            peer: { name: signal.peer_name || meta?.peer?.name || null, unitName: signal.unit_name || null },
+          }).accept(); // they meant to talk: no extra tap
+          return;
+        }
         if (isActive(current)) {
           // Already in another call: tell the new caller we are busy
           if (current.callId !== signal.call_id) {

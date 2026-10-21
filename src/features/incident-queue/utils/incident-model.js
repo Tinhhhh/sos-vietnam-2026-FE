@@ -60,6 +60,10 @@ export function normalizeIncident(raw) {
     createdAt: toDate(raw.created_at),
     escalateAt: toDate(raw.escalate_at),
     escalatedAt: toDate(raw.escalated_at),
+    escalationReasonLabel: raw.escalation_reason_label || null,
+    transferredFromLabel: raw.transferred_from_label || null,
+    transferReason: raw.transfer_reason || null,
+    escalationNote: raw.escalation_note || null,
     handler: raw.handler
       ? { accountId: raw.handler.account_id, fullName: raw.handler.full_name || 'Cán bộ' }
       : null,

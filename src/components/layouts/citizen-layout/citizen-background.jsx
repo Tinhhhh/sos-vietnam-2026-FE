@@ -4,6 +4,7 @@ import { useNetworkStatus } from '@/hooks/use-network-status';
 import { useReducedMotion } from '@/hooks/use-reduced-motion';
 import { isLowPowerDevice } from '@/lib/device-profile';
 
+import desk from './citizen-desktop.module.css';
 import styles from './citizen-background.module.css';
 
 const POSTER = '/assets/videos/sos-citizen-bg-poster.jpg';
@@ -34,6 +35,27 @@ export function CitizenBackground() {
   const loadedRef = useRef(false);
   const { tier } = useNetworkStatus();
   const reducedMotion = useReducedMotion();
+  const containerRef = useRef(null);
+
+  // Portrait screens: the video sits centred in the viewport, but the SOS orb is wherever the layout puts it
+  // (top bar height, font size...). Shift the video so the cupped hands stay under the orb.
+  useEffect(() => {
+    const align = () => {
+      const orb = document.querySelector('[aria-label="Bấm phát tín hiệu SOS"]');
+      const box = containerRef.current;
+      if (!orb || !box) return;
+      const r = orb.getBoundingClientRect();
+      const orbCenter = r.top + window.scrollY + r.height / 2;
+      box.style.setProperty('--orb-shift', `${Math.round(orbCenter - window.innerHeight / 2)}px`);
+    };
+    align();
+    const timers = [150, 600, 1500].map((ms) => window.setTimeout(align, ms));
+    window.addEventListener('resize', align);
+    return () => {
+      timers.forEach(window.clearTimeout);
+      window.removeEventListener('resize', align);
+    };
+  }, []);
 
   useEffect(() => {
     const video = videoRef.current;
@@ -69,10 +91,10 @@ export function CitizenBackground() {
   }, [tier, reducedMotion]);
 
   return (
-    <div className={styles.bgVideoContainer}>
+    <div ref={containerRef} className={styles.bgVideoContainer}>
       <video
         ref={videoRef}
-        className={`${styles.bgVideo} ${styles.citizenBgVideo}`}
+        className={`${styles.bgVideo} ${styles.citizenBgVideo} ${desk.bgVideo}`}
         muted
         playsInline
         preload="none"
@@ -86,9 +108,10 @@ export function CitizenBackground() {
         tabIndex={-1}
       />
       <div className={styles.bgVideoOverlay} />
-      <div className={`${styles.bgGlowOrb} ${styles.orb1}`} />
-      <div className={`${styles.bgGlowOrb} ${styles.orb2}`} />
-      <div className={`${styles.bgGlowOrb} ${styles.orb3}`} />
+      <div className={`${styles.bgGlowOrb} ${styles.orb1} ${desk.bgOrb}`} />
+      <div className={`${styles.bgGlowOrb} ${styles.orb2} ${desk.bgOrb}`} />
+      <div className={`${styles.bgGlowOrb} ${styles.orb3} ${desk.bgOrb}`} />
+      <div className={desk.bgShade} />
     </div>
   );
 }

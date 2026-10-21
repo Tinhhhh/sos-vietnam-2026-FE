@@ -24,7 +24,11 @@ export function useMediaAttachments({ onError }) {
       setProcessing(true);
       const added = [];
       for (const file of files) {
-        const type = file.type.startsWith('video/') ? 'video' : file.type.startsWith('image/') ? 'image' : null;
+        const type = file.type.startsWith('video/')
+          ? 'video'
+          : file.type.startsWith('image/')
+            ? 'image'
+            : null;
         if (type && room[type] <= 0) {
           skipped = true;
           continue;
