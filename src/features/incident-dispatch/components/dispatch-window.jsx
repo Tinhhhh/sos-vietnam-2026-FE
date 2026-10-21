@@ -1,0 +1,696 @@
+import { useEffect, useMemo, useState } from 'react';
+
+import { Modal } from '@/components/ui/modal/modal';
+import { useToast } from '@/components/ui/toast/toast-context';
+
+import { arriveDispatch, getDispatchPlan, saveDispatchPlan } from '../api/dispatch-api';
+import { reverseGeocode, searchAddress } from '../api/geocode';
+import {
+  formatDistance,
+  formatDuration,
+  haversineKm,
+  routeDetail,
+  routeTable,
+  straightEstimate,
+} from '../api/routing';
+import { STATION_ICON, needsDelegation, originCandidates } from '../utils/origin-candidates';
+import styles from './dispatch.module.css';
+import { DelegationStep } from './delegation-step';
+import delegationStyles from './delegation.module.css';
+import { DispatchStepper } from './dispatch-stepper';
+import { DispatchTrackingView } from './dispatch-tracking-view';
+import { FinishPanel } from './finish-panel';
+import { RouteMap } from './route-map';
+
+const ROAD_LIMIT = 40; // nearest stations that get a real road estimate; the rest straight-line
+const DELAY_NOTE = 'Thời gian thực tế có thể lâu hơn do ùn tắc giao thông hoặc thời tiết không thuận lợi.';
+
+const LEVEL_LABEL = { province: 'Trụ sở tỉnh', ward: 'Cơ sở xã/phường' };
+
+// Step keys stored in the draft (1..4). Ward police send their own station: no "Uỷ quyền" step.
+const STEP_KEYS = ['dispatch', 'delegate', 'track', 'finish'];
+const STEP_TITLES = { dispatch: 'Điều động', delegate: 'Uỷ quyền', track: 'Theo dõi', finish: 'Kết thúc' };
+const SENT_AT = new Intl.DateTimeFormat('vi-VN', {
+  hour: '2-digit',
+  minute: '2-digit',
+  day: '2-digit',
+  month: '2-digit',
+  year: 'numeric',
+});
+const BRIEF_KEY = 'sos_dispatch_brief';
+const ptKey = (p) => (p ? `${p.lat.toFixed(5)},${p.lng.toFixed(5)}` : '');
+
+/**
+ * Dispatch window of one incident (opens after "Xác nhận điều động", reopens from "Chi tiết
+ * điều động"). Batch 1: step 1 Điều động — correct the destination, pick the starting station with
+ * road distance / time for each, preview the route. Later steps show what was chosen.
+ *
+ * The saved plan (station, destination, route, step) comes from the BE
+ * (GET /incidents/{id}/dispatch-plan); "Chọn" / "Xác nhận điều động" saves it (PUT).
+ * Give it `key={incident.id}` so the plan is re-read for another incident.
+ *
+ * @param {{ incident: object, typeLabel?: string, officer: object, stations: object[], onClose: () => void,
+ *           LocationPicker: React.ComponentType }} props  map picker of the location feature (composed by the route)
+ */
+export function DispatchWindow(props) {
+  const { incident, onClose } = props;
+  const [loaded, setLoaded] = useState({ status: 'loading', plan: null, error: null });
+
+  useEffect(() => {
+    let alive = true;
+    getDispatchPlan(incident.id)
+      .then((plan) => alive && setLoaded({ status: 'ready', plan, error: null }))
+      .catch((err) => alive && setLoaded({ status: 'error', plan: null, error: err.message }));
+    return () => {
+      alive = false;
+    };
+  }, [incident.id]);
+
+  if (loaded.status !== 'ready') {
+    return (
+      <Modal
+        open
+        onClose={onClose}
+        solid
+        containerStyle={{ maxWidth: 520 }}
+        title={<span className={styles.windowTitle}>Điều động lực lượng · Ca {incident.id}</span>}
+      >
+        <div className={loaded.status === 'error' ? styles.warn : styles.muted}>
+          {loaded.status === 'error' ? `Không tải được kế hoạch điều động: ${loaded.error}` : 'Đang tải...'}
+        </div>
+      </Modal>
+    );
+  }
+  return <DispatchWindowBody {...props} initialPlan={loaded.plan} />;
+}
+
+function DispatchWindowBody({
+  incident,
+  typeLabel,
+  officer,
+  stations,
+  stationsStatus = 'ready',
+  onClose,
+  onFinished,
+  LocationPicker,
+  initialPlan,
+}) {
+  const toast = useToast();
+  const [draft, setDraft] = useState(initialPlan);
+  const [editing, setEditing] = useState(!draft || draft.step === 1);
+  const [saving, setSaving] = useState(false);
+
+  // The ward unit accepts / rejects / sets off on its own screen: every queue push of this incident
+  // re-reads the plan so this window follows (unless the officer is editing step 1).
+  useEffect(() => {
+    if (editing) return undefined;
+    let alive = true;
+    getDispatchPlan(incident.id)
+      .then((plan) => alive && setDraft(plan))
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [incident, editing]);
+  const [destination, setDestination] = useState(
+    () =>
+      draft?.destination ||
+      (incident.lat != null
+        ? {
+            lat: incident.lat,
+            lng: incident.lng,
+            address: [incident.address, incident.ward, incident.province].filter(Boolean).join(', '),
+            source: 'CITIZEN_GPS',
+          }
+        : null),
+  );
+  const [selectedId, setSelectedId] = useState(draft?.origin?.stationId ?? null);
+  const [pickerOpen, setPickerOpen] = useState(false);
+
+  const { mode, stations: candidates } = useMemo(
+    () => originCandidates(officer, incident, stations),
+    [officer, incident, stations],
+  );
+
+  // Road estimate for every candidate (nearest first). Belongs to one destination.
+  const [estimates, setEstimates] = useState({ key: '', byId: {}, error: null });
+  const destKey = ptKey(destination);
+  useEffect(() => {
+    if (!destination || candidates.length === 0) return undefined;
+    const ctrl = new AbortController();
+    const byDistance = [...candidates].sort(
+      (a, b) => haversineKm(a, destination) - haversineKm(b, destination),
+    );
+    const near = byDistance.slice(0, ROAD_LIMIT);
+    const byId = {};
+    byDistance.slice(ROAD_LIMIT).forEach((s) => (byId[s.id] = straightEstimate(s, destination)));
+    routeTable(near, destination, { signal: ctrl.signal })
+      .then((rows) => {
+        near.forEach((s, i) => (byId[s.id] = rows[i] || straightEstimate(s, destination)));
+        setEstimates({ key: destKey, byId, error: null });
+      })
+      .catch((err) => {
+        if (ctrl.signal.aborted) return;
+        near.forEach((s) => (byId[s.id] = straightEstimate(s, destination)));
+        setEstimates({ key: destKey, byId, error: err.message });
+      });
+    return () => ctrl.abort();
+  }, [candidates, destination, destKey]);
+  const est = estimates.key === destKey ? estimates.byId : null;
+
+  const sorted = useMemo(() => {
+    const dur = (s) => est?.[s.id]?.durationS ?? Infinity;
+    const list = [...candidates].sort(
+      (a, b) => dur(a) - dur(b) || haversineKm(a, destination) - haversineKm(b, destination),
+    );
+    // Province HQ ("cơ sở hiện tại") first, then the ward stations by travel time
+    return mode === 'province'
+      ? [...list.filter((s) => s.level !== 'ward'), ...list.filter((s) => s.level === 'ward')]
+      : list;
+  }, [candidates, est, destination, mode]);
+
+  // Ward police: their own station, nearest one preselected
+  const effectiveId = selectedId ?? (mode === 'ward' ? sorted[0]?.id : null);
+  const selected = candidates.find((s) => s.id === effectiveId) || null;
+
+  const [route, setRoute] = useState({ key: '', data: null, error: null });
+  const routeKey = selected && destination ? `${selected.id}|${destKey}` : '';
+  useEffect(() => {
+    if (!routeKey) return undefined;
+    const ctrl = new AbortController();
+    routeDetail(selected, destination, { signal: ctrl.signal })
+      .then((data) => setRoute({ key: routeKey, data, error: null }))
+      .catch((err) => !ctrl.signal.aborted && setRoute({ key: routeKey, data: null, error: err.message }));
+    return () => ctrl.abort();
+  }, [routeKey, selected, destination]);
+  const currentRoute = route.key === routeKey ? route.data : null;
+  const routeError = route.key === routeKey ? route.error : null;
+
+  const confirmOrigin = async () => {
+    if (!selected || !destination) return;
+    const delegate = needsDelegation(officer, selected);
+    setSaving(true);
+    try {
+      const next = await saveDispatchPlan(incident.id, {
+        stationId: selected.id,
+        destination,
+        route: currentRoute || {
+          ...(est?.[selected.id] || straightEstimate(selected, destination)),
+          coords: null,
+        },
+        delegate,
+      });
+      setDraft(next);
+      setEditing(false);
+      toast.show(
+        delegate
+          ? `Đã chọn ${selected.name}: chuyển sang bước uỷ quyền`
+          : `Đã điều động ${selected.name}: người báo tin đã thấy lực lượng đang tới`,
+        { tone: 'success' },
+      );
+    } catch (err) {
+      toast.show(err.message, { tone: 'error' });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const rejected = draft?.status === 'REJECTED';
+  const step = editing || rejected ? 1 : draft?.step || 1;
+
+  // Back to step 1 reopens the form; the saved plan stays until it is confirmed again.
+  const goBack = () => setEditing(true);
+
+  // Handed to a ward officer who has not answered yet: the plan is locked (BE refuses changes too)
+  const waitingAnswer = draft?.status === 'PENDING_ACCEPT' && !!draft?.assignedTo;
+  // "Khởi hành ngay": own unit on the way -> at the scene (step 4); a delegated unit presses it on its card
+  const canArrive = step === 3 && draft?.status === 'EN_ROUTE' && !draft?.assignedTo;
+  const [arriving, setArriving] = useState(false);
+  const arrive = async () => {
+    setArriving(true);
+    try {
+      setDraft(await arriveDispatch(incident.id));
+      toast.show('Lực lượng đã tới hiện trường: chuyển sang bước Kết thúc', { tone: 'success' });
+    } catch (err) {
+      toast.show(err.message, { tone: 'error' });
+    } finally {
+      setArriving(false);
+    }
+  };
+  const isWard = mode === 'ward';
+  const steps = STEP_KEYS.filter((k) => !(isWard && k === 'delegate')).map((key) => ({
+    key,
+    title: STEP_TITLES[key],
+    skipped: key === 'delegate' && !!draft && !draft.assignedTo && step > 2,
+  }));
+
+  return (
+    <Modal
+      open
+      onClose={pickerOpen ? () => {} : onClose}
+      solid
+      containerStyle={{ maxWidth: 1120, width: 'min(1120px, calc(100vw - 24px))' }}
+      title={<span className={styles.windowTitle}>Điều động lực lượng · Ca {incident.id}</span>}
+    >
+      <DispatchStepper steps={steps} current={STEP_KEYS[step - 1]} />
+
+      {step === 1 && rejected && (
+        <div className={delegationStyles.rejectedBanner}>
+          <b>{draft.assignedTo?.fullName || draft.origin.name}</b> ({draft.origin.name}) đã từ chối
+          {draft.rejectReason ? `: "${draft.rejectReason}"` : ''}. Chọn đơn vị khác để điều động.
+        </div>
+      )}
+      {step === 1 ? (
+        <div className={styles.layout}>
+          <div className={styles.side}>
+            <DestinationBox
+              destination={destination}
+              original={incident}
+              typeLabel={typeLabel}
+              onChange={setDestination}
+              onOpenPicker={() => setPickerOpen(true)}
+            />
+            {stationsStatus !== 'ready' && candidates.length === 0 && (
+              <div className={styles.box}>
+                <div className={styles.muted}>
+                  {stationsStatus === 'error'
+                    ? 'Chưa tải được danh sách trụ sở, đang thử lại...'
+                    : 'Đang tải danh sách trụ sở...'}
+                </div>
+              </div>
+            )}
+            {!isWard && (
+              <OriginList
+                stations={sorted}
+                estimates={est}
+                estimateError={estimates.key === destKey ? estimates.error : null}
+                selectedId={effectiveId}
+                onSelect={setSelectedId}
+                hasDestination={!!destination}
+              />
+            )}
+          </div>
+          <div className={styles.mapCol}>
+            <RouteMap origin={selected} destination={destination} coords={currentRoute?.coords || null} />
+            <RouteSummary
+              station={selected}
+              route={currentRoute || (selected && est?.[selected.id]) || null}
+              error={routeError}
+            />
+          </div>
+          <div className={styles.footer}>
+            {draft?.step > 1 && !rejected && (
+              <button type="button" className={styles.btnBack} onClick={() => setEditing(false)}>
+                ← Giữ lựa chọn cũ
+              </button>
+            )}
+            {selected && needsDelegation(officer, selected) && (
+              <span className={styles.footerHint}>
+                Cơ sở xã/phường: bước tiếp theo sẽ liên hệ và uỷ quyền ca cho đơn vị này.
+              </span>
+            )}
+            <button
+              type="button"
+              className={styles.btnPrimary}
+              disabled={!selected || !destination || saving}
+              onClick={confirmOrigin}
+            >
+              {saving
+                ? 'Đang lưu...'
+                : isWard
+                  ? 'Xác nhận điều động'
+                  : selected
+                    ? `Chọn ${selected.name}`
+                    : 'Chọn điểm xuất phát'}
+            </button>
+          </div>
+        </div>
+      ) : (
+        <>
+          {step >= 3 ? (
+            <DispatchTrackingView plan={draft} />
+          ) : (
+            <div className={delegationStyles.panel}>
+              <ChosenSummary
+                draft={draft}
+                canPickOrigin={!isWard}
+                locked={waitingAnswer}
+                onEdit={() => setEditing(true)}
+              />
+              <DelegationStep
+                incidentId={incident.id}
+                plan={draft}
+                onPlan={setDraft}
+                locked={waitingAnswer}
+              />
+            </div>
+          )}
+          {step === 4 ? (
+            <FinishPanel
+              incidentId={incident.id}
+              plan={draft}
+              canConfirm={!draft.assignedTo}
+              onPlan={setDraft}
+              onFinished={() => {
+                onFinished?.(incident.id);
+                onClose();
+              }}
+            />
+          ) : (
+            <div className={styles.navRow}>
+              {waitingAnswer ? (
+                <span className={styles.lockNote}>
+                  Đang chờ {draft.assignedTo.fullName} trả lời: tạm khoá. Không liên lạc được thì bấm "Thu hồi
+                  uỷ quyền" ở trên để chọn lại.
+                </span>
+              ) : (
+                <button type="button" className={styles.btnBack} onClick={goBack}>
+                  ← Quay lại bước trước
+                </button>
+              )}
+              {step === 3 && !waitingAnswer && (
+                <button type="button" className={styles.linkBtn} onClick={() => setEditing(true)}>
+                  {isWard ? 'Đổi điểm đến' : 'Đổi điểm xuất phát / điểm đến'}
+                </button>
+              )}
+              {canArrive && (
+                <button type="button" className={styles.btnPrimary} disabled={arriving} onClick={arrive}>
+                  {arriving ? 'Đang gửi...' : 'Khởi hành ngay'}
+                </button>
+              )}
+            </div>
+          )}
+        </>
+      )}
+
+      {/* mounted only while open, so its layer is added after (above) this window */}
+      {pickerOpen && (
+        <LocationPicker
+          open
+          initial={destination}
+          title="Chọn điểm đến (hiện trường)"
+          onClose={() => setPickerOpen(false)}
+          onPick={(p) => {
+            setDestination({
+              lat: p.lat,
+              lng: p.lng,
+              address: 'Vị trí chọn trên bản đồ (đang tìm địa chỉ...)',
+              source: 'OFFICER_EDIT',
+            });
+            setPickerOpen(false);
+            // Fill in the street address of the picked point (only if the officer has not moved it again)
+            reverseGeocode(p)
+              .then((address) =>
+                setDestination((cur) =>
+                  cur && cur.lat === p.lat && cur.lng === p.lng
+                    ? { ...cur, address: address || 'Vị trí chọn trên bản đồ' }
+                    : cur,
+                ),
+              )
+              .catch(() =>
+                setDestination((cur) =>
+                  cur && cur.lat === p.lat && cur.lng === p.lng
+                    ? { ...cur, address: 'Vị trí chọn trên bản đồ' }
+                    : cur,
+                ),
+              );
+          }}
+        />
+      )}
+    </Modal>
+  );
+}
+
+/** Where the force goes: the citizen's GPS, or a point the officer corrected (address / map). */
+function DestinationBox({ destination, original, typeLabel, onChange, onOpenPicker }) {
+  const [query, setQuery] = useState('');
+  const [results, setResults] = useState({ status: 'idle', items: [], error: null });
+  // Sender / time / phone / type / description can be folded away (remembered per browser)
+  const [showBrief, setShowBriefState] = useState(() => {
+    try {
+      return localStorage.getItem(BRIEF_KEY) !== 'hidden';
+    } catch {
+      return true;
+    }
+  });
+  const setShowBrief = (update) =>
+    setShowBriefState((prev) => {
+      const next = typeof update === 'function' ? update(prev) : update;
+      try {
+        localStorage.setItem(BRIEF_KEY, next ? 'shown' : 'hidden');
+      } catch {
+        // storage blocked: the choice just lasts for this window
+      }
+      return next;
+    });
+  const gps = original.lat != null ? { lat: original.lat, lng: original.lng } : null;
+
+  const search = async (e) => {
+    e.preventDefault();
+    if (query.trim().length < 3) return;
+    setResults({ status: 'loading', items: [], error: null });
+    try {
+      const items = await searchAddress(query, { near: gps });
+      setResults({ status: 'ready', items, error: null });
+    } catch (err) {
+      setResults({ status: 'error', items: [], error: err.message });
+    }
+  };
+
+  return (
+    <section className={styles.box}>
+      <div className={styles.boxHead}>
+        <span className={styles.boxTitle}>Điểm đến (hiện trường)</span>
+        <span className={destination?.source === 'OFFICER_EDIT' ? styles.chipEdit : styles.chipGps}>
+          {destination?.source === 'OFFICER_EDIT' ? 'Cán bộ chỉnh' : 'GPS người dân'}
+        </span>
+      </div>
+      <button
+        type="button"
+        className={styles.briefToggle}
+        aria-expanded={showBrief}
+        onClick={() => setShowBrief((v) => !v)}
+      >
+        {showBrief ? '▾ Ẩn thông tin người báo' : '▸ Hiện thông tin người báo'}
+      </button>
+      {showBrief && <CaseBrief incident={original} typeLabel={typeLabel} />}
+      {destination ? (
+        <>
+          <div className={styles.destAddr}>{destination.address || 'Không có địa chỉ'}</div>
+          <div className={styles.destCoord}>
+            {destination.lat.toFixed(5)}, {destination.lng.toFixed(5)}
+            {destination.source === 'CITIZEN_GPS' && original.accuracy ? ` · ±${original.accuracy} m` : ''}
+          </div>
+        </>
+      ) : (
+        <div className={styles.warn}>Ca không có toạ độ: tìm địa chỉ hoặc chọn trên bản đồ.</div>
+      )}
+
+      <form className={styles.searchRow} onSubmit={search}>
+        <input
+          className={styles.input}
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Địa chỉ người dân cung cấp thêm..."
+          aria-label="Tìm địa chỉ điểm đến"
+        />
+        <button type="submit" className={styles.btnSmall} disabled={query.trim().length < 3}>
+          Tìm
+        </button>
+      </form>
+      <div className={styles.destActions}>
+        <button type="button" className={styles.linkBtn} onClick={onOpenPicker}>
+          Chọn trên bản đồ
+        </button>
+        {gps && destination?.source === 'OFFICER_EDIT' && (
+          <button
+            type="button"
+            className={styles.linkBtn}
+            onClick={() =>
+              onChange({
+                ...gps,
+                address: [original.address, original.ward, original.province].filter(Boolean).join(', '),
+                source: 'CITIZEN_GPS',
+              })
+            }
+          >
+            Về GPS người dân
+          </button>
+        )}
+      </div>
+      {results.status === 'loading' && <div className={styles.muted}>Đang tìm...</div>}
+      {results.status === 'error' && <div className={styles.warn}>{results.error}</div>}
+      {results.status === 'ready' && results.items.length === 0 && (
+        <div className={styles.muted}>Không tìm thấy địa chỉ này.</div>
+      )}
+      {results.items.length > 0 && (
+        <ul className={styles.results}>
+          {results.items.map((r) => (
+            <li key={`${r.lat},${r.lng}`}>
+              <button
+                type="button"
+                onClick={() => {
+                  onChange({ lat: r.lat, lng: r.lng, address: r.label, source: 'OFFICER_EDIT' });
+                  setResults({ status: 'idle', items: [], error: null });
+                  setQuery('');
+                }}
+              >
+                {r.label}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+
+/** Province / PCCC / CSGT officers: pick the HQ or a ward station (ward police never see this). */
+function OriginList({ stations, estimates, estimateError, selectedId, onSelect, hasDestination }) {
+  return (
+    <section className={`${styles.box} ${styles.originBox}`}>
+      <div className={styles.boxHead}>
+        <span className={styles.boxTitle}>Chọn điểm xuất phát ({stations.length})</span>
+      </div>
+      <div className={styles.muted}>
+        Trụ sở tỉnh hiện tại hoặc cơ sở xã/phường trong địa bàn, sắp theo thời gian tới.
+      </div>
+      {!hasDestination && <div className={styles.muted}>Chọn điểm đến để tính quãng đường.</div>}
+      {stations.length === 0 && (
+        <div className={styles.warn}>Không có cơ sở nào của lực lượng này trong tỉnh.</div>
+      )}
+      {estimateError && (
+        <div className={styles.muted}>
+          Không tính được đường bộ ({estimateError}): đang ước lượng theo đường chim bay.
+        </div>
+      )}
+      <ul className={styles.origins}>
+        {stations.map((s, i) => {
+          const e = estimates?.[s.id];
+          const prevLevel = stations[i - 1]?.level;
+          const groupTitle =
+            i === 0 || (prevLevel !== 'ward') !== (s.level !== 'ward')
+              ? s.level === 'ward'
+                ? 'Cơ sở xã/phường'
+                : 'Cơ sở hiện tại (tỉnh)'
+              : null;
+          return (
+            <li key={s.id}>
+              {groupTitle && <div className={styles.group}>{groupTitle}</div>}
+              <button
+                type="button"
+                className={`${styles.origin} ${s.id === selectedId ? styles.originOn : ''}`}
+                onClick={() => onSelect(s.id)}
+              >
+                <img
+                  className={styles.originIcon}
+                  src={STATION_ICON[s.agency] || STATION_ICON.police}
+                  alt=""
+                />
+                <span className={styles.originMain}>
+                  <span className={styles.originName}>{s.name}</span>
+                  <span className={styles.originSub}>
+                    {[LEVEL_LABEL[s.level], s.ward].filter(Boolean).join(' · ')}
+                  </span>
+                </span>
+                <span className={styles.originEta}>
+                  {e ? (
+                    <>
+                      <b>{formatDuration(e.durationS)}</b>
+                      <span>
+                        {e.estimated ? '~' : ''}
+                        {formatDistance(e.distanceM)}
+                      </span>
+                    </>
+                  ) : (
+                    hasDestination && <span>Đang tính...</span>
+                  )}
+                </span>
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+    </section>
+  );
+}
+
+function RouteSummary({ station, route, error }) {
+  if (!station) return <div className={styles.summary}>Chọn một cơ sở để xem tuyến đường.</div>;
+  return (
+    <div className={styles.summary}>
+      <div className={styles.summaryRow}>
+        <img
+          className={styles.summaryIcon}
+          src={STATION_ICON[station.agency] || STATION_ICON.police}
+          alt=""
+        />
+        <div className={styles.summaryMain}>
+          <div className={styles.summaryName}>{station.name}</div>
+          <div className={styles.summarySub}>{station.address || 'Chưa có địa chỉ'}</div>
+        </div>
+        <div className={styles.summaryEta}>
+          <b>{route ? formatDuration(route.durationS) : '—'}</b>
+          <span>
+            {route?.estimated ? '~' : ''}
+            {route ? formatDistance(route.distanceM) : ''}
+          </span>
+        </div>
+      </div>
+      {error && <div className={styles.warn}>Không vẽ được tuyến: {error}</div>}
+      <div className={styles.delayNote}>{DELAY_NOTE}</div>
+    </div>
+  );
+}
+
+/** Steps 2-4 come in the next batches; for now show what step 1 saved. */
+function ChosenSummary({ draft, canPickOrigin, locked = false, onEdit }) {
+  const o = draft.origin;
+  return (
+    <div className={styles.chosen}>
+      <div className={styles.box}>
+        <div className={styles.boxHead}>
+          <span className={styles.boxTitle}>
+            {canPickOrigin ? 'Đã chọn điểm xuất phát' : 'Trụ sở xuất phát'}
+          </span>
+          {!locked && (
+            <button type="button" className={styles.linkBtn} onClick={onEdit}>
+              {canPickOrigin ? 'Đổi điểm xuất phát / điểm đến' : 'Đổi điểm đến'}
+            </button>
+          )}
+        </div>
+        <div className={styles.summaryRow}>
+          <img className={styles.summaryIcon} src={STATION_ICON[o.agency] || STATION_ICON.police} alt="" />
+          <div className={styles.summaryMain}>
+            <div className={styles.summaryName}>{o.name}</div>
+            <div className={styles.summarySub}>{o.address || 'Chưa có địa chỉ'}</div>
+          </div>
+          <div className={styles.summaryEta}>
+            <b>{formatDuration(draft.route?.durationS)}</b>
+            <span>{formatDistance(draft.route?.distanceM)}</span>
+          </div>
+        </div>
+        <div className={styles.destCoord}>Điểm đến: {draft.destination?.address}</div>
+      </div>
+    </div>
+  );
+}
+
+/** Who sent the SOS, when, how to call them, what happened (top of the destination box). */
+function CaseBrief({ incident, typeLabel }) {
+  const content = [incident.tags?.join(', '), incident.description].filter(Boolean).join(' — ');
+  return (
+    <dl className={styles.brief}>
+      <dt>Người gửi</dt>
+      <dd>{incident.citizenName || 'Không để tên'}</dd>
+      <dt>Gửi lúc</dt>
+      <dd>{incident.createdAt ? SENT_AT.format(incident.createdAt) : '—'}</dd>
+      <dt>Điện thoại</dt>
+      <dd>{incident.phone ? <a href={`tel:${incident.phone}`}>{incident.phone}</a> : 'Không có'}</dd>
+      <dt>Loại hình</dt>
+      <dd>{typeLabel || incident.type}</dd>
+      <dt>Mô tả</dt>
+      <dd>{content || 'Không có mô tả'}</dd>
+    </dl>
+  );
+}

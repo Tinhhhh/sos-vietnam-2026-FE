@@ -4,6 +4,8 @@ import { useOutletContext } from 'react-router';
 import { useToast } from '@/components/ui/toast/toast-context';
 import { LocationBanner } from '@/features/location/components/location-banner';
 import { SosRequestModal } from '@/features/sos-request/components/sos-request-modal';
+import { CitizenDispatchButton } from '@/features/incident-dispatch';
+import { CitizenDocumentButton } from '@/features/incident-report';
 import { SosTrackingScreen } from '@/features/sos-tracking';
 import { SosHero } from '@/features/sos-trigger/components/sos-hero';
 import { clearActiveIncident, loadActiveIncident } from '@/stores/active-incident';
@@ -16,7 +18,8 @@ const LocationPicker = lazy(() =>
 /**
  * "/" — SOS trigger screen (legacy #sosTriggerView) + the SOS request form.
  * After sending, the waiting / call screen takes over until the citizen cancels or the case closes.
- * A reload returns to it (the active incident is kept in sessionStorage).
+ * A reload or a new visit returns to it (the active incident is kept in localStorage); sending SOS
+ * again from a phone that has an open SOS also returns to that one (BE answers resumed = true).
  */
 export function CitizenHomeRoute() {
   const { geo } = useOutletContext();
@@ -78,6 +81,16 @@ export function CitizenHomeRoute() {
           token={active.citizenAccessToken}
           notify={toast.show}
           onClosed={handleTrackingClosed}
+          dispatchSlot={(p) => <CitizenDispatchButton {...p} />}
+          documentSlot={({ incident, token }) => (
+            <CitizenDocumentButton
+              access={{ incidentId: incident.id, token }}
+              notify={toast.show}
+              closeOnSign
+              className="btn-refresh-loc"
+              style={{ margin: '10px auto 0', padding: '8px 16px', fontWeight: 700, display: 'flex' }}
+            />
+          )}
         />
       )}
     </div>

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import { MAX_ATTACHMENTS, prepareAttachment } from '../utils/media';
+import { MAX_IMAGES, MAX_VIDEOS, prepareAttachment } from '../utils/media';
 
 /** Picked scene photos/videos with object-URL previews that are freed on removal. */
 export function useMediaAttachments({ onError }) {
@@ -16,18 +16,25 @@ export function useMediaAttachments({ onError }) {
       const files = Array.from(fileList || []);
       if (files.length === 0) return;
 
-      const room = MAX_ATTACHMENTS - attachmentsRef.current.length;
-      if (files.length > room) {
-        onError(`Tối đa ${MAX_ATTACHMENTS} ảnh/video cho mỗi lần báo sự cố.`);
-      }
+      // Tối đa MAX_IMAGES ảnh + MAX_VIDEOS video mỗi lần báo (BE kiểm lại)
+      const count = (type) => attachmentsRef.current.filter((a) => a.type === type).length;
+      const room = { image: MAX_IMAGES - count('image'), video: MAX_VIDEOS - count('video') };
+      let skipped = false;
 
       setProcessing(true);
       const added = [];
-      for (const file of files.slice(0, Math.max(room, 0))) {
+      for (const file of files) {
+        const type = file.type.startsWith('video/') ? 'video' : file.type.startsWith('image/') ? 'image' : null;
+        if (type && room[type] <= 0) {
+          skipped = true;
+          continue;
+        }
+        if (type) room[type] -= 1;
         const { attachment, error } = await prepareAttachment(file);
         if (error) onError(error);
         if (attachment) added.push(attachment);
       }
+      if (skipped) onError(`Tối đa ${MAX_IMAGES} ảnh và ${MAX_VIDEOS} video cho mỗi lần báo sự cố.`);
       setAttachments((list) => [...list, ...added]);
       setProcessing(false);
     },

@@ -22,6 +22,9 @@ const CONNECTION = {
 };
 
 const IN_CALL = ['ringing', 'connecting', 'live', 'reconnecting'];
+// Same as BE app.incident.auto-cancel-minutes: nobody took it in this time -> the report has expired
+const EXPIRE_MS = 60 * 60 * 1000;
+const AUTO_RETURN_S = 5;
 
 /**
  * Screen the citizen sees right after sending an SOS, shaped like an outgoing phone call:
@@ -29,15 +32,19 @@ const IN_CALL = ['ringing', 'connecting', 'live', 'reconnecting'];
  * (5 s lock) and the wait timer at the bottom.
  *
  * @param {{ initialIncident: object, token: string, notify: Function,
- *           onClosed: (message?: string) => void }} props
+ *           onClosed: (message?: string) => void,
+ *           dispatchSlot?: (p: { incident: object, token: string, variant: 'call'|'screen' }) => React.ReactNode,
+ *           documentSlot?: (p: { incident: object, token: string }) => React.ReactNode }} props
  *   initialIncident: raw incident from POST /incidents (or the copy saved in sessionStorage)
+ *   dispatchSlot: "..." button of the dispatch feature (tracking map), composed by the route
+ *   documentSlot: "Xem & ký văn bản báo cáo" of the report feature, shown once the incident is RESOLVED
  */
 export function SosTrackingScreen(props) {
   // Portal to <body>: the portal's main column creates a stacking context under the dock
   return createPortal(<TrackingContent {...props} />, document.body);
 }
 
-function TrackingContent({ initialIncident, token, notify, onClosed }) {
+function TrackingContent({ initialIncident, token, notify, onClosed, dispatchSlot, documentSlot }) {
   // The tracking socket also carries call signals; the call hook is created after it
   const signalHandler = useRef(() => {});
   const tracking = useIncidentTracking({
@@ -60,7 +67,19 @@ function TrackingContent({ initialIncident, token, notify, onClosed }) {
   const now = useNow(true);
   const [cancelling, setCancelling] = useState(false);
   const { call } = phone;
-  const closed = CLOSED_STATUSES.includes(incident.status);
+  // Waited over an hour with nobody taking it (BE auto-cancels it too; this also covers a lost connection)
+  const expired =
+    incident.status === 'PENDING' && !incident.handler && now - incident.createdAt.getTime() > EXPIRE_MS;
+  const closed = CLOSED_STATUSES.includes(incident.status) || expired;
+  // RESOLVED: go home by itself only once the citizen signed the report, or an hour after the case closed
+  // (officers may never write one). Cancelled / expired: right away.
+  const signed = ['CITIZEN_SIGNED', 'SIGNED'].includes(incident.documentStatus);
+  const resolvedLongAgo = !!incident.resolvedAt && now - incident.resolvedAt.getTime() > EXPIRE_MS;
+  const autoReturn = closed && (incident.status !== 'RESOLVED' || signed || resolvedLongAgo);
+  // A click on the closed screen (copy the code, read / sign the report) stops the countdown, until the
+  // report status changes (e.g. the citizen just signed: count again)
+  const [stayedFor, setStayedFor] = useState(null);
+  const stayed = stayedFor === incident.documentStatus;
   const unit = incident.handler?.unitName || receivingUnit(incident);
   const type = TYPE_TEXT[incident.type] || TYPE_TEXT.POLICE;
 
@@ -72,7 +91,7 @@ function TrackingContent({ initialIncident, token, notify, onClosed }) {
 
   const [requesting, setRequesting] = useState(false);
   const askProvince = async () => {
-    if (!window.confirm('Chuyển tin báo lên cấp tỉnh/thành phố? Cán bộ xã/phường sẽ không giữ ca này nữa.'))
+    if (!window.confirm('Chuyển tin báo lên cấp tỉnh/thành phố? Cấp xã/phường sẽ không xử lý ca này nữa.'))
       return;
     setRequesting(true);
     try {
@@ -113,6 +132,7 @@ function TrackingContent({ initialIncident, token, notify, onClosed }) {
         onToggleMic={phone.setMic}
         onToggleCamera={phone.setCamera}
         onSwitchCamera={phone.switchCamera}
+        extraControl={!closed && dispatchSlot?.({ incident, token, variant: 'call' })}
       />
     );
   }
@@ -134,9 +154,10 @@ function TrackingContent({ initialIncident, token, notify, onClosed }) {
           />
           {conn.text}
         </span>
+        {!closed && dispatchSlot?.({ incident, token, variant: 'screen' })}
       </div>
 
-      <div className={styles.center}>
+      <div className={styles.center} onClickCapture={() => closed && setStayedFor(incident.documentStatus)}>
         <div className={styles.phoneWrap}>
           {!closed && (
             <>
@@ -152,6 +173,7 @@ function TrackingContent({ initialIncident, token, notify, onClosed }) {
 
         <div>
           <StatusText
+            expired={expired}
             incident={incident}
             unit={unit}
             incoming={incoming}
@@ -159,7 +181,10 @@ function TrackingContent({ initialIncident, token, notify, onClosed }) {
             peerName={call?.peer?.name}
           />
           {incident.lookupCode ? (
-            <LookupCode code={incident.lookupCode} />
+            <>
+              <LookupCode code={incident.lookupCode} />
+              {incident.status === 'RESOLVED' && documentSlot?.({ incident, token })}
+            </>
           ) : (
             <div className={styles.incidentId}>Mã tin báo: {incident.id}</div>
           )}
@@ -201,10 +226,19 @@ function TrackingContent({ initialIncident, token, notify, onClosed }) {
           </button>
         )}
 
+        {closed && incident.status === 'RESOLVED' && !signed && !resolvedLongAgo && (
+          <p className={styles.sub} style={{ color: '#fcd34d' }}>
+            {incident.documentStatus === 'NONE'
+              ? 'Cán bộ đang lập biên bản sự việc. Vui lòng chờ để ký xác nhận.'
+              : 'Vui lòng ký xác nhận biên bản: bấm "Xem & ký văn bản báo cáo".'}
+          </p>
+        )}
         {closed && (
-          <button type="button" className={styles.callBackBtn} onClick={() => onClosed()}>
-            Về trang chủ
-          </button>
+          <AutoReturn
+            key={`${incident.documentStatus}-${autoReturn}`}
+            paused={stayed || !autoReturn}
+            onReturn={() => onClosed()}
+          />
         )}
       </div>
 
@@ -215,6 +249,21 @@ function TrackingContent({ initialIncident, token, notify, onClosed }) {
         </div>
       )}
     </div>
+  );
+}
+
+/** "Về trang chủ (5s)": the closed screen goes back to the menu by itself unless the citizen is using it. */
+function AutoReturn({ paused, onReturn }) {
+  const [start] = useState(() => Date.now());
+  const now = useNow(!paused, 250);
+  const left = Math.max(0, AUTO_RETURN_S - Math.floor((now - start) / 1000));
+  useEffect(() => {
+    if (!paused && left === 0) onReturn();
+  }, [paused, left, onReturn]);
+  return (
+    <button type="button" className={styles.callBackBtn} onClick={onReturn}>
+      Về trang chủ{paused ? '' : ` (${left}s)`}
+    </button>
   );
 }
 
@@ -252,10 +301,14 @@ function officerTitle(name) {
   return /^cán bộ/i.test(name) ? name : `Cán bộ ${name}`;
 }
 
-function StatusText({ incident, unit, incoming, call, peerName }) {
+function StatusText({ incident, unit, incoming, call, peerName, expired }) {
   let title;
   let sub;
-  if (incoming) {
+  if (expired) {
+    title = 'Đã quá thời gian chờ tiếp nhận';
+    sub =
+      'Chưa có cán bộ tiếp nhận tin báo sau 1 giờ. Nếu vẫn cần hỗ trợ, hãy gửi SOS mới hoặc gọi ngay 113 / 114 / 115.';
+  } else if (incoming) {
     title = `${peerName || 'Cán bộ'} đang gọi video cho bạn`;
     sub = `${unit}. Bấm Nghe để nói chuyện và cho cán bộ xem hiện trường.`;
   } else if (incident.status === 'CANCELLED') {

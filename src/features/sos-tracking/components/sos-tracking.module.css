@@ -565,3 +565,10 @@
   line-height: 1.45;
   color: #94a3b8;
 }
+
+/* 5 call controls (mic, camera, switch, "...", hang up) on narrow phones */
+@media (max-width: 400px) {
+  .controls {
+    gap: 10px;
+  }
+}

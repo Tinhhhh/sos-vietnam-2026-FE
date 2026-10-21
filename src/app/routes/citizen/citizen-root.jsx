@@ -7,6 +7,7 @@ import { useToast } from '@/components/ui/toast/toast-context';
 import { paths } from '@/config/paths';
 import { FamilySosModal } from '@/features/family-sos/components/family-sos-modal';
 import { IncidentLookupModal } from '@/features/incident-lookup';
+import { CitizenDocumentButton } from '@/features/incident-report';
 import { useGeolocation } from '@/features/location/hooks/use-geolocation';
 import { SurvivalGuideModal } from '@/features/survival-guide/components/survival-guide-modal';
 
@@ -41,7 +42,24 @@ export function CitizenRoot() {
             notify={toast.show}
           />
           <SurvivalGuideModal open={openModal === 'guide'} onClose={closeModal} />
-          <IncidentLookupModal open={openModal === 'lookup'} onClose={closeModal} />
+          <IncidentLookupModal
+            open={openModal === 'lookup'}
+            onClose={closeModal}
+            documentSlot={(access) => (
+              <CitizenDocumentButton
+                access={access}
+                notify={toast.show}
+                className="btn-refresh-loc"
+                style={{
+                  justifyContent: 'center',
+                  padding: 12,
+                  fontSize: 15,
+                  fontWeight: 800,
+                  borderRadius: 12,
+                }}
+              />
+            )}
+          />
         </>
       }
     >

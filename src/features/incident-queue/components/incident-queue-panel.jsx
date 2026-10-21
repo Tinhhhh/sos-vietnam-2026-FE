@@ -5,10 +5,18 @@ import { SvgIcon } from '@/components/ui/svg-icon/svg-icon';
 import { useToast } from '@/components/ui/toast/toast-context';
 import { useNow } from '@/hooks/use-now';
 
-import { claimIncident, escalateIncident, releaseIncident, requestDispatch } from '../api/incidents';
+import {
+  cancelByOfficer,
+  claimIncident,
+  escalateIncident,
+  forceFinishIncident,
+  releaseIncident,
+  requestDispatch,
+} from '../api/incidents';
 import { TYPE_LOOK, formatCountdown, secondsToEscalation } from '../utils/incident-model';
 import { DETAIL_BUTTON_STYLE, PAGE_SIZE } from '../utils/list-paging';
 import callStyles from './call-button.module.css';
+import { ConfirmReasonDialog } from './confirm-reason-dialog';
 import { HandoverDialog } from './handover-dialog';
 import { Pager, RangeTabs } from './list-controls';
 import styles from './incident-panels.module.css';
@@ -74,6 +82,9 @@ const badgeStyle = (bg, fg, border = 'transparent') => ({
  *   onCall?: (inc) => void,    // start a video call with the citizen (incident already held by me)
  *   inCall?: boolean,          // a call is already open: call buttons are disabled
  *   onOpenDetail?: (id) => void, // "Chi tiết" box (info, photos / videos, claim history)
+ *   onRequestDispatch?: (incident) => void, // confirm dialog + dispatch window (else plain API call)
+ *   onOpenDispatch?: (incident) => void, // reopen the dispatch window of a RESOLVING case
+ *   renderDelegation?: (incident) => React.ReactNode, // controls of a case delegated to my (ward) unit
  * }} props
  */
 export function IncidentQueuePanel({
@@ -89,6 +100,9 @@ export function IncidentQueuePanel({
   onCall,
   inCall = false,
   onOpenDetail,
+  onRequestDispatch,
+  onOpenDispatch,
+  renderDelegation,
 }) {
   const toast = useToast();
   // Every card shows a countdown or the time waited, so tick while there is any card
@@ -97,11 +111,15 @@ export function IncidentQueuePanel({
   const holding = incidents.find((i) => i.heldByMe) || null;
   const [busyId, setBusyId] = useState(null);
   const [handoverOf, setHandoverOf] = useState(null);
+  const [confirmOf, setConfirmOf] = useState(null); // { kind: 'finish' | 'cancel', inc }
   const [days, setDays] = useState(null); // null = every open incident
   const [page, setPage] = useState(0);
 
   const since = days ? now - days * 24 * 3600 * 1000 : null;
-  const inRange = since ? incidents.filter((i) => !i.createdAt || i.createdAt.getTime() >= since) : incidents;
+  // My own work first (the case I hold, a case delegated to me), so it never hides on a later page
+  const mine = (i) => (i.heldByMe ? 0 : i.delegation?.assignedToMe ? 1 : 2);
+  const ordered = [...incidents].sort((a, b) => mine(a) - mine(b));
+  const inRange = since ? ordered.filter((i) => !i.createdAt || i.createdAt.getTime() >= since) : ordered;
   const totalPages = Math.max(1, Math.ceil(inRange.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages - 1); // the list shrinks when incidents are closed
   const pageItems = inRange.slice(safePage * PAGE_SIZE, safePage * PAGE_SIZE + PAGE_SIZE);
@@ -137,7 +155,14 @@ export function IncidentQueuePanel({
     handover: (inc) => setHandoverOf(inc),
     // Verified with the citizen: ask for forces to be dispatched (VERIFYING -> RESOLVING)
     dispatch: (inc) =>
-      run(inc, () => requestDispatch(inc.id), `Đã gửi yêu cầu điều động lực lượng cho ca ${inc.id}`),
+      onRequestDispatch
+        ? onRequestDispatch(inc)
+        : run(inc, () => requestDispatch(inc.id), `Đã gửi yêu cầu điều động lực lượng cho ca ${inc.id}`),
+    openDispatch: (inc) => onOpenDispatch?.(inc),
+    // Both ask first (dialog with a required reason): end once forces are dispatched / cancel at any step
+    forceFinish: (inc) => setConfirmOf({ kind: 'finish', inc }),
+    cancel: (inc) => setConfirmOf({ kind: 'cancel', inc }),
+    canOpenDispatch: !!onOpenDispatch,
     // Cannot handle it at ward level: hand it to the province right now
     escalate: async (inc) => {
       if (!window.confirm(`Chuyển ca ${inc.id} lên cấp tỉnh/thành phố ngay? Bạn sẽ không giữ ca này nữa.`))
@@ -247,6 +272,7 @@ export function IncidentQueuePanel({
               actions={actions}
               onSelect={onSelect}
               onOpenDetail={onOpenDetail}
+              renderDelegation={renderDelegation}
             />
           ))}
         </div>
@@ -270,6 +296,40 @@ export function IncidentQueuePanel({
           if (ok) setHandoverOf(null);
         }}
       />
+
+      {confirmOf && (
+        <ConfirmReasonDialog
+          key={`${confirmOf.kind}-${confirmOf.inc.id}`}
+          busy={busyId === confirmOf.inc.id}
+          {...(confirmOf.kind === 'finish'
+            ? {
+                title: `Kết thúc ca ${confirmOf.inc.id}?`,
+                message:
+                  'Ca sẽ đóng ngay (đã xử lý xong), không chờ người dân xác nhận và không lập văn bản đầy đủ. Lý do được lưu vào hồ sơ ca.',
+                confirmLabel: 'Kết thúc ca',
+                placeholder: 'Ví dụ: đã xử lý xong, người báo không trả lời để xác nhận',
+              }
+            : {
+                title: `Huỷ ca ${confirmOf.inc.id}?`,
+                message:
+                  'Ca sẽ bị huỷ và rời hàng đợi, không thể khôi phục. Người báo tin sẽ thấy tin báo đã bị huỷ.',
+                confirmLabel: 'Huỷ ca',
+                placeholder: 'Ví dụ: xác minh là báo nhầm / trùng với ca khác',
+              })}
+          onClose={() => setConfirmOf(null)}
+          onConfirm={async (reason) => {
+            const { kind, inc } = confirmOf;
+            const ok =
+              kind === 'finish'
+                ? await run(inc, () => forceFinishIncident(inc.id, reason), `Đã kết thúc ca ${inc.id}`)
+                : await run(inc, () => cancelByOfficer(inc.id, reason), `Đã huỷ ca ${inc.id}`);
+            if (ok) {
+              setConfirmOf(null);
+              onRetry();
+            }
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -285,8 +345,10 @@ function QueueCard({
   actions,
   onSelect,
   onOpenDetail,
+  renderDelegation,
 }) {
   const look = TYPE_LOOK[inc.type] || TYPE_LOOK.POLICE;
+  const delegatedHere = !!inc.delegation?.delegatedToMyUnit && !!renderDelegation;
   const time = inc.createdAt
     ? inc.createdAt.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
     : '--:--';
@@ -303,6 +365,8 @@ function QueueCard({
       className={`${styles.queueCard} ${selected ? styles.active : ''}`}
       onClick={() => onSelect(inc)}
       onKeyDown={(e) => {
+        // only the card itself: keys typed in inputs/modals inside it (React portals bubble here) stay untouched
+        if (e.target !== e.currentTarget) return;
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault();
           onSelect(inc);
@@ -372,7 +436,11 @@ function QueueCard({
         className={styles.queueCardActions}
         style={{ justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}
       >
-        <ClaimControls incident={inc} holding={holding} busy={busy} canCall={canCall} actions={actions} />
+        {delegatedHere ? (
+          renderDelegation(inc)
+        ) : (
+          <ClaimControls incident={inc} holding={holding} busy={busy} canCall={canCall} actions={actions} />
+        )}
       </div>
     </div>
   );
@@ -401,6 +469,14 @@ function ClaimControls({ incident: inc, holding, busy, canCall, actions }) {
         look: ['rgba(52, 211, 153, 0.18)', '#34d399', '#d1fae5'],
         onClick: actions.dispatch,
       },
+      inc.status === 'RESOLVING' &&
+        actions.canOpenDispatch && {
+          key: 'dispatch-detail',
+          label: 'Chi tiết điều động',
+          title: 'Mở lại cửa sổ điều động: điểm xuất phát, uỷ quyền, theo dõi',
+          look: ['rgba(52, 211, 153, 0.18)', '#34d399', '#d1fae5'],
+          onClick: actions.openDispatch,
+        },
       canEscalate && {
         key: 'escalate',
         label: 'Chuyển lên tỉnh',
@@ -414,6 +490,22 @@ function ClaimControls({ incident: inc, holding, busy, canCall, actions }) {
         title: 'Trả ca về hàng đợi chung cho cán bộ khác nhận (đồng hồ leo thang tính tiếp)',
         look: ['rgba(148, 163, 184, 0.15)', '#94a3b8', '#e2e8f0'],
         onClick: actions.release,
+      },
+      // Only once the forces are on the way / at the scene (step 3 "Theo dõi" or later)
+      inc.status === 'RESOLVING' &&
+        inc.dispatchStep >= 3 && {
+          key: 'force-finish',
+          label: 'Kết thúc ca',
+          title: 'Kết thúc ca ngay (ghi lý do), không chờ xác nhận / văn bản',
+          look: ['rgba(245, 158, 11, 0.15)', '#fbbf24', '#fde68a'],
+          onClick: actions.forceFinish,
+        },
+      {
+        key: 'cancel',
+        label: 'Huỷ ca',
+        title: 'Huỷ ca này (ghi lý do), ở bất kỳ bước nào',
+        look: ['rgba(239, 68, 68, 0.15)', '#f87171', '#fecaca'],
+        onClick: actions.cancel,
       },
       {
         key: 'handover',

@@ -38,7 +38,9 @@ function useCosmicStarfield(canvasRef) {
 
     function resize() {
       const parent = canvas.parentElement;
-      const rect = parent ? parent.getBoundingClientRect() : { width: window.innerWidth, height: window.innerHeight };
+      const rect = parent
+        ? parent.getBoundingClientRect()
+        : { width: window.innerWidth, height: window.innerHeight };
       width = Math.max(rect.width || window.innerWidth, 320);
       height = Math.max(rect.height || window.innerHeight, 480);
       canvas.width = width * dpr;
@@ -58,7 +60,7 @@ function useCosmicStarfield(canvasRef) {
       baseAlpha: Math.random() * 0.5 + 0.25,
       twinkleSpeed: Math.random() * 0.04 + 0.015,
       phase: Math.random() * Math.PI * 2,
-      hue: Math.random() > 0.8 ? 195 : (Math.random() > 0.5 ? 210 : 0),
+      hue: Math.random() > 0.8 ? 195 : Math.random() > 0.5 ? 210 : 0,
     }));
 
     // 10 drifting micro-photons
@@ -288,24 +290,46 @@ export function OfficerLoginForm() {
           <span className={s.headerBadgeDot} />
           HỆ THỐNG TRỰC CHIẾN QUỐC GIA 2026
         </div>
-        <h1 className={s.headerTitle}>
-          CỔNG CÁN BỘ & ĐIỀU PHỐI CỨU HỘ KHẨN CẤP
-        </h1>
+        <h1 className={s.headerTitle}>CỔNG CÁN BỘ & ĐIỀU PHỐI CỨU HỘ KHẨN CẤP</h1>
         <div className={s.headerDescCard}>
           <span className={s.headerDescText}>
             Trung tâm tiếp nhận, giám sát và chỉ huy phản ứng nhanh các lực lượng cứu hộ liên ngành
           </span>
           <div className={s.emergencyTags}>
             <span className={`${s.emergencyTag} ${s.tagBlue}`}>
-              <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#00ECF3', boxShadow: '0 0 6px #00ECF3' }} />
+              <span
+                style={{
+                  width: 6,
+                  height: 6,
+                  borderRadius: '50%',
+                  background: '#00ECF3',
+                  boxShadow: '0 0 6px #00ECF3',
+                }}
+              />
               113 CÔNG AN
             </span>
             <span className={`${s.emergencyTag} ${s.tagGold}`}>
-              <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#DFB077', boxShadow: '0 0 6px #DFB077' }} />
+              <span
+                style={{
+                  width: 6,
+                  height: 6,
+                  borderRadius: '50%',
+                  background: '#DFB077',
+                  boxShadow: '0 0 6px #DFB077',
+                }}
+              />
               114 PCCC
             </span>
             <span className={`${s.emergencyTag} ${s.tagRed}`}>
-              <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#ff4d6d', boxShadow: '0 0 6px #ff4d6d' }} />
+              <span
+                style={{
+                  width: 6,
+                  height: 6,
+                  borderRadius: '50%',
+                  background: '#ff4d6d',
+                  boxShadow: '0 0 6px #ff4d6d',
+                }}
+              />
               115 CẤP CỨU
             </span>
           </div>
@@ -319,27 +343,13 @@ export function OfficerLoginForm() {
           <div className={s.shieldRadarRing} />
           <div className={s.shieldPingRing} />
           <div className={s.shieldCore}>
-            <img
-              src="/assets/icons/khien.png"
-              alt="Khiên An Ninh Quốc Gia"
-              className={s.shieldIcon}
-            />
+            <img src="/assets/icons/khien.png" alt="Khiên An Ninh Quốc Gia" className={s.shieldIcon} />
           </div>
         </div>
 
         {/* The Single Primary Button to open UI Login */}
-        <button
-          id="btn-open-officer-login"
-          type="button"
-          className={s.openPortalBtn}
-          onClick={openModal}
-        >
-          <img
-            src="/assets/icons/khien.png"
-            alt=""
-            className={s.openPortalIcon}
-            aria-hidden="true"
-          />
+        <button id="btn-open-officer-login" type="button" className={s.openPortalBtn} onClick={openModal}>
+          <img src="/assets/icons/khien.png" alt="" className={s.openPortalIcon} aria-hidden="true" />
           <span>ĐĂNG NHẬP CÁN BỘ TÁC CHIẾN</span>
           <svg
             className={s.openPortalArrow}
@@ -381,11 +391,7 @@ export function OfficerLoginForm() {
 
             {/* Glowing Shield Emblem */}
             <div className={s.modalShieldWrap} aria-hidden="true">
-              <img
-                src="/assets/icons/khien.png"
-                alt=""
-                className={s.modalShieldImg}
-              />
+              <img src="/assets/icons/khien.png" alt="" className={s.modalShieldImg} />
             </div>
 
             {/* Badge */}
@@ -395,9 +401,7 @@ export function OfficerLoginForm() {
             </div>
 
             <h2 className={s.modalTitle}>ĐĂNG NHẬP CÁN BỘ</h2>
-            <p className={s.modalSubtitle}>
-              Vui lòng nhập tài khoản email và mật khẩu cán bộ được cấp.
-            </p>
+            <p className={s.modalSubtitle}>Vui lòng nhập tài khoản email và mật khẩu cán bộ được cấp.</p>
 
             {/* Form */}
             <form className={s.form} onSubmit={handleSubmit} noValidate>

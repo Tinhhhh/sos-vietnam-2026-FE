@@ -41,6 +41,9 @@ export function normalizeTracking(raw) {
     cancelReason: raw.cancel_reason || null,
     cancelReasonLabel: raw.cancel_reason_label || null,
     lookupCode: raw.lookup_code || null,
+    // report document: NONE | AWAITING_CITIZEN | CITIZEN_SIGNED | SIGNED
+    documentStatus: raw.document_status || 'NONE',
+    resolvedAt: toDate(raw.resolved_at),
     handler: raw.handler
       ? { fullName: raw.handler.full_name || 'Cán bộ', unitName: raw.handler.unit_name || null }
       : null,
@@ -58,9 +61,10 @@ export function receivingUnit(inc) {
 
 /**
  * What the box next to "Huỷ báo cáo" shows (ward-level police incidents have a 15-minute deadline):
- * - countdown   PENDING / VERIFYING before the deadline (PENDING then moves up by itself)
- * - request     VERIFYING past the deadline: the officer took it but did not dispatch forces yet,
- *               the citizen may ask to move it to the province (officer took it and went silent)
+ * - countdown   PENDING / VERIFYING before the deadline: the "Yêu cầu chuyển lên cấp tỉnh" button is
+ *               already there, greyed out, with the time left until it can be pressed
+ * - request     PENDING / VERIFYING past the deadline and forces not dispatched yet: the button is active
+ *               (nobody took it / the officer took it and went silent)
  * - locked      RESOLVING: forces are on the way, the request button is greyed out
  * - elapsed     everything else (CSGT, PCCC, province level, already escalated): time waited
  */
@@ -69,8 +73,7 @@ export function timerMode(inc, now) {
   if (!wardDeadline) return 'elapsed';
   if (inc.status === 'RESOLVING') return 'locked';
   const overdue = inc.escalateAt.getTime() <= now;
-  if (inc.status === 'VERIFYING') return overdue ? 'request' : 'countdown';
-  if (inc.status === 'PENDING') return 'countdown';
+  if (inc.status === 'VERIFYING' || inc.status === 'PENDING') return overdue ? 'request' : 'countdown';
   return 'elapsed';
 }
 

@@ -1,6 +1,8 @@
 // Limits match be-v2 IncidentServiceImpl.
-export const MAX_ATTACHMENTS = 10;
-export const MAX_VIDEO_BYTES = 15 * 1024 * 1024;
+export const MAX_IMAGES = 5;
+export const MAX_VIDEOS = 1;
+export const MAX_ATTACHMENTS = MAX_IMAGES + MAX_VIDEOS;
+export const MAX_VIDEO_BYTES = 20 * 1024 * 1024;
 export const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
 
 const IMAGE_MAX_DIMENSION = 1280;
@@ -48,7 +50,7 @@ export async function prepareAttachment(file) {
   if (file.type.startsWith('video/')) {
     if (file.size > MAX_VIDEO_BYTES) {
       return {
-        error: `Video "${file.name}" quá lớn (> 15MB). Vui lòng chọn video ngắn hơn 30 giây để cứu hộ tiếp nhận kịp thời.`,
+        error: `Video "${file.name}" quá lớn (> 20MB). Vui lòng chọn video ngắn hơn 30 giây để cứu hộ tiếp nhận kịp thời.`,
       };
     }
     return {

@@ -25,6 +25,7 @@ export function CitizenCallScreen({
   onToggleMic,
   onToggleCamera,
   onSwitchCamera,
+  extraControl = null, // e.g. the "..." dispatch tracking button
 }) {
   const now = useNow(call.state === 'live');
   const overlay = STATE_TEXT[call.state];
@@ -97,6 +98,7 @@ export function CitizenCallScreen({
         >
           <CallIcon name="switchCam" />
         </button>
+        {extraControl}
         <button
           type="button"
           className={`${styles.ctrl} ${styles.ctrlHangup}`}
