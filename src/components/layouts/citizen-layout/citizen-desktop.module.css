@@ -1,0 +1,510 @@
+/*
+ * Hand-written desktop (>= 1025px) look of the citizen home (Stitch reference "Hệ thống điều phối khẩn cấp
+ * quốc gia 24/7"): deep navy, dimmed hands video, no colour blobs, top bar, hotline cards. Mobile unchanged.
+ */
+/* background (all sizes): hands video dimmed, navy vignette instead of the purple / amber glow orbs */
+.bgVideo {
+  opacity: 0.3 !important;
+  filter: saturate(0.55) brightness(0.85);
+}
+
+.bgOrb {
+  display: none !important;
+}
+
+.bgShade {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+  background:
+    radial-gradient(ellipse 55% 40% at 50% 52%, rgba(220, 38, 38, 0.12), transparent 70%),
+    radial-gradient(ellipse 65% 35% at 50% 22%, rgba(2, 132, 199, 0.12), transparent 70%),
+    radial-gradient(circle at center, transparent 0%, rgba(3, 8, 22, 0.88) 78%);
+}
+
+.hidden {
+  display: none !important;
+}
+
+/* ---------------------------------------------------------------- top bar */
+/* Phone: 2 rows in the page flow (system pill + officer button, then the GPS card).
+   Desktop: 1 fixed row across the top; the wrapper keeps its height so the hero starts below it. */
+.topBarWrap {
+  position: relative;
+  z-index: 20;
+  margin-bottom: 14px;
+}
+
+.topBar {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.row1 {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.longName {
+  display: none;
+}
+
+@media (min-width: 1025px) {
+  .topBarWrap {
+    height: 56px;
+    margin-bottom: 18px;
+  }
+
+  .topBar {
+    position: fixed;
+    top: 18px;
+    left: 0;
+    right: 0;
+    z-index: 9990;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    padding: 0 28px;
+    max-width: 1440px;
+    margin: 0 auto;
+    pointer-events: none;
+  }
+
+  .topBar > * {
+    pointer-events: auto;
+  }
+
+  .row1 {
+    display: contents;
+  }
+
+  .longName {
+    display: inline;
+  }
+
+  .shortName {
+    display: none;
+  }
+}
+
+body:global(.in-sos-tracking) .topBarWrap {
+  display: none !important;
+}
+
+.glass {
+  background: rgba(10, 24, 46, 0.72);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(56, 189, 248, 0.28);
+  box-shadow:
+    0 10px 30px -10px rgba(0, 0, 0, 0.7),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.systemPill {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 12px;
+  border-radius: 999px;
+  min-width: 0;
+}
+
+@media (min-width: 1025px) {
+  .systemPill {
+    gap: 12px;
+    padding: 9px 18px;
+  }
+}
+
+.liveDot {
+  position: relative;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #34d399;
+  flex-shrink: 0;
+}
+
+.liveDot::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: #34d399;
+  animation: ping 1.8s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+@keyframes ping {
+  75%,
+  100% {
+    transform: scale(2.2);
+    opacity: 0;
+  }
+}
+
+.systemName {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #67e8f9;
+  white-space: nowrap;
+}
+
+.divider {
+  width: 1px;
+  height: 16px;
+  background: rgba(56, 189, 248, 0.3);
+}
+
+.clock {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace;
+  font-size: 12px;
+  color: #cbd5e1;
+  white-space: nowrap;
+}
+
+.right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* phone: the GPS card is its own full-width row */
+.right.gpsRow {
+  display: block;
+}
+
+@media (min-width: 1025px) {
+  .right.gpsRow {
+    display: flex;
+  }
+}
+
+.gpsPill {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 14px;
+  min-width: 0;
+}
+
+.gpsTexts {
+  flex: 1;
+}
+
+@media (min-width: 1025px) {
+  .gpsPill {
+    gap: 12px;
+    padding: 6px 8px;
+    border-radius: 999px;
+    max-width: 560px;
+  }
+}
+
+.gpsIcon {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: rgba(8, 51, 68, 0.8);
+  border: 1px solid rgba(34, 211, 238, 0.3);
+  color: #f87171;
+  flex-shrink: 0;
+}
+
+.gpsTexts {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.gpsLabelRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.gpsLabel {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #67e8f9;
+}
+
+.accuracy {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 0 6px;
+  border-radius: 4px;
+  color: #34d399;
+  background: rgba(16, 185, 129, 0.18);
+  border: 1px solid rgba(52, 211, 153, 0.35);
+}
+
+.accuracyLow {
+  color: #fbbf24;
+  background: rgba(245, 158, 11, 0.16);
+  border-color: rgba(251, 191, 36, 0.4);
+}
+
+.gpsLine {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #f1f5f9;
+  min-width: 0;
+}
+
+.gpsAddress {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+@media (min-width: 1025px) {
+  .gpsAddress {
+    max-width: 260px;
+  }
+}
+
+.gpsCoords {
+  font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace;
+  font-size: 11px;
+  font-weight: 400;
+  color: #94a3b8;
+  white-space: nowrap;
+}
+
+.gpsWarn {
+  color: #fbbf24;
+}
+
+.iconBtn {
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  background: rgba(8, 47, 73, 0.5);
+  color: #bae6fd;
+  cursor: pointer;
+  padding: 0;
+  min-height: 0;
+}
+
+.iconBtn:hover {
+  background: rgba(12, 74, 110, 0.7);
+}
+
+.officerLink {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  padding: 8px 13px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #1d4ed8, #4338ca);
+  border: 1px solid rgba(96, 165, 250, 0.35);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 800;
+  text-decoration: none;
+  white-space: nowrap;
+  box-shadow: 0 10px 24px -8px rgba(30, 64, 175, 0.7);
+}
+
+@media (min-width: 1025px) {
+  .officerLink {
+    gap: 8px;
+    padding: 10px 18px;
+    font-size: 13px;
+  }
+}
+
+.officerLink:hover {
+  background: linear-gradient(90deg, #2563eb, #4f46e5);
+}
+
+/* ---------------------------------------------------------------- hotline cards */
+.hotlines {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  width: 100%;
+  max-width: 680px;
+  margin: 18px auto 0;
+}
+
+@media (min-width: 1025px) {
+  .hotlines {
+    gap: 14px;
+    margin-top: 26px;
+  }
+}
+
+.hotline {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 11px 13px;
+  border-radius: 16px;
+  text-decoration: none;
+  transition:
+    transform 0.15s ease,
+    background 0.15s ease;
+}
+
+.hotline:hover {
+  transform: translateY(-2px);
+}
+
+.hotlineIcon {
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+
+.hotlineMain {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-align: left;
+}
+
+.hotlineNum {
+  font-size: 16px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.hotlineName {
+  margin-top: 3px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: #cbd5e1;
+}
+
+.hotlineTag {
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+
+/* phone: icon + tag on top, number + name below (like the Stitch mobile frame) */
+@media (max-width: 1024px) {
+  .hotline {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    padding: 9px 10px;
+    border-radius: 13px;
+  }
+
+  .hotlineMain {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+
+  .hotlineIcon {
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+  }
+
+  .hotlineTag {
+    position: absolute;
+    top: 9px;
+    right: 9px;
+    font-size: 9px;
+    padding: 1px 6px;
+  }
+
+  .hotlineNum {
+    font-size: 18px;
+    color: #fff !important;
+  }
+
+  .hotlineName {
+    font-size: 10px;
+  }
+
+  .systemName {
+    font-size: 11px;
+  }
+
+  .clock {
+    font-size: 11px;
+  }
+}
+
+.phoneOnly {
+  display: contents;
+}
+
+.desktopOnlyInline {
+  display: none;
+}
+
+@media (min-width: 1025px) {
+  .phoneOnly {
+    display: none;
+  }
+
+  .desktopOnlyInline {
+    display: contents;
+  }
+}
+
+/* hero headline: one large line with a silver gradient on desktop */
+@media (min-width: 1025px) {
+  .heroTitle {
+    font-size: 50px !important;
+    line-height: 1.15 !important;
+    max-width: none !important;
+    white-space: nowrap;
+    background: linear-gradient(180deg, #ffffff 0%, #e2e8f0 55%, #94a3b8 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .heroSub {
+    max-width: 680px !important;
+    font-size: 16px !important;
+    color: #cbd5e1 !important;
+  }
+}
+
+/* portrait: follow the orb (CitizenBackground sets --orb-shift = orb centre - viewport centre) */
+@media (max-aspect-ratio: 1/1) {
+  .bgVideo.bgVideo {
+    transform: translateY(calc(var(--orb-shift, 0px) + var(--hands-offset, 2vh))) !important;
+  }
+}

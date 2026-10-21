@@ -2,6 +2,7 @@ import { useState } from 'react';
 
 import { isLowPowerDevice } from '@/lib/device-profile';
 
+import desk from './citizen-desktop.module.css';
 import styles from './ambient-bubbles.module.css';
 
 // Port of legacy public/js/ios-bubble-ambient.js.
@@ -40,7 +41,7 @@ export function AmbientBubbles() {
   if (bubbles.length === 0) return null;
 
   return (
-    <div className={styles.ios26AmbientBubblesBackdrop} aria-hidden="true">
+    <div className={`${styles.ios26AmbientBubblesBackdrop} ${desk.hidden}`} aria-hidden="true">
       {bubbles.map((b) => (
         <div key={b.id} className={styles.ios26TranslucentBubble} style={b.style} />
       ))}

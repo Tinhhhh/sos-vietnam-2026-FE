@@ -127,6 +127,32 @@
   align-items: center;
   justify-content: center;
   z-index: 10;
+  /* legacy tactical-responsive.css gives every button min-height 44px on touch screens: keep it a small circle */
+  min-width: 0 !important;
+  min-height: 0 !important;
+  padding: 0 !important;
+  line-height: 1;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
+}
+
+/* Bigger hit area without a bigger circle */
+.removeButton::after {
+  content: '';
+  position: absolute;
+  inset: -8px;
+}
+
+@media (max-width: 480px) {
+  .previewThumb {
+    width: 72px;
+    height: 72px;
+  }
+
+  .removeButton {
+    width: 22px;
+    height: 22px;
+    font-size: 12px;
+  }
 }
 
 .processing {

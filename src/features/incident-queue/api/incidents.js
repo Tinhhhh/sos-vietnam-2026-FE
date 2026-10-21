@@ -83,8 +83,18 @@ export async function requestDispatch(id) {
 }
 
 /** Response is the citizen-side view; the caller reloads the queue to get the province-level card. */
-export async function escalateIncident(id) {
-  await api.post(`/api/v1/incidents/${encodeURIComponent(id)}/escalate`);
+/**
+ * Officer holding a VERIFYING incident moves it to another force (the citizen picked the wrong one):
+ *   POST /api/v1/incidents/{id}/transfer  body { agency: 'POLICE' | 'CSGT' | 'FIRE', reason (5-500) }
+ *   -> the incident goes back to PENDING in that force's queue; the old force's queues drop the card.
+ */
+export async function transferIncident(id, agency, reason) {
+  await api.post(`/api/v1/incidents/${encodeURIComponent(id)}/transfer`, { agency, reason });
+}
+
+/** Officer holding a ward incident moves it to the province; reason (5-500 characters) is required. */
+export async function escalateIncident(id, reason) {
+  await api.post(`/api/v1/incidents/${encodeURIComponent(id)}/escalate`, { reason });
 }
 
 export async function getHandoverCandidates(id) {
@@ -143,6 +153,10 @@ export async function getIncidentDetail(id) {
     acceptedAt: toDate(d.accepted_at),
     escalateAt: toDate(d.escalate_at),
     escalatedAt: toDate(d.escalated_at),
+    escalationReasonLabel: d.escalation_reason_label || null,
+    transferredFromLabel: d.transferred_from_label || null,
+    transferReason: d.transfer_reason || null,
+    escalationNote: d.escalation_note || null,
     cancelledAt: toDate(d.cancelled_at),
     cancelReasonLabel: d.cancel_reason_label || null,
     updatedAt: toDate(d.updated_at),

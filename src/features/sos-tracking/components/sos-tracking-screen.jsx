@@ -34,7 +34,9 @@ const AUTO_RETURN_S = 5;
  * @param {{ initialIncident: object, token: string, notify: Function,
  *           onClosed: (message?: string) => void,
  *           dispatchSlot?: (p: { incident: object, token: string, variant: 'call'|'screen' }) => React.ReactNode,
- *           documentSlot?: (p: { incident: object, token: string }) => React.ReactNode }} props
+ *           documentSlot?: (p: { incident: object, token: string }) => React.ReactNode,
+ *           mediaSlot?: (p: { incident: object, token: string }) => React.ReactNode }} props
+ *   mediaSlot: "Bổ sung ảnh / video" of the SOS form feature, shown once an officer took the report
  *   initialIncident: raw incident from POST /incidents (or the copy saved in sessionStorage)
  *   dispatchSlot: "..." button of the dispatch feature (tracking map), composed by the route
  *   documentSlot: "Xem & ký văn bản báo cáo" of the report feature, shown once the incident is RESOLVED
@@ -44,7 +46,15 @@ export function SosTrackingScreen(props) {
   return createPortal(<TrackingContent {...props} />, document.body);
 }
 
-function TrackingContent({ initialIncident, token, notify, onClosed, dispatchSlot, documentSlot }) {
+function TrackingContent({
+  initialIncident,
+  token,
+  notify,
+  onClosed,
+  dispatchSlot,
+  documentSlot,
+  mediaSlot,
+}) {
   // The tracking socket also carries call signals; the call hook is created after it
   const signalHandler = useRef(() => {});
   const tracking = useIncidentTracking({
@@ -225,6 +235,10 @@ function TrackingContent({ initialIncident, token, notify, onClosed, dispatchSlo
             <CallIcon name="phone" /> Gọi video cho cán bộ
           </button>
         )}
+
+        {!incoming &&
+          ['VERIFYING', 'RESOLVING'].includes(incident.status) &&
+          mediaSlot?.({ incident, token })}
 
         {closed && incident.status === 'RESOLVED' && !signed && !resolvedLongAgo && (
           <p className={styles.sub} style={{ color: '#fcd34d' }}>

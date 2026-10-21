@@ -162,6 +162,18 @@ function DetailBody({ data, onPreview }) {
         </span>
         {data.cancelReasonLabel && <span className={styles.muted}>Lý do huỷ: {data.cancelReasonLabel}</span>}
       </div>
+      {data.transferredFromLabel && (
+        <div className={styles.muted} style={{ margin: '-4px 0 10px' }}>
+          Chuyển từ lực lượng {data.transferredFromLabel}
+          {data.transferReason ? ` · Lý do: "${data.transferReason}"` : ''}
+        </div>
+      )}
+      {data.escalatedAt && (data.escalationReasonLabel || data.escalationNote) && (
+        <div className={styles.muted} style={{ margin: '-4px 0 10px' }}>
+          Chuyển lên tỉnh: {data.escalationReasonLabel}
+          {data.escalationNote ? ` · Lý do cán bộ ghi: "${data.escalationNote}"` : ''}
+        </div>
+      )}
 
       <dl className={styles.grid}>
         {rows.map(([k, v, href]) => (
