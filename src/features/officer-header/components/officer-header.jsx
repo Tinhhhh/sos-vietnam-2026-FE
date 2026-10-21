@@ -6,7 +6,7 @@ import { SvgIcon } from '@/components/ui/svg-icon/svg-icon';
 import { useVnClock } from '../hooks/use-vn-clock';
 import { useWeather } from '../hooks/use-weather';
 import ui from './console-header.module.css';
-import styles from './officer-header.module.css';
+import menu from './settings-menu.module.css';
 
 /**
  * Officer console header (flat bar, national dispatch design): crest + system title on the left;
@@ -17,19 +17,11 @@ import styles from './officer-header.module.css';
  *   officer: ReturnType<import('@/features/auth').buildOfficerProfile>,
  *   unitCoords?: { lat: number, lng: number } | null,
  *   onLocateUnit?: () => void,
- *   onOpenOfficerInfo?: () => void,
  *   pendingCount?: number,
  *   onOpenQueue?: () => void,
  * }} props
  */
-export function OfficerHeader({
-  officer,
-  unitCoords,
-  onLocateUnit,
-  onOpenOfficerInfo,
-  pendingCount = 0,
-  onOpenQueue,
-}) {
+export function OfficerHeader({ officer, unitCoords, onLocateUnit, pendingCount = 0, onOpenQueue }) {
   const clock = useVnClock();
   const weather = useWeather(unitCoords);
   const bellLabel = pendingCount > 0 ? `${pendingCount} ca đang chờ tiếp nhận` : 'Hàng đợi sự cố';
@@ -82,12 +74,7 @@ export function OfficerHeader({
           {pendingCount > 0 && <em className={ui.badge}>{pendingCount > 99 ? '99+' : pendingCount}</em>}
         </button>
 
-        <button
-          type="button"
-          className={ui.profile}
-          title="Cán bộ đang đăng nhập (bấm để xem hồ sơ)"
-          onClick={onOpenOfficerInfo}
-        >
+        <div className={ui.profile} title="Cán bộ đang đăng nhập">
           <span className={ui.avatar} aria-hidden="true">
             {initials(officer.fullName)}
           </span>
@@ -97,8 +84,7 @@ export function OfficerHeader({
               {officer.isAdmin ? 'Quản trị hệ thống' : 'Cán bộ · Đang trực tuyến'}
             </span>
           </span>
-          <i className={ui.chevron} aria-hidden="true" />
-        </button>
+        </div>
       </div>
     </header>
   );
@@ -142,11 +128,11 @@ function WeatherInfo({ weather }) {
 }
 
 /**
- * Settings popover (admin tools, officer profile, logout). The trigger is supplied by the caller
+ * Settings popover (admin tools, change password; logout is its own rail button). The trigger is supplied by the caller
  * (the console rail button): renderTrigger({ ref, onClick, open }). The menu opens to the right
  * of the trigger, or below it on narrow screens.
  */
-export function SettingsMenu({ isAdmin, onOpenAdmin, onOpenOfficerInfo, onLogout, renderTrigger }) {
+export function SettingsMenu({ isAdmin, onOpenAdmin, onChangePassword, renderTrigger }) {
   const [pos, setPos] = useState(null); // null = closed
   const btnRef = useRef(null);
   const menuRef = useRef(null);
@@ -167,7 +153,7 @@ export function SettingsMenu({ isAdmin, onOpenAdmin, onOpenOfficerInfo, onLogout
       return;
     }
     const rect = btnRef.current.getBoundingClientRect();
-    const menuHeight = 260;
+    const menuHeight = 180;
     if (window.innerWidth <= 992) {
       // rail is at the bottom on phones: open above the button
       setPos({
@@ -195,84 +181,52 @@ export function SettingsMenu({ isAdmin, onOpenAdmin, onOpenOfficerInfo, onLogout
         createPortal(
           <div
             ref={menuRef}
-            className={`${styles.gearDropdownMenu} liquid-glass`}
-            style={{
-              display: 'flex',
-              position: 'fixed',
-              zIndex: 99999,
-              top: pos.top ?? 'auto',
-              bottom: pos.bottom ?? 'auto',
-              left: pos.left,
-              right: 'auto',
-            }}
+            className={menu.menu}
+            role="menu"
+            style={{ top: pos.top ?? 'auto', bottom: pos.bottom ?? 'auto', left: pos.left }}
           >
-            {isAdmin && (
-              <div
-                className={styles.gearMenuItem}
-                title="Bảng phân quyền & quản trị hệ thống"
-                onClick={pick(onOpenAdmin)}
-              >
-                <div
-                  className={styles.gearMenuIcon}
-                  style={{
-                    background: 'rgba(139, 92, 246, 0.25)',
-                    color: '#c084fc',
-                    border: '1px solid rgba(139, 92, 246, 0.5)',
-                  }}
-                >
-                  <SvgIcon name="shield" color="purple" />
-                </div>
-                <div className={styles.gearMenuContent}>
-                  <div className={styles.gearMenuTitle} style={{ color: '#c084fc' }}>
-                    Phân Quyền & Quản Trị
-                  </div>
-                  <div className={styles.gearMenuDesc}>Tài khoản đơn vị, mật khẩu, ủy quyền</div>
-                </div>
-              </div>
-            )}
-
-            <div className={styles.gearMenuItem} title="Hồ sơ cán bộ" onClick={pick(onOpenOfficerInfo)}>
-              <div
-                className={styles.gearMenuIcon}
-                style={{
-                  background: 'rgba(56, 189, 248, 0.25)',
-                  color: '#38bdf8',
-                  border: '1px solid rgba(56, 189, 248, 0.5)',
-                }}
-              >
-                <SvgIcon name="user" color="blue" />
-              </div>
-              <div className={styles.gearMenuContent}>
-                <div className={styles.gearMenuTitle} style={{ color: '#38bdf8' }}>
-                  Thông Tin Cán Bộ
-                </div>
-                <div className={styles.gearMenuDesc}>Hồ sơ cán bộ, đơn vị công tác</div>
-              </div>
+            <div className={menu.head}>
+              <SvgIcon name="gear" color="blue" size="sm" />
+              Cài đặt
             </div>
-
-            <div className={styles.gearMenuDivider} />
-
-            <div className={styles.gearMenuItem} title="Đăng xuất" onClick={pick(onLogout)}>
-              <div
-                className={styles.gearMenuIcon}
-                style={{
-                  background: 'rgba(239, 68, 68, 0.25)',
-                  color: '#f87171',
-                  border: '1px solid rgba(239, 68, 68, 0.5)',
-                }}
-              >
-                <SvgIcon name="logout" color="red" />
-              </div>
-              <div className={styles.gearMenuContent}>
-                <div className={styles.gearMenuTitle} style={{ color: '#f87171' }}>
-                  Đăng Xuất
-                </div>
-                <div className={styles.gearMenuDesc}>Thoát phiên làm việc an ninh</div>
-              </div>
+            <div className={menu.list}>
+              {isAdmin && (
+                <MenuItem
+                  icon="shield"
+                  color="purple"
+                  title="Phân quyền & quản trị"
+                  desc="Tạo tài khoản cán bộ, phân quyền đơn vị"
+                  onClick={pick(onOpenAdmin)}
+                />
+              )}
+              <MenuItem
+                icon="lock"
+                color="blue"
+                title="Đổi mật khẩu"
+                desc="Mật khẩu đăng nhập của tài khoản này"
+                onClick={pick(onChangePassword)}
+              />
             </div>
           </div>,
           document.body,
         )}
     </>
+  );
+}
+
+function MenuItem({ icon, color, title, desc, onClick }) {
+  return (
+    <button type="button" role="menuitem" className={menu.item} onClick={onClick}>
+      <span className={menu.icon}>
+        <SvgIcon name={icon} color={color} />
+      </span>
+      <span className={menu.text}>
+        <span className={menu.title}>{title}</span>
+        <span className={menu.desc}>{desc}</span>
+      </span>
+      <span className={menu.chevron} aria-hidden="true">
+        ›
+      </span>
+    </button>
   );
 }

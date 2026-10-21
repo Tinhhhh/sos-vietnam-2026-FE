@@ -24,6 +24,14 @@ export async function getMeApi() {
   return body.data;
 }
 
+/** POST /api/v1/auth/change-password { current_password, new_password } (đang đăng nhập) -> chỉ message. */
+export async function changePasswordApi({ currentPassword, newPassword }) {
+  await api.post('/api/v1/auth/change-password', {
+    current_password: currentPassword,
+    new_password: newPassword,
+  });
+}
+
 export async function logoutApi() {
   await api.post('/api/v1/auth/logout');
 }

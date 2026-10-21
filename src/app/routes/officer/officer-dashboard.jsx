@@ -19,15 +19,19 @@ import {
 import { SvgIcon } from '@/components/ui/svg-icon/svg-icon';
 import { useToast } from '@/components/ui/toast/toast-context';
 import { paths } from '@/config/paths';
-import { buildOfficerProfile, useAuth } from '@/features/auth';
+import { ChangePasswordDialog, OfficerInfoPanel, buildOfficerProfile, useAuth } from '@/features/auth';
 import { CommandMap, ServiceDirectoryPanel, StationDirectory, useStations } from '@/features/command-map';
 import { CallMapCard, IncomingCallDialog, OfficerCallView, useOfficerCall } from '@/features/incident-call';
+import { DelegationControls, DispatchConfirmDialog, DispatchWindow } from '@/features/incident-dispatch';
+import { ReportDocumentModal, ReportPromptDialog } from '@/features/incident-report';
+import { LocationPicker } from '@/features/location/components/location-picker';
 import {
   IncidentDetailDialog,
   IncidentHistoryPanel,
   IncidentQueuePanel,
   OfficerStatusPanel,
   TYPE_LOOK,
+  requestDispatch,
   playIncidentAlert,
   stopIncidentAlert,
   unlockIncidentAlertAudio,
@@ -36,7 +40,6 @@ import {
 import { OfficerHeader, SettingsMenu } from '@/features/officer-header';
 
 const LATER = {
-  officer: 'Hồ sơ cán bộ thuộc module Quản trị (làm sau).',
   incidents: 'Xoá / xuất danh sách sự cố thuộc module Lịch sử & Thống kê (làm sau).',
   directory: 'Quản lý danh bạ thuộc module Quản trị (làm sau).',
 };
@@ -53,6 +56,13 @@ export function OfficerDashboardRoute() {
   const [unitCoords, setUnitCoords] = useState(null);
   const [selectedIncidentId, setSelectedIncidentId] = useState(null);
   const [detailId, setDetailId] = useState(null); // "Chi tiết" box
+  const [passwordOpen, setPasswordOpen] = useState(false);
+  const [dispatchConfirm, setDispatchConfirm] = useState(null); // incident waiting for "Xác nhận điều động"
+  const [dispatchBusy, setDispatchBusy] = useState(false);
+  const [dispatchId, setDispatchId] = useState(null); // dispatch window
+  const [reportPromptId, setReportPromptId] = useState(null); // "Ca đã kết thúc · lập văn bản ngay?"
+  const [reportId, setReportId] = useState(null); // report document window
+  const [historyKey, setHistoryKey] = useState(0); // reload the history after a document changes
 
   // The socket reads the token on every (re)connect, so it picks up refreshed tokens.
   const tokenRef = useRef(accessToken);
@@ -111,6 +121,31 @@ export function OfficerDashboardRoute() {
     return () => body.classList.remove(officer.theme, 'officer-authenticated');
   }, [officer.theme]);
 
+  // "Yêu cầu điều động" -> confirm -> VERIFYING to RESOLVING -> dispatch window
+  const askDispatch = (inc) => {
+    setDetailId(null);
+    setDispatchConfirm(inc);
+  };
+  const confirmDispatch = async () => {
+    const inc = dispatchConfirm;
+    setDispatchBusy(true);
+    try {
+      const updated = await requestDispatch(inc.id);
+      if (updated) queue.upsert(updated);
+      setDispatchConfirm(null);
+      setDispatchId(inc.id);
+    } catch (err) {
+      toast.show(err.message, { tone: 'error' });
+    } finally {
+      setDispatchBusy(false);
+    }
+  };
+  const openDispatch = (inc) => {
+    setDetailId(null);
+    setDispatchId(inc.id);
+  };
+  const dispatchIncident = dispatchId ? queue.incidents.find((i) => i.id === dispatchId) || null : null;
+
   const later = (key) => () => toast.show(LATER[key], { tone: 'info' });
   const toggleWindow = (key) => setOpenWindow((cur) => (cur === key ? null : key));
   const closeWindow = useCallback(() => setOpenWindow(null), []);
@@ -137,6 +172,9 @@ export function OfficerDashboardRoute() {
           }}
           inCall={!!call && call.state !== 'ended'}
           onOpenDetail={setDetailId}
+          onRequestDispatch={askDispatch}
+          onOpenDispatch={openDispatch}
+          renderDelegation={(inc) => <DelegationControls incident={inc} onFinished={setReportPromptId} />}
         />
       ),
     },
@@ -149,6 +187,8 @@ export function OfficerDashboardRoute() {
           onExportExcel={later('incidents')}
           onClear={later('incidents')}
           onOpenDetail={setDetailId}
+          onOpenDocument={setReportId}
+          refreshKey={historyKey}
         />
       ),
     },
@@ -180,6 +220,11 @@ export function OfficerDashboardRoute() {
         />
       ),
     },
+    profile: {
+      title: 'Hồ sơ cán bộ',
+      icon: <SvgIcon name="user" color="blue" />,
+      body: <OfficerInfoPanel user={user} unitName={officer.unitName} />,
+    },
     hospitals: {
       title: 'Bệnh viện & cấp cứu 115',
       icon: <SvgIcon name="building" color="emerald" />,
@@ -188,8 +233,21 @@ export function OfficerDashboardRoute() {
   };
   const current = openWindow ? windows[openWindow] : null;
 
+  // Shortcut back into the dispatch window of the case I am dispatching (the queue card may be far down)
+  const dispatching = queue.incidents.find((i) => i.heldByMe && i.status === 'RESOLVING') || null;
+
   const actions = (
     <>
+      {dispatching && (
+        <ActionTile
+          icon="car"
+          tone="green"
+          title="Ca đang điều động"
+          subtitle={`${dispatching.id} · mở lại`}
+          active={dispatchId === dispatching.id}
+          onClick={() => openDispatch(dispatching)}
+        />
+      )}
       <ActionTile
         icon="alert"
         tone="red"
@@ -264,11 +322,17 @@ export function OfficerDashboardRoute() {
         active={openWindow === 'officers'}
         onClick={() => toggleWindow('officers')}
       />
+      <RailButton
+        icon="user"
+        label="Hồ sơ"
+        title="Thông tin cán bộ: hồ sơ, đơn vị công tác"
+        active={openWindow === 'profile'}
+        onClick={() => toggleWindow('profile')}
+      />
       <SettingsMenu
         isAdmin={officer.isAdmin}
         onOpenAdmin={() => navigate(paths.officer.newAccount.getHref())}
-        onOpenOfficerInfo={later('officer')}
-        onLogout={logout}
+        onChangePassword={() => setPasswordOpen(true)}
         renderTrigger={({ ref, onClick, open }) => (
           <RailButton
             buttonRef={ref}
@@ -293,7 +357,6 @@ export function OfficerDashboardRoute() {
             officer={officer}
             unitCoords={unitCoords}
             onLocateUnit={() => mapApi.current?.focusUnit()}
-            onOpenOfficerInfo={later('officer')}
             pendingCount={pendingCount}
             onOpenQueue={() => setOpenWindow('incidents')}
           />
@@ -350,6 +413,43 @@ export function OfficerDashboardRoute() {
         live={detailId ? queue.incidents.find((i) => i.id === detailId) || null : null}
         holding={queue.incidents.find((i) => i.heldByMe) || null}
         onChange={queue.upsert}
+        onRequestDispatch={askDispatch}
+        onOpenDispatch={openDispatch}
+      />
+      <ChangePasswordDialog open={passwordOpen} onClose={() => setPasswordOpen(false)} />
+      <DispatchConfirmDialog
+        incident={dispatchConfirm}
+        busy={dispatchBusy}
+        onConfirm={confirmDispatch}
+        onCancel={() => setDispatchConfirm(null)}
+      />
+      {dispatchIncident && (
+        <DispatchWindow
+          key={dispatchIncident.id}
+          incident={dispatchIncident}
+          typeLabel={TYPE_LOOK[dispatchIncident.type]?.label}
+          officer={officer}
+          stations={stations}
+          stationsStatus={stationsStatus}
+          LocationPicker={LocationPicker}
+          onClose={() => setDispatchId(null)}
+          onFinished={setReportPromptId}
+        />
+      )}
+      <ReportPromptDialog
+        incidentId={reportPromptId}
+        onLater={() => setReportPromptId(null)}
+        onCreate={(id) => {
+          setReportPromptId(null);
+          setReportId(id);
+        }}
+      />
+      <ReportDocumentModal
+        incidentId={reportId}
+        onClose={() => {
+          setReportId(null);
+          setHistoryKey((k) => k + 1);
+        }}
       />
       {call?.state === 'incoming' && (
         <IncomingCallDialog

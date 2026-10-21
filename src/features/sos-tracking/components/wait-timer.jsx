@@ -3,8 +3,8 @@ import styles from './sos-tracking.module.css';
 
 /**
  * Box next to "Huỷ báo cáo" (see timerMode):
- * - countdown to the 15-minute hand-over to the province
- * - past the deadline while the officer is still verifying: "Yêu cầu chuyển lên cấp tỉnh" button
+ * - before the 15-minute deadline: "Yêu cầu chuyển lên cấp tỉnh" greyed out, with the time left
+ * - past the deadline and forces not dispatched yet: the same button, active
  * - forces dispatched (RESOLVING): the same button, greyed out
  * - otherwise: time waited since the report
  *
@@ -15,26 +15,21 @@ export function WaitTimer({ incident, now, busy = false, onRequestProvince }) {
 
   if (mode === 'countdown') {
     const left = Math.max(0, (incident.escalateAt.getTime() - now) / 1000);
-    const urgent = left < 5 * 60;
     const pending = incident.status === 'PENDING';
     return (
-      <div
-        className={`${styles.timerBox} ${urgent ? styles.timerUrgent : styles.timerCountdown}`}
+      <button
+        type="button"
+        className={`${styles.timerBox} ${styles.provinceBtn}`}
+        disabled
         title={
           pending
-            ? 'Quá 15 phút chưa có cán bộ xã/phường tiếp nhận thì tự chuyển lên cấp tỉnh/thành phố'
+            ? 'Quá 15 phút chưa có cán bộ xã/phường tiếp nhận thì tin báo tự chuyển lên cấp tỉnh, hoặc bạn bấm nút này'
             : 'Quá 15 phút mà cán bộ chưa điều động lực lượng thì bạn được yêu cầu chuyển lên cấp tỉnh'
         }
       >
-        <span className={styles.timerLabel}>
-          {left > 0
-            ? pending
-              ? 'Chuyển lên tỉnh sau'
-              : 'Được yêu cầu lên tỉnh sau'
-            : 'Đang chuyển lên tỉnh'}
-        </span>
-        <span className={styles.timerValue}>{formatDuration(left)}</span>
-      </div>
+        <span className={styles.timerLabel}>Bấm được sau {formatDuration(left)}</span>
+        <span className={styles.provinceBtnText}>⚡ Yêu cầu chuyển lên cấp tỉnh</span>
+      </button>
     );
   }
 
@@ -48,7 +43,7 @@ export function WaitTimer({ incident, now, busy = false, onRequestProvince }) {
         title={
           locked
             ? 'Lực lượng đã được điều động tới hiện trường'
-            : 'Cán bộ đã nhận ca quá 15 phút mà chưa điều động lực lượng: chuyển tin báo lên cấp tỉnh/thành phố'
+            : 'Đã quá 15 phút mà chưa có lực lượng được điều động: chuyển tin báo lên cấp tỉnh/thành phố'
         }
         onClick={onRequestProvince}
       >

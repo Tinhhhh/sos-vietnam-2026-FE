@@ -1,0 +1,162 @@
+import { useEffect, useRef } from 'react';
+
+import { LngLatBounds, Map, Marker } from '@/lib/maplibre';
+
+import { STATION_ICON } from '../utils/origin-candidates';
+import styles from './dispatch.module.css';
+
+// Same raster base map as the command map (Vietnamese labels)
+const STYLE = {
+  version: 8,
+  sources: {
+    base: {
+      type: 'raster',
+      tiles: [0, 1, 2, 3].map((n) => `https://mt${n}.google.com/vt/lyrs=m&hl=vi&x={x}&y={y}&z={z}`),
+      tileSize: 256,
+      attribution: '© Google',
+    },
+  },
+  layers: [{ id: 'base', type: 'raster', source: 'base' }],
+};
+
+function stationEl(agency) {
+  const el = document.createElement('div');
+  el.className = styles.stationPin;
+  const img = document.createElement('img');
+  img.src = STATION_ICON[agency] || STATION_ICON.police;
+  img.alt = '';
+  el.appendChild(img);
+  return el;
+}
+
+function sosEl() {
+  const el = document.createElement('div');
+  el.className = styles.sosPin;
+  el.innerHTML = '<span></span><b>SOS</b>';
+  return el;
+}
+
+/**
+ * Map of one dispatch: the station (its own emblem), the SOS point and the road route between
+ * them (green line like a ride-hailing app). Fits both points whenever they change.
+ *
+ * The map follows its box: when the box changes size (modal animation, phone rotation, bottom sheet)
+ * it redraws and fits the route again, so tiles never stay stretched.
+ *
+ * @param {{ origin?: {lat,lng,agency}|null, destination?: {lat,lng}|null, coords?: number[][]|null,
+ *           className?: string, padding?: number | object }} props  className replaces the default fixed height
+ */
+export function RouteMap({ origin, destination, coords, className, padding = 48 }) {
+  const containerRef = useRef(null);
+  const mapRef = useRef(null);
+  const markersRef = useRef({ origin: null, dest: null });
+  const boundsRef = useRef(null); // last fitted area, re-fitted after a resize
+  const paddingRef = useRef(padding);
+  useEffect(() => {
+    paddingRef.current = padding;
+  }, [padding]);
+
+  useEffect(() => {
+    const map = new Map({
+      container: containerRef.current,
+      style: STYLE,
+      center: [105.78, 10.03],
+      zoom: 11,
+      attributionControl: { compact: true },
+    });
+    mapRef.current = map;
+    map.on('load', () => {
+      map.addSource('route', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
+      map.addLayer({
+        id: 'route-casing',
+        type: 'line',
+        source: 'route',
+        layout: { 'line-cap': 'round', 'line-join': 'round' },
+        paint: { 'line-color': '#065f46', 'line-width': 9, 'line-opacity': 0.55 },
+      });
+      map.addLayer({
+        id: 'route-line',
+        type: 'line',
+        source: 'route',
+        layout: { 'line-cap': 'round', 'line-join': 'round' },
+        paint: { 'line-color': '#22c55e', 'line-width': 5 },
+      });
+      map.fire('route-ready');
+    });
+    const markers = markersRef.current;
+    return () => {
+      markers.origin = null;
+      markers.dest = null;
+      map.remove();
+      mapRef.current = null;
+    };
+  }, []);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return undefined;
+    const markers = markersRef.current;
+
+    markers.origin?.remove();
+    markers.origin = origin
+      ? new Marker({ element: stationEl(origin.agency), anchor: 'center' })
+          .setLngLat([origin.lng, origin.lat])
+          .addTo(map)
+      : null;
+    markers.dest?.remove();
+    markers.dest = destination
+      ? new Marker({ element: sosEl(), anchor: 'bottom' })
+          .setLngLat([destination.lng, destination.lat])
+          .addTo(map)
+      : null;
+
+    const draw = () => {
+      const line =
+        coords && coords.length > 1
+          ? { type: 'Feature', geometry: { type: 'LineString', coordinates: coords }, properties: {} }
+          : null;
+      map.getSource('route')?.setData({ type: 'FeatureCollection', features: line ? [line] : [] });
+      const pts = [
+        ...(coords || []),
+        origin && [origin.lng, origin.lat],
+        destination && [destination.lng, destination.lat],
+      ].filter(Boolean);
+      if (pts.length === 1) {
+        boundsRef.current = null;
+        map.jumpTo({ center: pts[0], zoom: 15 });
+      }
+      if (pts.length > 1) {
+        const b = pts.reduce((acc, p) => acc.extend(p), new LngLatBounds(pts[0], pts[0]));
+        boundsRef.current = b;
+        map.fitBounds(b, { padding: paddingRef.current, maxZoom: 16, duration: 600 });
+      }
+    };
+    if (map.getSource('route')) draw();
+    else map.once('route-ready', draw);
+    return () => map.off('route-ready', draw);
+  }, [origin, destination, coords]);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el || typeof ResizeObserver === 'undefined') return undefined;
+    let frame = 0;
+    const observer = new ResizeObserver(() => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        const map = mapRef.current;
+        if (!map) return;
+        map.resize();
+        if (boundsRef.current) {
+          map.fitBounds(boundsRef.current, { padding: paddingRef.current, maxZoom: 16, duration: 0 });
+        }
+      });
+    });
+    observer.observe(el);
+    return () => {
+      cancelAnimationFrame(frame);
+      observer.disconnect();
+    };
+  }, []);
+
+  return <div ref={containerRef} className={className || styles.map} />;
+}

@@ -1,6 +1,7 @@
 import { useCallback, useRef, useState } from 'react';
 
 import { Modal } from '@/components/ui/modal/modal';
+import { cleanIncidentLabel } from '@/config/incident-suggestions';
 import { saveActiveIncident } from '@/stores/active-incident';
 
 import { createIncident, uploadIncidentMedia } from '../api/incidents';
@@ -31,6 +32,8 @@ const NO_LOCATION_ERROR =
  *
  * @param {{ open: boolean, onClose: () => void, location: object, onPickLocation?: () => void,
  *           notify: Function, onSubmitted: (result: { incident: object, mediaError?: string }) => void }} props
+ *   The phone already has an open SOS: BE answers with that incident (resumed = true, new token) and
+ *   the call screen opens on it instead of a new report.
  */
 export function SosRequestModal({ open, onClose, location, onPickLocation, notify, onSubmitted }) {
   const [agencyId, setAgencyId] = useState(DEFAULT_AGENCY_ID);
@@ -85,7 +88,7 @@ export function SosRequestModal({ open, onClose, location, onPickLocation, notif
     try {
       const body = await createIncident({
         emergency_type: agency.emergencyType,
-        incident_tags: tags,
+        incident_tags: tags.map(cleanIncidentLabel), // emoji chỉ để hiển thị trên ô chọn
         description: notes.trim() || null,
         citizen_name: reporterName.trim() || DEFAULT_REPORTER_NAME,
         phone: phone || null,
@@ -99,6 +102,12 @@ export function SosRequestModal({ open, onClose, location, onPickLocation, notif
       if (!result?.incident) throw new Error(body?.message || 'Máy chủ không xác nhận tin báo');
 
       saveActiveIncident(result.incident, result.citizen_access_token);
+      if (result.resumed) {
+        notify(`Bạn đang có tin báo ${result.incident.id} chưa kết thúc, đã mở lại màn hình theo dõi.`, {
+          tone: 'info',
+          duration: 8000,
+        });
+      }
 
       // The SOS is already recorded; a failed upload must not hide that.
       let mediaError;
@@ -265,7 +274,9 @@ export function SosRequestModal({ open, onClose, location, onPickLocation, notif
           className={`btn-submit-sos${submitting ? ` ${formStyles.submitBusy}` : ''}`}
           disabled={submitting || media.processing || !location.hasFix}
           title={location.hasFix ? undefined : 'Cần vị trí của bạn trước khi gửi'}
-          style={location.hasFix ? undefined : { opacity: 0.45, cursor: 'not-allowed', filter: 'grayscale(0.6)' }}
+          style={
+            location.hasFix ? undefined : { opacity: 0.45, cursor: 'not-allowed', filter: 'grayscale(0.6)' }
+          }
           onClick={handleSubmit}
         >
           {submitting ? (

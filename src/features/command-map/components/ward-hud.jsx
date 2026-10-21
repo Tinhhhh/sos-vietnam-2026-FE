@@ -1,8 +1,17 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 
+import place from './ward-hud-place.module.css';
 import styles from './ward-hud.module.css';
 
 const MISSING = 'Chưa cập nhật';
+
+const LEVEL_LABEL = { province: 'Cấp tỉnh / thành phố', ward: 'Cấp xã / phường', enterprise: 'Doanh nghiệp' };
+const AGENCY_LABEL = {
+  police: 'Công an',
+  csgt: 'Cảnh sát giao thông',
+  fire: 'PCCC & CNCH',
+  hospital: 'Y tế',
+};
 
 function gmapsUrl(station, origin) {
   if (!station) return 'https://www.google.com/maps';
@@ -35,6 +44,8 @@ function provinceTitle(name) {
 export function WardHud({ selection, origin, onPickFacility, onClose }) {
   const [minimized, setMinimized] = useState(false);
   const [picked, setPicked] = useState(null);
+  const [offset, setOffset] = useState({ x: 0, y: 0 });
+  const ref = useRef(null);
   const facilities = selection.facilities || [];
   const station = (picked && facilities.find((f) => f.id === picked)) || selection.station;
   const isProvince = selection.kind === 'province';
@@ -45,6 +56,31 @@ export function WardHud({ selection, origin, onPickFacility, onClose }) {
   const phone = station?.phone || '';
   const cleanPhone = phone.replace(/[^0-9+]/g, '');
 
+  // Drag by the header like the console windows; stays inside the map.
+  const startDrag = (e) => {
+    if (e.button !== 0 || e.target.closest('button, a')) return;
+    const el = ref.current;
+    const area = el?.parentElement;
+    if (!el || !area) return;
+    e.preventDefault();
+    const start = { px: e.clientX, py: e.clientY, x: offset.x, y: offset.y };
+    const rect = el.getBoundingClientRect();
+    const box = area.getBoundingClientRect();
+    const min = { x: start.x + box.left - rect.left, y: start.y + box.top - rect.top };
+    const max = { x: start.x + box.right - rect.right, y: start.y + box.bottom - rect.top - 44 };
+    const move = (ev) => {
+      const x = Math.min(Math.max(start.x + ev.clientX - start.px, min.x), Math.max(min.x, max.x));
+      const y = Math.min(Math.max(start.y + ev.clientY - start.py, min.y), Math.max(min.y, max.y));
+      setOffset({ x, y });
+    };
+    const up = () => {
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+  };
+
   const pick = (fac) => {
     setPicked(fac.id);
     onPickFacility?.(fac);
@@ -52,7 +88,8 @@ export function WardHud({ selection, origin, onPickFacility, onClose }) {
 
   return (
     <div
-      className={`${styles.tacticalWardGeofenceHud} ${minimized ? styles.isMinimized : ''}`}
+      ref={ref}
+      className={`${styles.tacticalWardGeofenceHud} ${place.right} ${minimized ? styles.isMinimized : ''}`}
       style={{
         fontFamily: "'Hubot Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
         background: '#1c1917',
@@ -64,9 +101,21 @@ export function WardHud({ selection, origin, onPickFacility, onClose }) {
         maxWidth: 345,
         boxShadow: '0 10px 30px rgba(0,0,0,0.85)',
         textAlign: 'left',
+        transform: `translate(${offset.x}px, ${offset.y}px)`,
       }}
     >
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 6 }}>
+      <div
+        onPointerDown={startDrag}
+        title="Kéo để di chuyển"
+        style={{
+          display: 'flex',
+          alignItems: 'flex-start',
+          justifyContent: 'space-between',
+          gap: 6,
+          cursor: 'move',
+          userSelect: 'none',
+        }}
+      >
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, flex: 1, minWidth: 0 }}>
           <img
             src="/assets/iconcongan.png"
@@ -210,6 +259,27 @@ export function WardHud({ selection, origin, onPickFacility, onClose }) {
           <div>
             <b>- Lĩnh vực:</b> <span>{station?.services || MISSING}</span>
           </div>
+          <div style={{ marginBottom: 2 }}>
+            <b>- Lực lượng:</b> <span>{AGENCY_LABEL[station?.agency] || MISSING}</span>
+            {station?.level && (
+              <span style={{ color: '#94a3b8' }}> · {LEVEL_LABEL[station.level] || station.level}</span>
+            )}
+          </div>
+          <div style={{ marginBottom: 2 }}>
+            <b>- Loại cơ sở:</b> <span>{station?.facilityType || 'Trụ sở chính'}</span>
+          </div>
+          <div style={{ marginBottom: 2 }}>
+            <b>- Địa bàn:</b>{' '}
+            <span>{[station?.ward, station?.province].filter(Boolean).join(', ') || MISSING}</span>
+          </div>
+          {typeof station?.lat === 'number' && typeof station?.lng === 'number' && (
+            <div>
+              <b>- Toạ độ:</b>{' '}
+              <span style={{ color: '#93c5fd', fontVariantNumeric: 'tabular-nums' }}>
+                {station.lat.toFixed(5)}, {station.lng.toFixed(5)}
+              </span>
+            </div>
+          )}
         </div>
 
         {facilities.length > 1 && (

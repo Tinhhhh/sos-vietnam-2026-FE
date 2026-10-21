@@ -12,6 +12,37 @@
   color: #94a3b8;
 }
 
+.mapWrap {
+  position: relative;
+}
+
+/* Fixed pin: its tip sits on the exact map centre */
+.pin {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -100%);
+  pointer-events: none;
+  filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.45));
+  transition: transform 0.15s ease;
+}
+
+.pinLifted {
+  transform: translate(-50%, calc(-100% - 10px));
+}
+
+.pinShadow {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 10px;
+  height: 4px;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.45);
+  pointer-events: none;
+}
+
 .map {
   width: 100%;
   height: min(60vh, 460px);

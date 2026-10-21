@@ -53,7 +53,10 @@ export function AuthProvider({ children }) {
       .catch(async () => {
         // Access token expired — try refresh
         const rt = localStorage.getItem(REFRESH_KEY);
-        if (!rt) { clearSession(); return; }
+        if (!rt) {
+          clearSession();
+          return;
+        }
         try {
           const tokens = await refreshTokenApi(rt);
           saveTokens(tokens.access_token, tokens.refresh_token ?? rt);
@@ -88,7 +91,11 @@ export function AuthProvider({ children }) {
   }, []);
 
   const logout = useCallback(async () => {
-    try { await logoutApi(); } catch { /* ignore network errors */ }
+    try {
+      await logoutApi();
+    } catch {
+      /* ignore network errors */
+    }
     clearSession();
   }, []);
 

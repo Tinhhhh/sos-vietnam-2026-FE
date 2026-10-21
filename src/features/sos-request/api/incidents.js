@@ -19,6 +19,6 @@ export function uploadIncidentMedia({ incidentId, citizenAccessToken, attachment
   attachments.forEach((a) => form.append('files', a.blob, a.name));
   return api.post(`/api/v1/incidents/${encodeURIComponent(incidentId)}/media`, form, {
     headers: { 'X-SOS-Access-Token': citizenAccessToken },
-    timeout: 120000, // a 15MB video on a slow mobile network
+    timeout: 120000, // a 20MB video on a slow mobile network
   });
 }

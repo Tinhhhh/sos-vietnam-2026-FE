@@ -5,8 +5,11 @@ import { api } from '@/lib/api-client';
  *   POST /api/v1/incidents/lookup   body { lookup_code: 'K7M2-QX9P', phone_last4: '5678' }
  *     -> data: { lookup_code, emergency_type, emergency_type_label, status, status_label, incident_tags,
  *                address, ward, province, handling_unit, created_at, accepted_at, escalated_at,
- *                cancelled_at, cancel_reason_label,
- *                dispatches: [{ station_name, agency_label, phone, dispatched_at }] }
+ *                cancelled_at, cancel_reason_label, citizen_name, phone_masked, description, full_address,
+ *                destination_address, handler: { name, unit, at }, report: { result_label, summary, forces, note, created_at },
+ *                dispatches: [{ role_label, status_label, station_name, agency_label, phone, dispatched_at,
+ *                               dispatched_by: { name, unit, at }, assigned_to: { name, unit, at }, reject_reason,
+ *                               origin_address, destination_address, distance_m, duration_s, departed_at, arrived_at }] }
  *     -> 404 "Mã tra cứu hoặc số điện thoại không đúng" (same message for a wrong code or a wrong phone)
  * The code is shown on the tracking screen once the incident is RESOLVED. Sent in the body, never the URL.
  */

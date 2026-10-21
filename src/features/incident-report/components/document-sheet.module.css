@@ -1,0 +1,364 @@
+/* The report sheet: white paper, Times New Roman, layout of the legacy #reportSheetContainer (hand-written). */
+.sheet {
+  background: #ffffff;
+  color: #000000;
+  padding: 28px 26px;
+  border-radius: 10px;
+  font-family: 'Times New Roman', Times, serif;
+  font-size: 13pt;
+  line-height: 1.5;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 14px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #cbd5e1;
+}
+
+.headLeft {
+  width: 42%;
+  text-align: center;
+}
+
+.headRight {
+  width: 56%;
+  text-align: center;
+}
+
+.upper {
+  font-size: 12pt;
+  text-transform: uppercase;
+}
+
+.lower {
+  font-size: 12.5pt;
+  font-weight: bold;
+  text-transform: uppercase;
+}
+
+.nation {
+  font-size: 12.5pt;
+  font-weight: bold;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.motto {
+  font-size: 13.5pt;
+  font-weight: bold;
+}
+
+.rule {
+  height: 1.5px;
+  background: #000;
+  margin: 3px auto 4px;
+}
+
+.placeDate {
+  font-size: 13pt;
+  font-style: italic;
+  margin-top: 4px;
+}
+
+.title {
+  text-align: center;
+  margin-bottom: 16px;
+}
+
+.titleText {
+  font-size: 14.5pt;
+  font-weight: bold;
+  text-transform: uppercase;
+}
+
+.subtitle {
+  font-size: 12pt;
+  font-style: italic;
+  margin-top: 4px;
+}
+
+.section {
+  margin-bottom: 14px;
+}
+
+.sectionTitle {
+  font-weight: bold;
+  font-size: 13.5pt;
+  margin-bottom: 6px;
+  text-transform: uppercase;
+}
+
+.line {
+  margin-bottom: 6px;
+}
+
+.line b {
+  margin-right: 4px;
+}
+
+.input,
+.textarea {
+  font-family: 'Times New Roman', Times, serif;
+  font-size: 13pt;
+  color: #000;
+  background: transparent;
+  border: none;
+  border-bottom: 1px dotted #000;
+  padding: 1px 4px;
+  min-width: 0;
+}
+
+.input:focus,
+.textarea:focus {
+  outline: none;
+  background: rgba(37, 99, 235, 0.07);
+  border-bottom-color: #2563eb;
+}
+
+.input {
+  width: 60%;
+}
+
+.wide {
+  display: block;
+  width: 98%;
+}
+
+.center {
+  text-align: center;
+  width: 92%;
+}
+
+.textarea {
+  display: block;
+  width: 98%;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  padding: 5px 6px;
+  resize: vertical;
+}
+
+.value {
+  font-weight: normal;
+}
+
+.choices {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin-left: 4px;
+}
+
+.choices label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+}
+
+.link {
+  color: #2563eb;
+  text-decoration: underline;
+  font-weight: bold;
+}
+
+.notice,
+.noticeOk {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 10px 0 14px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 11pt;
+}
+
+.notice {
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid #f87171;
+  color: #b91c1c;
+}
+
+.noticeOk {
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid #34d399;
+  color: #047857;
+}
+
+.badge {
+  flex-shrink: 0;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-weight: 800;
+  font-size: 10.5pt;
+  color: #fff;
+  background: #dc2626;
+}
+
+.noticeOk .badge {
+  background: #059669;
+}
+
+.signatures {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-top: 18px;
+  padding-top: 12px;
+  border-top: 1px dashed #cbd5e1;
+}
+
+.sigBox {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 10px;
+  border: 1px dashed #cbd5e1;
+  border-radius: 8px;
+  background: #f8fafc;
+  text-align: center;
+}
+
+.sigRole {
+  font-weight: bold;
+  text-transform: uppercase;
+  font-size: 12.5pt;
+}
+
+.sigHint {
+  font-style: italic;
+  font-size: 11pt;
+  color: #64748b;
+}
+
+.sigArea {
+  min-height: 68px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+}
+
+.sigImg {
+  max-height: 64px;
+  max-width: 170px;
+}
+
+.sigTyped {
+  font-size: 20px;
+  font-style: italic;
+  font-weight: bold;
+  color: #1e3a8a;
+}
+
+.sigEmpty {
+  color: #94a3b8;
+  font-size: 11pt;
+  font-style: italic;
+}
+
+.sigName {
+  font-weight: bold;
+}
+
+.sigMeta {
+  font-size: 10pt;
+  color: #64748b;
+}
+
+.sigBtn {
+  margin-top: 4px;
+  padding: 4px 12px;
+  border-radius: 20px;
+  border: 1px solid #3b82f6;
+  background: rgba(59, 130, 246, 0.12);
+  color: #1d4ed8;
+  font: inherit;
+  font-family: system-ui, sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.sigBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.sigBtnAlt {
+  composes: sigBtn;
+  border-color: #f59e0b;
+  background: rgba(245, 158, 11, 0.12);
+  color: #b45309;
+}
+
+@media (max-width: 640px) {
+  .sheet {
+    padding: 18px 12px;
+    font-size: 12pt;
+  }
+
+  .header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .headLeft,
+  .headRight {
+    width: 100%;
+  }
+
+  .nation {
+    white-space: normal;
+  }
+
+  .input {
+    width: 100%;
+  }
+
+  .signatures {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* legacy-global.css styles every textarea / focused input as dark glass with !important: undo it on the paper */
+.sheet .textarea,
+.sheet .textarea:focus {
+  background: #ffffff !important;
+  color: #000000 !important;
+  border: 1px solid #cbd5e1 !important;
+  border-radius: 4px !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  padding: 5px 6px !important;
+  font-family: 'Times New Roman', Times, serif !important;
+  font-size: 13pt !important;
+  line-height: 1.45 !important;
+}
+
+.sheet .textarea:focus {
+  border-color: #2563eb !important;
+  background: #f8fbff !important;
+}
+
+.sheet .input:focus {
+  box-shadow: none !important;
+  background: rgba(37, 99, 235, 0.07) !important;
+  border-color: #2563eb !important;
+}
+
+.choices input {
+  accent-color: #1e3a8a;
+}
+
+.mark {
+  font-size: 1.1em;
+}

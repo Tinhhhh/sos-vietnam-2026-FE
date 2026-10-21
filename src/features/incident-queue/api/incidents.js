@@ -196,3 +196,16 @@ export async function getOfficerStatus() {
       : null,
   }));
 }
+
+/** Officer holding the case ends it once forces are on the way / at the scene: RESOLVED, report FORCED. */
+export async function forceFinishIncident(id, reason) {
+  await api.post(`/api/v1/incidents/${encodeURIComponent(id)}/dispatch-plan/finish`, {
+    force: true,
+    note: reason,
+  });
+}
+
+/** Officer holding the case cancels it at any step (reason 5-255): CANCELLED. */
+export async function cancelByOfficer(id, reason) {
+  await api.post(`/api/v1/incidents/${encodeURIComponent(id)}/officer-cancel`, { reason });
+}

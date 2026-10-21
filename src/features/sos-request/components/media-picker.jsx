@@ -1,6 +1,7 @@
 import { useRef } from 'react';
 
 import styles from './sos-request-form.module.css';
+import { MAX_IMAGES, MAX_VIDEOS, MAX_VIDEO_BYTES } from '../utils/media';
 
 /** "Ảnh / Video hiện trường": camera capture or gallery pick, with removable previews. */
 export function MediaPicker({ attachments, processing, onAddFiles, onRemove, disabled }) {
@@ -23,6 +24,10 @@ export function MediaPicker({ attachments, processing, onAddFiles, onRemove, dis
           Ảnh / Video Hiện Trường Sự Cố
         </span>
         <span className={styles.mediaOptional}>(Tùy chọn)</span>
+      </div>
+      <div style={{ fontSize: 11.5, color: '#94a3b8', margin: '-2px 0 8px' }}>
+        Tối đa {MAX_IMAGES} ảnh và {MAX_VIDEOS} video (video ≤ {MAX_VIDEO_BYTES / 1024 / 1024}MB, nên quay
+        dưới 30 giây).
       </div>
 
       <div className={styles.mediaButtons}>

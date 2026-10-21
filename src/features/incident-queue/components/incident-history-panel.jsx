@@ -33,10 +33,19 @@ const fmt = (d) => (d ? TIME.format(d) : '--');
  * GET /incidents/history, PAGE_SIZE per page, filtered by 1 / 7 / 30 days, search and (command
  * centre only) force.
  *
- * @param {{ agency: string, onExportExcel?: () => void, onClear?: () => void, onOpenDetail?: (id) => void }} props
- *   agency = officer agency key ('all' for the command centre); onOpenDetail opens the "Chi tiết" box.
+ * @param {{ agency: string, onExportExcel?: () => void, onClear?: () => void, onOpenDetail?: (id) => void,
+ *           onOpenDocument?: (id) => void, refreshKey?: any }} props
+ *   agency = officer agency key ('all' for the command centre); onOpenDetail opens the "Chi tiết" box;
+ *   onOpenDocument opens the report document of a resolved incident (create / view); refreshKey reloads the page.
  */
-export function IncidentHistoryPanel({ agency, onExportExcel, onClear, onOpenDetail }) {
+export function IncidentHistoryPanel({
+  agency,
+  onExportExcel,
+  onClear,
+  onOpenDetail,
+  onOpenDocument,
+  refreshKey,
+}) {
   const isAdmin = agency === 'all';
   const [days, setDays] = useState(7);
   const [filter, setFilter] = useState('all');
@@ -54,7 +63,7 @@ export function IncidentHistoryPanel({ agency, onExportExcel, onClear, onOpenDet
     error: null,
   });
   const agencyParam = isAdmin ? FILTERS.find((f) => f.key === filter)?.agency : null;
-  const requestKey = `${days}|${query}|${agencyParam}|${page}|${reloadKey}`;
+  const requestKey = `${days}|${query}|${agencyParam}|${page}|${reloadKey}|${refreshKey ?? ''}`;
   const state = result.key === requestKey ? result : { ...result, status: 'loading', error: null };
 
   // Search after the officer stops typing
@@ -187,7 +196,14 @@ export function IncidentHistoryPanel({ agency, onExportExcel, onClear, onOpenDet
             text={query ? `Không khớp với "${query}".` : 'Ca hoàn tất hoặc bị huỷ sẽ được lưu ở đây.'}
           />
         ) : (
-          state.items.map((item) => <HistoryCard key={item.id} item={item} onOpenDetail={onOpenDetail} />)
+          state.items.map((item) => (
+            <HistoryCard
+              key={item.id}
+              item={item}
+              onOpenDetail={onOpenDetail}
+              onOpenDocument={onOpenDocument}
+            />
+          ))
         )}
         {state.status === 'loading' && state.items.length === 0 && (
           <div style={{ padding: 24, textAlign: 'center', color: '#94a3b8', fontSize: 12 }}>Đang tải...</div>
@@ -205,7 +221,24 @@ export function IncidentHistoryPanel({ agency, onExportExcel, onClear, onOpenDet
   );
 }
 
-function HistoryCard({ item, onOpenDetail }) {
+const DOC_LOOK = {
+  NONE: {
+    label: 'Tạo văn bản',
+    title: 'Lập văn bản báo cáo cho ca này',
+    color: '#34d399',
+    border: '#10b981',
+  },
+  DRAFT: {
+    label: 'Xem văn bản',
+    title: 'Văn bản đã lập, chưa đủ chữ ký 2 bên',
+    color: '#fbbf24',
+    border: '#f59e0b',
+  },
+  SIGNED: { label: 'Xem văn bản', title: 'Văn bản đã đủ chữ ký 2 bên', color: '#93c5fd', border: '#3b82f6' },
+};
+
+function HistoryCard({ item, onOpenDetail, onOpenDocument }) {
+  const doc = DOC_LOOK[item.documentStatus] || DOC_LOOK.NONE;
   const look = TYPE_LOOK[item.type] || TYPE_LOOK.POLICE;
   const status = STATUS_LOOK[item.status] || STATUS_LOOK.CANCELLED;
   const location =
@@ -245,6 +278,26 @@ function HistoryCard({ item, onOpenDetail }) {
             onClick={() => onOpenDetail(item.id)}
           >
             Chi tiết
+          </button>
+        )}
+        {onOpenDocument && item.status === 'RESOLVED' && (
+          <button
+            type="button"
+            style={{
+              ...DETAIL_BUTTON_STYLE,
+              marginLeft: 0,
+              color: doc.color,
+              border: `1px solid ${doc.border}`,
+            }}
+            title={doc.title}
+            onClick={() => onOpenDocument(item.id)}
+          >
+            {doc.label}
+            {item.documentStatus === 'DRAFT'
+              ? ' · chưa ký đủ'
+              : item.documentStatus === 'SIGNED'
+                ? ' · đã ký'
+                : ''}
           </button>
         )}
       </div>

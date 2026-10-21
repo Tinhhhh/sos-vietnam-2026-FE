@@ -1,5 +1,6 @@
 /**
- * The citizen's current SOS (survives reloads within the tab, like legacy).
+ * The citizen's current SOS. localStorage: closing the tab / browser and opening the site again goes
+ * straight back to the call screen of that SOS (the tracking screen clears it once the case is closed).
  * Shared by the request form (writes it) and incident tracking (reads it).
  * Keys match legacy app.js so both apps read the same session data.
  */
@@ -8,8 +9,8 @@ const tokenKey = (incidentId) => `sos_citizen_access_token_${incidentId}`;
 
 export function saveActiveIncident(incident, citizenAccessToken) {
   try {
-    sessionStorage.setItem(INCIDENT_KEY, JSON.stringify(incident));
-    if (citizenAccessToken) sessionStorage.setItem(tokenKey(incident.id), citizenAccessToken);
+    localStorage.setItem(INCIDENT_KEY, JSON.stringify(incident));
+    if (citizenAccessToken) localStorage.setItem(tokenKey(incident.id), citizenAccessToken);
   } catch {
     // storage blocked (private mode): tracking just won't survive a reload
   }
@@ -18,9 +19,9 @@ export function saveActiveIncident(incident, citizenAccessToken) {
 /** @returns {{ incident: object, citizenAccessToken: string } | null} */
 export function loadActiveIncident() {
   try {
-    const incident = JSON.parse(sessionStorage.getItem(INCIDENT_KEY) || 'null');
+    const incident = JSON.parse(localStorage.getItem(INCIDENT_KEY) || 'null');
     if (!incident?.id) return null;
-    return { incident, citizenAccessToken: sessionStorage.getItem(tokenKey(incident.id)) || '' };
+    return { incident, citizenAccessToken: localStorage.getItem(tokenKey(incident.id)) || '' };
   } catch {
     return null;
   }
@@ -29,8 +30,8 @@ export function loadActiveIncident() {
 export function clearActiveIncident() {
   try {
     const current = loadActiveIncident();
-    if (current) sessionStorage.removeItem(tokenKey(current.incident.id));
-    sessionStorage.removeItem(INCIDENT_KEY);
+    if (current) localStorage.removeItem(tokenKey(current.incident.id));
+    localStorage.removeItem(INCIDENT_KEY);
   } catch {
     // ignore
   }

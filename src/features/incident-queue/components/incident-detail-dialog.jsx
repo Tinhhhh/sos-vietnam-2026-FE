@@ -31,10 +31,20 @@ const STATUS_TONE = {
  * "Yêu cầu điều động" while the officer is verifying it. History cases have no footer.
  *
  * @param {{ incidentId: string|null, onClose: () => void,
- *           live?: object|null, holding?: object|null, onChange?: (incident) => void }} props
+ *           live?: object|null, holding?: object|null, onChange?: (incident) => void,
+ *           onRequestDispatch?: (incident) => void, onOpenDispatch?: (incident) => void }} props
+ *   onRequestDispatch = confirm dialog + dispatch window, onOpenDispatch = "Chi tiết điều động".
  *   live = the incident from the queue (heldByMe, canHandle...), holding = the case the officer holds.
  */
-export function IncidentDetailDialog({ incidentId, onClose, live, holding, onChange }) {
+export function IncidentDetailDialog({
+  incidentId,
+  onClose,
+  live,
+  holding,
+  onChange,
+  onRequestDispatch,
+  onOpenDispatch,
+}) {
   const toast = useToast();
   // Result of the last request; it belongs to `key` (a stale one shows as loading)
   const [result, setResult] = useState({ key: null, data: null, error: null });
@@ -93,7 +103,12 @@ export function IncidentDetailDialog({ incidentId, onClose, live, holding, onCha
           holding={holding}
           busy={busy}
           onClaim={() => act(claimIncident, `Đã tiếp nhận ca ${incidentId}`)}
-          onDispatch={() => act(requestDispatch, `Đã gửi yêu cầu điều động cho ca ${incidentId}`)}
+          onDispatch={() =>
+            onRequestDispatch
+              ? onRequestDispatch(live)
+              : act(requestDispatch, `Đã gửi yêu cầu điều động cho ca ${incidentId}`)
+          }
+          onOpenDispatch={onOpenDispatch ? () => onOpenDispatch(live) : null}
         />
       )}
 
@@ -220,7 +235,8 @@ function DetailBody({ data, onPreview }) {
                   {c.endReasonLabel ? ` · ${c.endReasonLabel}` : ''}
                   {c.handedToName ? ` cho ${c.handedToName}` : ''}
                 </span>
-                {c.note && <span>Lý do: {c.note}</span>}
+                {/* reason of a release / handover: only on the turn that ended */}
+                {c.note && c.releasedAt && <span>Lý do: {c.note}</span>}
               </li>
             ))}
           </ul>
@@ -263,7 +279,19 @@ function Section({ title, children }) {
 }
 
 /** Next step for this case, at the bottom of the box. */
-function DetailFooter({ live, holding, busy, onClaim, onDispatch }) {
+function DetailFooter({ live, holding, busy, onClaim, onDispatch, onOpenDispatch }) {
+  if (live.heldByMe && live.status === 'RESOLVING' && onOpenDispatch) {
+    return (
+      <div className={styles.footer}>
+        <span className={styles.footerHint}>
+          Ca đang điều động: xem điểm xuất phát, uỷ quyền và theo dõi lực lượng.
+        </span>
+        <button type="button" className={styles.footerDispatch} onClick={onOpenDispatch}>
+          Chi tiết điều động
+        </button>
+      </div>
+    );
+  }
   if (live.heldByMe && live.status === 'VERIFYING') {
     return (
       <div className={styles.footer}>

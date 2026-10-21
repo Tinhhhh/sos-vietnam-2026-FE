@@ -65,6 +65,28 @@ export function normalizeIncident(raw) {
       : null,
     heldByMe: raw.held_by_me === true,
     canHandle: raw.can_handle === true,
+    dispatchStep: raw.dispatch_step ?? null, // 1-4 of the dispatch, null = no starting station yet
+    // Step 2 of a dispatch: the case was handed to a ward unit (null otherwise)
+    delegation: raw.delegation
+      ? {
+          dispatchId: raw.delegation.dispatch_id,
+          status: raw.delegation.status,
+          statusLabel: raw.delegation.status_label,
+          step: raw.delegation.step,
+          stationName: raw.delegation.station_name,
+          fromUnit: raw.delegation.from_unit,
+          fromOfficer: raw.delegation.from_officer,
+          assignedTo: raw.delegation.assigned_to
+            ? {
+                accountId: raw.delegation.assigned_to.account_id,
+                fullName: raw.delegation.assigned_to.full_name,
+              }
+            : null,
+          assignedToMe: raw.delegation.assigned_to_me === true,
+          delegatedToMyUnit: raw.delegation.delegated_to_my_unit === true,
+          rejectReason: raw.delegation.reject_reason || null,
+        }
+      : null,
   };
 }
 
@@ -107,5 +129,7 @@ export function normalizeHistoryItem(raw) {
     cancelReasonLabel: raw.cancel_reason_label || null,
     handlerName: raw.handler_name || null,
     dispatchCount: raw.dispatch_count || 0,
+    // văn bản báo cáo: NONE | DRAFT | SIGNED
+    documentStatus: raw.document_status || 'NONE',
   };
 }
