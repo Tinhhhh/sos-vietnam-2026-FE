@@ -387,8 +387,8 @@
 }
 
 .shieldIcon {
-  width: 60px;
-  height: 60px;
+  width: 76px;
+  height: 76px;
   object-fit: contain;
   filter: drop-shadow(0 0 16px rgba(172, 0, 21, 0.95)) drop-shadow(0 0 8px rgba(0, 236, 243, 0.6));
 }

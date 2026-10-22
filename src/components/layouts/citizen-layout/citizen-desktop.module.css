@@ -502,7 +502,13 @@ body:global(.in-sos-tracking) .topBarWrap {
   }
 }
 
-/* portrait: follow the orb (CitizenBackground sets --orb-shift = orb centre - viewport centre) */
+/* follow the orb (CitizenBackground sets --orb-shift = orb centre - viewport centre) */
+/* landscape: the video covers the screen, so scale it a little to hide the edge the shift uncovers */
+@media (min-aspect-ratio: 1/1) {
+  .bgVideo.bgVideo {
+    transform: translateY(var(--orb-shift, 0px)) scale(1.12) !important;
+  }
+}
 @media (max-aspect-ratio: 1/1) {
   .bgVideo.bgVideo {
     transform: translateY(calc(var(--orb-shift, 0px) + var(--hands-offset, 2vh))) !important;

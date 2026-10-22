@@ -343,7 +343,7 @@ export function OfficerLoginForm() {
           <div className={s.shieldRadarRing} />
           <div className={s.shieldPingRing} />
           <div className={s.shieldCore}>
-            <img src="/assets/icons/khien.png" alt="Khiên An Ninh Quốc Gia" className={s.shieldIcon} />
+            <img src="/assets/icons/logo-sos-emblem.png" alt="Khiên An Ninh Quốc Gia" className={s.shieldIcon} />
           </div>
         </div>
 
