@@ -19,7 +19,7 @@ import { DETAIL_BUTTON_STYLE, PAGE_SIZE } from '../utils/list-paging';
 import callStyles from './call-button.module.css';
 import { ConfirmReasonDialog } from './confirm-reason-dialog';
 import { HandoverDialog } from './handover-dialog';
-import { Pager, RangeTabs } from './list-controls';
+import { Pager } from './list-controls';
 import styles from './incident-panels.module.css';
 
 const AGENCY_TAG_CLASS = {
@@ -64,14 +64,18 @@ const badgeStyle = (bg, fg, border = 'transparent') => ({
   border: `1px solid ${border}`,
   fontSize: 10,
   fontWeight: 800,
-  padding: '1px 6px',
+  // fixed height so the badges and the "Chi tiết" button sit on one line, same size
+  height: 22,
+  boxSizing: 'border-box',
+  padding: '0 6px',
   borderRadius: 4,
+  whiteSpace: 'nowrap',
 });
 
 /**
  * Window "Hàng đợi sự cố" (legacy #panelIncidentsView + renderQueue()): live queue of the
  * officer's unit, with claim / release / hand over. The whole live queue is in memory (STOMP
- * updates), so the 1 / 7 / 30 day filter and the pages (PAGE_SIZE cards) are applied here. Like booking a ride: the first
+ * updates), so the pages (PAGE_SIZE cards) are cut here. Like booking a ride: the first
  * officer to press "Tiếp nhận" holds the incident, the others still see it locked.
  * An officer holds at most one incident at a time.
  *
@@ -114,21 +118,15 @@ export function IncidentQueuePanel({
   const [handoverOf, setHandoverOf] = useState(null);
   const [confirmOf, setConfirmOf] = useState(null); // { kind: 'finish' | 'cancel' | 'escalate' | 'transfer', inc }
   const [transferTo, setTransferTo] = useState(''); // force picked in the "Chuyển lực lượng" dialog
-  const [days, setDays] = useState(null); // null = every open incident
+  // The queue only holds open incidents (they are dealt with now), so no 1 / 7 / 30 day filter here
   const [page, setPage] = useState(0);
 
-  const since = days ? now - days * 24 * 3600 * 1000 : null;
   // My own work first (the case I hold, a case delegated to me), so it never hides on a later page
   const mine = (i) => (i.heldByMe ? 0 : i.delegation?.assignedToMe ? 1 : 2);
   const ordered = [...incidents].sort((a, b) => mine(a) - mine(b));
-  const inRange = since ? ordered.filter((i) => !i.createdAt || i.createdAt.getTime() >= since) : ordered;
-  const totalPages = Math.max(1, Math.ceil(inRange.length / PAGE_SIZE));
+  const totalPages = Math.max(1, Math.ceil(ordered.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages - 1); // the list shrinks when incidents are closed
-  const pageItems = inRange.slice(safePage * PAGE_SIZE, safePage * PAGE_SIZE + PAGE_SIZE);
-  const changeRange = (d) => {
-    setDays(d);
-    setPage(0);
-  };
+  const pageItems = ordered.slice(safePage * PAGE_SIZE, safePage * PAGE_SIZE + PAGE_SIZE);
 
   const run = async (inc, action, success) => {
     setBusyId(inc.id);
@@ -232,15 +230,7 @@ export function IncidentQueuePanel({
         </span>
       </div>
 
-      <div style={{ padding: '0 4px 8px' }}>
-        <RangeTabs value={days} onChange={changeRange} allowAll />
-      </div>
-
-      {status === 'ready' && incidents.length > 0 && inRange.length === 0 ? (
-        <div style={{ flex: 1, padding: '32px 12px', textAlign: 'center', color: '#94a3b8', fontSize: 13 }}>
-          Không có ca nào đang mở được báo trong {days} ngày qua.
-        </div>
-      ) : status === 'ready' && incidents.length > 0 ? (
+      {status === 'ready' && incidents.length > 0 ? (
         <div
           className={styles.incidentQueueList}
           style={{
@@ -275,7 +265,7 @@ export function IncidentQueuePanel({
       )}
 
       {status === 'ready' && incidents.length > 0 && (
-        <Pager page={safePage} totalPages={totalPages} total={inRange.length} onPage={setPage} />
+        <Pager page={safePage} totalPages={totalPages} onPage={setPage} />
       )}
 
       <HandoverDialog
@@ -424,13 +414,18 @@ function QueueCard({
         </span>
       </div>
 
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 6 }}>
-        <LevelBadge incident={inc} officerLevel={officerLevel} />
-        {secondsLeft != null ? (
-          <CountdownBadge seconds={secondsLeft} />
-        ) : (
-          <ElapsedBadge incident={inc} now={now} />
-        )}
+      {/* badges on the left (they wrap among themselves), "Chi tiết" always on the right, centred */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+        <div
+          style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 6, flex: 1, minWidth: 0 }}
+        >
+          <LevelBadge incident={inc} officerLevel={officerLevel} />
+          {secondsLeft != null ? (
+            <CountdownBadge seconds={secondsLeft} />
+          ) : (
+            <ElapsedBadge incident={inc} now={now} />
+          )}
+        </div>
         {onOpenDetail && (
           <button
             type="button"

@@ -4,11 +4,11 @@ import { RANGE_OPTIONS } from '../utils/list-paging';
 import styles from './list-controls.module.css';
 
 /**
- * Time range tabs: last 1 / 7 / 30 days, plus "Tất cả" when `allowAll`.
- * @param {{ value: number|null, onChange: (days: number|null) => void, allowAll?: boolean }} props
+ * Time range tabs of the history window: last 1 / 7 / 30 days.
+ * @param {{ value: number, onChange: (days: number) => void }} props
  */
-export function RangeTabs({ value, onChange, allowAll = false }) {
-  const options = allowAll ? [{ days: null, label: 'Tất cả' }, ...RANGE_OPTIONS] : RANGE_OPTIONS;
+export function RangeTabs({ value, onChange }) {
+  const options = RANGE_OPTIONS;
   return (
     <div className={styles.range} role="radiogroup" aria-label="Khoảng thời gian">
       {options.map((o) => (
@@ -29,14 +29,13 @@ export function RangeTabs({ value, onChange, allowAll = false }) {
 
 /**
  * Previous / next page and "jump to page".
- * @param {{ page: number, totalPages: number, total: number, onPage: (page: number) => void, disabled?: boolean }} props
+ * @param {{ page: number, totalPages: number, onPage: (page: number) => void, disabled?: boolean }} props
  *   page is 0-based; the UI shows it 1-based.
  */
-export function Pager({ page, totalPages, total, onPage, disabled = false }) {
+export function Pager({ page, totalPages, onPage, disabled = false }) {
   const pages = Math.max(1, totalPages);
   return (
     <div className={styles.pager}>
-      <span className={styles.total}>{total} ca</span>
       <div className={styles.pagerNav}>
         <button
           type="button"

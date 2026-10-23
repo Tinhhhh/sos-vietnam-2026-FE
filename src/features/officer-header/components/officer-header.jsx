@@ -31,7 +31,11 @@ export function OfficerHeader({ officer, unitCoords, onLocateUnit, pendingCount 
       <div className={ui.brand}>
         <img src="/assets/icons/khien.png" className={ui.crest} alt="Huy hiệu Công an nhân dân" />
         <div className={ui.titles}>
-          <div className={ui.title}>Hệ Thống Điều Phối Khẩn Cấp Quốc Gia 24/7</div>
+          {/* one line on wide screens; on phones two lines split where the phrase breaks naturally */}
+          <div className={ui.title}>
+            <span className={ui.titlePart}>Hệ Thống Điều Phối</span>{' '}
+            <span className={ui.titlePart}>Khẩn Cấp Quốc Gia 24/7</span>
+          </div>
           <div className={ui.subtitle}>Vietnam National Emergency Dispatch System</div>
         </div>
       </div>

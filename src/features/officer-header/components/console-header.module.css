@@ -280,6 +280,30 @@ button.info:focus-visible,
   .clock {
     display: none;
   }
+
+  /* title on two lines ("Hệ thống điều phối" / "khẩn cấp quốc gia 24/7"), smaller, never cut */
+  .brand {
+    flex: 1 1 auto;
+    gap: 8px;
+  }
+
+  .title {
+    font-size: 12px;
+    line-height: 1.2;
+    letter-spacing: 0;
+    white-space: normal;
+    overflow: visible;
+  }
+
+  .titlePart {
+    display: block;
+    white-space: nowrap;
+  }
+
+  /* bell + avatar keep their size instead of being pushed off the screen */
+  .right {
+    flex-shrink: 0;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

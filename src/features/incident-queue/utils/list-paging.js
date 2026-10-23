@@ -11,10 +11,15 @@ export const PAGE_SIZE = 4;
 /** Small "Chi tiết" button on queue / history cards. */
 export const DETAIL_BUTTON_STYLE = {
   marginLeft: 'auto',
+  flexShrink: 0,
   display: 'inline-flex',
   alignItems: 'center',
   gap: 4,
-  padding: '2px 9px',
+  // same 22px as the card badges; minHeight 0 beats the global 44px touch rule
+  height: 22,
+  minHeight: 0,
+  boxSizing: 'border-box',
+  padding: '0 9px',
   borderRadius: 6,
   border: '1px solid rgba(56, 189, 248, 0.55)',
   background: 'rgba(14, 165, 233, 0.12)',
