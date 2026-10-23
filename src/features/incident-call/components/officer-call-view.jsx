@@ -98,7 +98,7 @@ export function OfficerCallView({
           mirrored
           fallback={<div className={styles.avatar}>👮</div>}
         >
-          <span className={styles.pipLabel}>CÁN BỘ TIẾP NHẬN</span>
+          <span className={styles.pipLabel}>LỰC LƯỢNG TIẾP NHẬN</span>
         </VideoTile>
 
         {status && (
