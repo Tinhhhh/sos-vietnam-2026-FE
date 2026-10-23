@@ -1,12 +1,27 @@
-import { useRef } from 'react';
+import { useCallback, useRef, useState } from 'react';
 
+import { CameraCapture } from './camera-capture';
 import styles from './sos-request-form.module.css';
+import { canUseInPageCamera } from '../utils/camera';
 import { MAX_IMAGES, MAX_VIDEOS, MAX_VIDEO_BYTES } from '../utils/media';
 
-/** "Ảnh / Video hiện trường": camera capture or gallery pick, with removable previews. */
+/**
+ * "Ảnh / Video hiện trường": camera capture or gallery pick, with removable previews.
+ * "Chụp Camera" opens the in-page camera (torch off by default, so no automatic flash); browsers that
+ * can't do that, or a denied camera, fall back to the phone's own camera app.
+ */
 export function MediaPicker({ attachments, processing, onAddFiles, onRemove, disabled }) {
   const cameraRef = useRef(null);
   const galleryRef = useRef(null);
+  const [cameraOpen, setCameraOpen] = useState(false);
+  const closeCamera = useCallback(() => setCameraOpen(false), []);
+  const captured = useCallback((file) => onAddFiles([file]), [onAddFiles]);
+  const nativeCamera = useCallback(() => {
+    setCameraOpen(false);
+    cameraRef.current?.click();
+  }, []);
+  const photosLeft = MAX_IMAGES - attachments.filter((a) => a.type === 'image').length;
+  const videosLeft = MAX_VIDEOS - attachments.filter((a) => a.type === 'video').length;
 
   const handleChange = (e) => {
     onAddFiles(e.target.files);
@@ -35,7 +50,7 @@ export function MediaPicker({ attachments, processing, onAddFiles, onRemove, dis
           type="button"
           className={`btn-refresh-loc ${styles.cameraButton}`}
           disabled={disabled}
-          onClick={() => cameraRef.current.click()}
+          onClick={() => (canUseInPageCamera() ? setCameraOpen(true) : cameraRef.current.click())}
         >
           <svg className="svg-ico ico-sm" viewBox="0 0 24 24" aria-hidden="true">
             <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
@@ -73,6 +88,15 @@ export function MediaPicker({ attachments, processing, onAddFiles, onRemove, dis
         multiple
         className={styles.hiddenInput}
         onChange={handleChange}
+      />
+
+      <CameraCapture
+        open={cameraOpen}
+        onClose={closeCamera}
+        onCapture={captured}
+        onFallback={nativeCamera}
+        photosLeft={photosLeft}
+        videosLeft={videosLeft}
       />
 
       {processing && <div className={styles.processing}>Đang xử lý ảnh/video…</div>}

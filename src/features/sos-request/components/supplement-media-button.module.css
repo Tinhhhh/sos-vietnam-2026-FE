@@ -30,3 +30,15 @@
   opacity: 0.6;
   cursor: default;
 }
+
+.row {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.row .btn {
+  margin: 0;
+}
