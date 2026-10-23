@@ -668,6 +668,8 @@
 
 .togglePwd {
   position: absolute;
+  /* keep its own size on touch screens (global rule gives every button min-height 44px) */
+  min-height: 0;
   right: 12px;
   background: none;
   border: none;

@@ -363,6 +363,7 @@ export function OfficerDashboardRoute() {
         }
         rail={rail}
         actions={actions}
+        actionsBadge={pendingCount}
         mapTitle={inCall ? 'Theo dõi GPS thời gian thực' : `Bản đồ tác chiến · ${officer.unitName}`}
         map={
           <CommandMap

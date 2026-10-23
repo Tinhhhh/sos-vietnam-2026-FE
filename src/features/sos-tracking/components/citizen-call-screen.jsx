@@ -6,7 +6,7 @@ import { formatDuration } from '../utils/tracking-model';
 import styles from './sos-tracking.module.css';
 
 const STATE_TEXT = {
-  ringing: 'Đang gọi cán bộ...',
+  ringing: 'Đang gọi lực lượng chức năng...',
   connecting: 'Đang kết nối cuộc gọi...',
   reconnecting: 'Mạng yếu, đang kết nối lại...',
 };
@@ -64,7 +64,7 @@ export function CitizenCallScreen({
             : 'SOS'}
         </span>
         <span className={styles.callBadge} style={{ marginRight: 'min(32vw, 160px)' }}>
-          {officerName || 'Cán bộ tiếp nhận'}
+          {officerName || 'Lực lượng chức năng'}
         </span>
       </div>
 

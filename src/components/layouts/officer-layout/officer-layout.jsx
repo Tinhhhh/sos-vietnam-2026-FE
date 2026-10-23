@@ -10,11 +10,12 @@ const MIN_CALL = 380;
 const DEFAULT_SIDE_RATIO = 0.34; // GPS widget about a third of the stage, on the right
 const ACTIONS_KEY = 'consoleActionsHidden';
 
+// Folded by default (more room for the map); '0' = the officer opened it and wants it kept open
 function readActionsHidden() {
   try {
-    return localStorage.getItem(ACTIONS_KEY) === '1';
+    return localStorage.getItem(ACTIONS_KEY) !== '0';
   } catch {
-    return false;
+    return true;
   }
 }
 
@@ -43,6 +44,7 @@ function readSideWidth() {
  *   header: React.ReactNode,
  *   rail: React.ReactNode,
  *   actions: React.ReactNode,
+ *   actionsBadge?: number,
  *   map: React.ReactNode,
  *   mapTitle: React.ReactNode,
  *   callPane?: React.ReactNode,
@@ -54,6 +56,7 @@ export function OfficerLayout({
   header,
   rail,
   actions,
+  actionsBadge,
   map,
   mapTitle,
   callPane,
@@ -64,7 +67,7 @@ export function OfficerLayout({
   const stageRef = useRef(null);
   const [sideWidth, setSideWidth] = useState(readSideWidth);
   const [dragging, setDragging] = useState(false);
-  // The tile bar can be folded away (arrow at its right end) to give the map more room
+  // The tile bar is folded into a "Chức năng" button on the map header (with the pending count) unless opened
   const [actionsHidden, setActionsHidden] = useState(readActionsHidden);
   const toggleActions = () =>
     setActionsHidden((hidden) => {
@@ -123,23 +126,21 @@ export function OfficerLayout({
           {rail}
         </nav>
         <div className={styles.workspace}>
-          <div className={`${styles.actionsRow} ${actionsHidden ? styles.actionsHidden : ''}`}>
-            {!actionsHidden && <div className={styles.actions}>{actions}</div>}
-            <button
-              type="button"
-              className={styles.actionsToggle}
-              aria-expanded={!actionsHidden}
-              aria-label={actionsHidden ? 'Hiện thanh chức năng' : 'Ẩn thanh chức năng'}
-              title={actionsHidden ? 'Hiện thanh chức năng' : 'Ẩn thanh chức năng'}
-              onClick={toggleActions}
-            >
-              <SvgIcon
-                name="chevronUp"
-                size="sm"
-                style={actionsHidden ? { transform: 'rotate(180deg)' } : undefined}
-              />
-            </button>
-          </div>
+          {!actionsHidden && (
+            <div className={styles.actionsRow}>
+              <div className={styles.actions}>{actions}</div>
+              <button
+                type="button"
+                className={styles.actionsToggle}
+                aria-expanded
+                aria-label="Thu gọn thanh chức năng"
+                title="Thu gọn thanh chức năng"
+                onClick={toggleActions}
+              >
+                <SvgIcon name="chevronUp" size="sm" />
+              </button>
+            </div>
+          )}
           <div
             ref={stageRef}
             className={`${styles.stage} ${inCall ? styles.inCall : ''} ${dragging ? styles.dragging : ''}`}
@@ -156,7 +157,22 @@ export function OfficerLayout({
                   <SvgIcon name={inCall ? 'target' : 'map'} color="blue" />
                   {mapTitle}
                 </span>
-                {inCall && <span className={styles.panelBadge}>GPS</span>}
+                <span className={styles.panelEnd}>
+                  {inCall && <span className={styles.panelBadge}>GPS</span>}
+                  {actionsHidden && (
+                    <button
+                      type="button"
+                      className={styles.actionsOpen}
+                      aria-expanded={false}
+                      title="Mở thanh chức năng (hàng đợi, lịch sử, danh bạ, thống kê)"
+                      onClick={toggleActions}
+                    >
+                      Chức năng
+                      {actionsBadge > 0 && <em className={styles.actionsOpenCount}>{actionsBadge}</em>}
+                      <SvgIcon name="chevronUp" size="sm" style={{ transform: 'rotate(180deg)' }} />
+                    </button>
+                  )}
+                </span>
               </header>
               <div className={styles.mapBody}>
                 {map}

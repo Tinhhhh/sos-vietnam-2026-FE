@@ -341,7 +341,11 @@ body {
   align-items: center;
   gap: 8px;
 }
+/* Round 34px; on touch screens 40px. min-height: 0 overrides the touch rule below that gives every
+   button min-height 44px (it stretched this one into an oval). */
 .btn-close-modal {
+  flex: 0 0 auto;
+  min-height: 0;
   background: rgba(255, 255, 255, 0.08);
   border: 1px solid rgba(255, 255, 255, 0.15);
   color: rgba(255, 255, 255, 0.7);
@@ -806,6 +810,10 @@ body {
   }
   button {
     min-height: 44px;
+  }
+  .btn-close-modal {
+    width: 40px;
+    height: 40px;
   }
 }
 @media (min-aspect-ratio: 2/1) {

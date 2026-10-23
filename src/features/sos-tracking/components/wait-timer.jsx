@@ -23,8 +23,8 @@ export function WaitTimer({ incident, now, busy = false, onRequestProvince }) {
         disabled
         title={
           pending
-            ? 'Quá 15 phút chưa có cán bộ xã/phường tiếp nhận thì tin báo tự chuyển lên cấp tỉnh, hoặc bạn bấm nút này'
-            : 'Quá 15 phút mà cán bộ chưa điều động lực lượng thì bạn được yêu cầu chuyển lên cấp tỉnh'
+            ? 'Quá 15 phút chưa có lực lượng chức năng xã/phường tiếp nhận thì tin báo tự chuyển lên cấp tỉnh, hoặc bạn bấm nút này'
+            : 'Quá 15 phút mà vẫn chưa điều động lực lượng thì bạn được yêu cầu chuyển lên cấp tỉnh'
         }
       >
         <span className={styles.timerLabel}>Bấm được sau {formatDuration(left)}</span>

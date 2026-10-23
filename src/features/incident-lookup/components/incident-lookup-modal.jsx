@@ -169,7 +169,7 @@ function LookupResult({ data, onBack, document }) {
         title="Tiếp nhận"
         rows={[
           ['Đơn vị tiếp nhận', data.handling_unit],
-          ['Cán bộ nhận ca', person(data.handler)],
+          ['Lực lượng chức năng tiếp nhận', person(data.handler)],
           ['Nhận ca lúc', fmt(data.handler?.at || data.accepted_at)],
           ['Chuyển lên tỉnh lúc', fmt(data.escalated_at)],
           ['Lý do chuyển tỉnh', data.escalation_reason_label],

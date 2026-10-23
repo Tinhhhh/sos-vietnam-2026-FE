@@ -98,8 +98,8 @@ function TrackingSheet({ plan, incidentId, token, onClose }) {
           />
         ) : (
           <div className={styles.empty}>
-            Cán bộ đang chọn lực lượng phù hợp. Khi lực lượng xuất phát, nút ⋯ sẽ có dấu chấm đỏ và bạn theo
-            dõi được đường đi tại đây.
+            Lực lượng chức năng đang chọn đơn vị phù hợp. Khi lực lượng xuất phát, nút ⋯ sẽ có dấu chấm đỏ và
+            bạn theo dõi được đường đi tại đây.
           </div>
         )}
       </div>
@@ -128,7 +128,7 @@ function CitizenConfirm({ incidentId, token, confirmed }) {
         try {
           await confirmHandled(incidentId, { citizenToken: token });
           setDone(true);
-          toast.show('Đã xác nhận. Cán bộ sẽ hoàn tất hồ sơ vụ việc.', { tone: 'success' });
+          toast.show('Đã xác nhận. Lực lượng chức năng sẽ hoàn tất hồ sơ vụ việc.', { tone: 'success' });
         } catch (err) {
           toast.show(err.message, { tone: 'error' });
         } finally {

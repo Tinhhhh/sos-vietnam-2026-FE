@@ -95,10 +95,10 @@ function CitizenDocumentWindow({ access, onClose, notify, onSigned }) {
         </div>
       ) : state.status === 'none' ? (
         <div className={styles.empty}>
-          <b>Cán bộ chưa lập văn bản báo cáo cho sự việc này.</b>
+          <b>Lực lượng chức năng chưa lập văn bản báo cáo cho sự việc này.</b>
           <span>
-            Khi cán bộ lập xong, văn bản sẽ hiện ở đây để bạn đọc lại và ký xác nhận. Bạn cũng có thể xem lại
-            sau bằng mục "Tra Cứu" với mã tra cứu và 4 số cuối số điện thoại.
+            Khi lực lượng chức năng lập xong, văn bản sẽ hiện ở đây để bạn đọc lại và ký xác nhận. Bạn cũng có
+            thể xem lại sau bằng mục "Tra Cứu" với mã tra cứu và 4 số cuối số điện thoại.
           </span>
         </div>
       ) : (
@@ -111,7 +111,7 @@ function CitizenDocumentWindow({ access, onClose, notify, onSigned }) {
               {doc.locked
                 ? 'Văn bản đã đủ chữ ký 2 bên'
                 : doc.citizenSignature
-                  ? 'Bạn đã ký · chờ cán bộ ký xác nhận'
+                  ? 'Bạn đã ký · chờ lực lượng chức năng ký xác nhận'
                   : 'Đọc kỹ nội dung rồi ký xác nhận ở ô "Người báo tin / người dân"'}
             </span>
           </div>
