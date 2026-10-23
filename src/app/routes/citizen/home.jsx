@@ -85,13 +85,7 @@ export function CitizenHomeRoute() {
           onClosed={handleTrackingClosed}
           dispatchSlot={(p) => <CitizenDispatchButton {...p} />}
           mediaSlot={({ incident, token }) => (
-            <SupplementMediaButton
-              incidentId={incident.id}
-              token={token}
-              notify={toast.show}
-              className="btn-refresh-loc"
-              style={{ margin: '10px auto 0', padding: '8px 16px', fontWeight: 700, display: 'flex' }}
-            />
+            <SupplementMediaButton incidentId={incident.id} token={token} notify={toast.show} />
           )}
           documentSlot={({ incident, token }) => (
             <CitizenDocumentButton

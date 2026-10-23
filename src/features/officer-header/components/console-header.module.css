@@ -140,6 +140,9 @@ button.info:focus-visible,
   position: relative;
   width: 40px;
   height: 40px;
+  flex-shrink: 0;
+  /* keep its own size on touch screens (global rule gives every button min-height 44px) */
+  min-height: 0;
   margin-left: 8px;
   display: grid;
   place-items: center;

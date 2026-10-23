@@ -346,3 +346,14 @@
     filter: drop-shadow(0 0 10px #00f0ff);
   }
 }
+
+/* Wrapper for the map's own controls (compass, zoom, "Địa bàn" dock): no box of its own on
+   larger screens, hidden on phones where pinch-zoom is enough and the map needs the room. */
+.hideOnPhone {
+  display: contents;
+}
+@media (max-width: 768px) {
+  .hideOnPhone {
+    display: none;
+  }
+}

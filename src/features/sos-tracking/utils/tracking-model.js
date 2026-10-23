@@ -45,7 +45,7 @@ export function normalizeTracking(raw) {
     documentStatus: raw.document_status || 'NONE',
     resolvedAt: toDate(raw.resolved_at),
     handler: raw.handler
-      ? { fullName: raw.handler.full_name || 'Cán bộ', unitName: raw.handler.unit_name || null }
+      ? { fullName: raw.handler.full_name || 'Lực lượng chức năng', unitName: raw.handler.unit_name || null }
       : null,
   };
 }

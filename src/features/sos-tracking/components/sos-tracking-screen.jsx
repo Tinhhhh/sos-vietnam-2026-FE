@@ -232,7 +232,7 @@ function TrackingContent({
             onClick={callBack}
             disabled={connection !== 'live'}
           >
-            <CallIcon name="phone" /> Gọi video cho cán bộ
+            <CallIcon name="phone" /> Gọi video cho lực lượng chức năng
           </button>
         )}
 
@@ -243,7 +243,7 @@ function TrackingContent({
         {closed && incident.status === 'RESOLVED' && !signed && !resolvedLongAgo && (
           <p className={styles.sub} style={{ color: '#fcd34d' }}>
             {incident.documentStatus === 'NONE'
-              ? 'Cán bộ đang lập biên bản sự việc. Vui lòng chờ để ký xác nhận.'
+              ? 'Lực lượng chức năng đang lập biên bản sự việc. Vui lòng chờ để ký xác nhận.'
               : 'Vui lòng ký xác nhận biên bản: bấm "Xem & ký văn bản báo cáo".'}
           </p>
         )}
@@ -310,9 +310,9 @@ function LookupCode({ code }) {
   );
 }
 
-/** "Cán bộ Nguyễn Văn A"; account names that already start with "Cán bộ" are not doubled. */
+/** The handler as citizens see it: the account name (often the unit, e.g. "Công an TP. Hồ Chí Minh"), else a generic label. */
 function officerTitle(name) {
-  return /^cán bộ/i.test(name) ? name : `Cán bộ ${name}`;
+  return name || 'Lực lượng chức năng';
 }
 
 function StatusText({ incident, unit, incoming, call, peerName, expired }) {
@@ -321,14 +321,16 @@ function StatusText({ incident, unit, incoming, call, peerName, expired }) {
   if (expired) {
     title = 'Đã quá thời gian chờ tiếp nhận';
     sub =
-      'Chưa có cán bộ tiếp nhận tin báo sau 1 giờ. Nếu vẫn cần hỗ trợ, hãy gửi SOS mới hoặc gọi ngay 113 / 114 / 115.';
+      'Chưa có lực lượng chức năng tiếp nhận tin báo sau 1 giờ. Nếu vẫn cần hỗ trợ, hãy gửi SOS mới hoặc gọi ngay 113 / 114 / 115.';
   } else if (incoming) {
-    title = `${peerName || 'Cán bộ'} đang gọi video cho bạn`;
-    sub = `${unit}. Bấm Nghe để nói chuyện và cho cán bộ xem hiện trường.`;
+    title = `${peerName || 'Lực lượng chức năng'} đang gọi video cho bạn`;
+    sub = `${unit}. Bấm Nghe để nói chuyện và cho lực lượng chức năng xem hiện trường.`;
   } else if (incident.status === 'CANCELLED') {
     // NO_RESPONDER: the server cancelled it after waiting too long with nobody taking it
     const auto = incident.cancelReason === 'NO_RESPONDER';
-    title = auto ? 'Tin báo đã tự huỷ vì quá lâu không có cán bộ tiếp nhận' : 'Tin báo đã được huỷ';
+    title = auto
+      ? 'Tin báo đã tự huỷ vì quá lâu không có lực lượng chức năng tiếp nhận'
+      : 'Tin báo đã được huỷ';
     sub = `${!auto && incident.cancelReasonLabel ? `Lý do: ${incident.cancelReasonLabel}. ` : ''}Nếu vẫn cần hỗ trợ, hãy gửi SOS mới hoặc gọi ngay 113 / 114 / 115.`;
   } else if (incident.status === 'RESOLVED') {
     title = 'Sự việc đã được xử lý xong';
@@ -338,12 +340,18 @@ function StatusText({ incident, unit, incoming, call, peerName, expired }) {
     sub = `${unit}${incident.handler ? ` · ${officerTitle(incident.handler.fullName)}` : ''}. Giữ an toàn và giữ máy.`;
   } else if (incident.handler) {
     title = `${officerTitle(incident.handler.fullName)} đang xác minh tin báo`;
-    sub = `${unit}. Cán bộ sẽ gọi video để xác minh, hoặc bạn có thể gọi trước.`;
+    sub = `${unit}. Lực lượng chức năng sẽ gọi video để xác minh, hoặc bạn có thể gọi trước.`;
   } else {
-    title = `Đang kết nối tới ${unit}...`;
+    title = (
+      <>
+        Đang kết nối tới
+        <br />
+        {unit}...
+      </>
+    );
     sub = incident.escalatedAt
       ? 'Tin báo đã được chuyển lên cấp tỉnh/thành phố. Vui lòng giữ máy.'
-      : 'Giữ màn hình này mở. Cán bộ sẽ gọi video cho bạn ngay khi tiếp nhận.';
+      : 'Giữ màn hình, cơ quan chức năng sẽ gọi cho bạn ngay khi tiếp nhận.';
   }
   const ended = call?.state === 'ended' && !incoming ? END_REASON_TEXT[call.endedReason] : null;
   return (

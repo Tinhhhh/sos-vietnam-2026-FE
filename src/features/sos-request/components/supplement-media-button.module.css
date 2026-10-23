@@ -1,0 +1,32 @@
+/* Secondary pill under "Gọi video cho lực lượng chức năng" on the tracking screen.
+ * Own class (not the legacy .btn-refresh-loc): that one grows to flex: 1 1 100% on phones,
+ * which inside the tracking screen's column turned it into a tall oval. */
+.btn {
+  flex: 0 0 auto;
+  align-self: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin: 10px auto 0;
+  padding: 9px 18px;
+  min-height: 40px;
+  max-width: 100%;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.08);
+  color: #e2e8f0;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.2;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.16);
+  border-color: rgba(255, 255, 255, 0.35);
+}
+.btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}

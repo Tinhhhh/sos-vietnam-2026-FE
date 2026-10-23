@@ -3,6 +3,8 @@ import { useRef, useState } from 'react';
 import { uploadIncidentMedia } from '../api/incidents';
 import { MAX_IMAGES, MAX_VIDEO_BYTES, MAX_VIDEOS, prepareAttachment } from '../utils/media';
 
+import styles from './supplement-media-button.module.css';
+
 /**
  * "Bổ sung ảnh / video" on the tracking screen once an officer took the report: pick from camera / gallery,
  * same compression and limits as the SOS form (BE counts what was already sent: 5 photos + 1 video in total).
@@ -28,7 +30,7 @@ export function SupplementMediaButton({ incidentId, token, notify, className, st
       if (attachments.length === 0) return;
       await uploadIncidentMedia({ incidentId, citizenAccessToken: token, attachments });
       attachments.forEach((a) => URL.revokeObjectURL(a.previewUrl));
-      notify(`Đã gửi thêm ${attachments.length} ảnh/video cho cán bộ.`, { tone: 'success' });
+      notify(`Đã gửi thêm ${attachments.length} ảnh/video cho lực lượng chức năng.`, { tone: 'success' });
     } catch (err) {
       notify(`Không gửi được ảnh/video: ${err.message}`, { tone: 'error', duration: 8000 });
     } finally {
@@ -40,7 +42,7 @@ export function SupplementMediaButton({ incidentId, token, notify, className, st
     <>
       <button
         type="button"
-        className={className}
+        className={className ? `${styles.btn} ${className}` : styles.btn}
         style={style}
         disabled={busy}
         title={`Tối đa ${MAX_IMAGES} ảnh và ${MAX_VIDEOS} video cho cả tin báo (video ≤ ${MAX_VIDEO_BYTES / 1024 / 1024}MB)`}

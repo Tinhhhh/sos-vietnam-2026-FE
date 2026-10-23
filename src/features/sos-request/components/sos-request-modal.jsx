@@ -355,8 +355,8 @@ function LocationCheck({ location, onPickLocation }) {
       </div>
       {!locating && (
         <div className={loc.warnText}>
-          Cán bộ cần vị trí chính xác để tới cứu. Hãy bật định vị (GPS) cho trình duyệt rồi thử lại, hoặc tự
-          chọn vị trí trên bản đồ. Nếu khẩn cấp, gọi ngay 113 / 114 / 115.
+          Lực lượng chức năng cần vị trí chính xác để tới cứu. Hãy bật định vị (GPS) cho trình duyệt rồi thử
+          lại, hoặc tự chọn vị trí trên bản đồ.
         </div>
       )}
       <div className={loc.warnActions}>

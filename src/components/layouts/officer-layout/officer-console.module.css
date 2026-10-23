@@ -128,11 +128,6 @@
   gap: 8px;
 }
 
-.actionsHidden {
-  justify-content: flex-end;
-  margin-bottom: -4px;
-}
-
 .actions {
   flex: 1;
   min-width: 0;
@@ -153,11 +148,49 @@
   cursor: pointer;
 }
 
-.actionsHidden .actionsToggle {
-  flex-basis: auto;
-  width: 44px;
-  height: 22px;
+/* Folded tile bar: one button on the map header, with the pending-case count */
+.panelEnd {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.actionsOpen {
+  display: inline-flex;
+  /* keep its own size on touch screens (global rule gives every button min-height 44px) */
+  min-height: 0;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 10px;
+  border: 1px solid var(--c-line-strong);
   border-radius: 8px;
+  background: rgba(8, 14, 28, 0.85);
+  color: #e2e8f0;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.actionsOpen:hover {
+  border-color: var(--c-accent);
+  color: #fff;
+}
+
+.actionsOpenCount {
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  background: #ef4444;
+  color: #fff;
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 800;
+  line-height: 18px;
+  text-align: center;
 }
 
 .actionsToggle:hover {
@@ -475,6 +508,8 @@
   flex-shrink: 0;
   width: 30px;
   height: 30px;
+  /* square, also on touch screens where every button gets min-height 44px */
+  min-height: 0;
   display: grid;
   place-items: center;
   border: 1px solid var(--c-line);

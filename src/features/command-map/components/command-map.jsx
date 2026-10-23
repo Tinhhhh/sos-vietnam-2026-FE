@@ -588,27 +588,32 @@ export function CommandMap({
         }}
       />
 
-      <MapControls
-        bearing={view.bearing}
-        onResetNorth={() => mapRef.current?.easeTo({ bearing: 0, pitch: 0, duration: 600 })}
-        onZoomIn={() => mapRef.current?.zoomIn()}
-        onZoomOut={() => mapRef.current?.zoomOut()}
-      />
+      {/* Compass / zoom and the "Địa bàn" dock: hidden on phones (pinch to zoom, more room for the map) */}
+      <div className={styles.hideOnPhone}>
+        <MapControls
+          bearing={view.bearing}
+          onResetNorth={() => mapRef.current?.easeTo({ bearing: 0, pitch: 0, duration: 600 })}
+          onZoomIn={() => mapRef.current?.zoomIn()}
+          onZoomOut={() => mapRef.current?.zoomOut()}
+        />
+      </div>
 
       {!styleOpen && (
-        <GeofenceDock
-          provinces={provinces}
-          wardsByProvince={wardsByProvince}
-          ensureWards={ensureWards}
-          stations={stations}
-          selectedProvince={dockProvince}
-          selectedWard={dockWard}
-          areaGridVisible={areaGridVisible}
-          onSelectProvince={selectProvince}
-          onSelectWard={selectWard}
-          onToggleAreaGrid={toggleAreaGrid}
-          onClear={clearSelection}
-        />
+        <div className={styles.hideOnPhone}>
+          <GeofenceDock
+            provinces={provinces}
+            wardsByProvince={wardsByProvince}
+            ensureWards={ensureWards}
+            stations={stations}
+            selectedProvince={dockProvince}
+            selectedWard={dockWard}
+            areaGridVisible={areaGridVisible}
+            onSelectProvince={selectProvince}
+            onSelectWard={selectWard}
+            onToggleAreaGrid={toggleAreaGrid}
+            onClear={clearSelection}
+          />
+        </div>
       )}
 
       {hud && (
