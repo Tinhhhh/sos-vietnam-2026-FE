@@ -14,11 +14,13 @@ export const api = axios.create({
 });
 
 export class ApiError extends Error {
-  constructor(message, { status, data } = {}) {
+  constructor(message, { status, data, config } = {}) {
     super(message);
     this.name = 'ApiError';
     this.status = status;
     this.data = data;
+    // request config, so the auth module can retry once after refreshing the token
+    this.config = config;
   }
 }
 
@@ -37,6 +39,6 @@ api.interceptors.response.use(
       (unreachable ? 'Không kết nối được máy chủ' : null) ||
       data?.error ||
       error.message;
-    return Promise.reject(new ApiError(message, { status, data }));
+    return Promise.reject(new ApiError(message, { status, data, config: error.config }));
   },
 );

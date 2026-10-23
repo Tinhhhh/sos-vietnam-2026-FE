@@ -16,9 +16,18 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router';
 
+import { SESSION_ENDED_KEY } from './auth-context';
 import { useAuth } from './use-auth';
 import { paths } from '@/config/paths';
 import s from './officer-login.module.css';
+
+function readSessionEnded() {
+  try {
+    return sessionStorage.getItem(SESSION_ENDED_KEY);
+  } catch {
+    return null;
+  }
+}
 
 // ── 60fps Tactical Cosmic Starfield Particle Hook ──────────────
 function useCosmicStarfield(canvasRef) {
@@ -202,17 +211,27 @@ export function OfficerLoginForm() {
   useCosmicStarfield(canvasRef);
 
   // State: Modal visibility
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [sessionEnded] = useState(readSessionEnded);
+  const [isModalOpen, setIsModalOpen] = useState(!!sessionEnded);
 
   // Form state
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPwd, setShowPwd] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState(sessionEnded);
   const [showProgress, setShowProgress] = useState(false);
 
   const { pct, label, startProgress } = useLoginProgress();
+
+  // Session ended from elsewhere (password changed, revoked): the form opens and says why, once
+  useEffect(() => {
+    try {
+      sessionStorage.removeItem(SESSION_ENDED_KEY);
+    } catch {
+      // storage blocked
+    }
+  }, []);
 
   function openModal() {
     setError(null);
@@ -343,7 +362,11 @@ export function OfficerLoginForm() {
           <div className={s.shieldRadarRing} />
           <div className={s.shieldPingRing} />
           <div className={s.shieldCore}>
-            <img src="/assets/icons/logo-sos-emblem.png" alt="Khiên An Ninh Quốc Gia" className={s.shieldIcon} />
+            <img
+              src="/assets/icons/logo-sos-emblem.png"
+              alt="Khiên An Ninh Quốc Gia"
+              className={s.shieldIcon}
+            />
           </div>
         </div>
 
