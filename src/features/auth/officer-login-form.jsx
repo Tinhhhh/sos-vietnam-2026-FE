@@ -16,9 +16,54 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router';
 
+import { SESSION_ENDED_KEY } from './auth-context';
 import { useAuth } from './use-auth';
 import { paths } from '@/config/paths';
 import s from './officer-login.module.css';
+
+/** Solid eye for the password toggle; `crossed` = password is shown, click to hide it again. */
+function EyeIcon({ crossed }) {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">
+      <path
+        fillRule="evenodd"
+        d="M12 5C6.5 5 2.4 9.1 1 12c1.4 2.9 5.5 7 11 7s9.6-4.1 11-7c-1.4-2.9-5.5-7-11-7zm0 11.3a4.3 4.3 0 1 1 0-8.6 4.3 4.3 0 0 1 0 8.6z"
+      />
+      <circle cx="12" cy="12" r="2.6" />
+      <circle cx="13.1" cy="10.9" r="0.9" fill="#0b1628" />
+      {crossed && (
+        <>
+          <line
+            x1="3.5"
+            y1="3.5"
+            x2="20.5"
+            y2="20.5"
+            stroke="#0b1628"
+            strokeWidth="4"
+            strokeLinecap="round"
+          />
+          <line
+            x1="3.5"
+            y1="3.5"
+            x2="20.5"
+            y2="20.5"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+          />
+        </>
+      )}
+    </svg>
+  );
+}
+
+function readSessionEnded() {
+  try {
+    return sessionStorage.getItem(SESSION_ENDED_KEY);
+  } catch {
+    return null;
+  }
+}
 
 // ── 60fps Tactical Cosmic Starfield Particle Hook ──────────────
 function useCosmicStarfield(canvasRef) {
@@ -202,17 +247,27 @@ export function OfficerLoginForm() {
   useCosmicStarfield(canvasRef);
 
   // State: Modal visibility
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [sessionEnded] = useState(readSessionEnded);
+  const [isModalOpen, setIsModalOpen] = useState(!!sessionEnded);
 
   // Form state
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPwd, setShowPwd] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState(sessionEnded);
   const [showProgress, setShowProgress] = useState(false);
 
   const { pct, label, startProgress } = useLoginProgress();
+
+  // Session ended from elsewhere (password changed, revoked): the form opens and says why, once
+  useEffect(() => {
+    try {
+      sessionStorage.removeItem(SESSION_ENDED_KEY);
+    } catch {
+      // storage blocked
+    }
+  }, []);
 
   function openModal() {
     setError(null);
@@ -343,7 +398,11 @@ export function OfficerLoginForm() {
           <div className={s.shieldRadarRing} />
           <div className={s.shieldPingRing} />
           <div className={s.shieldCore}>
-            <img src="/assets/icons/logo-sos-emblem.png" alt="Khiên An Ninh Quốc Gia" className={s.shieldIcon} />
+            <img
+              src="/assets/icons/logo-sos-emblem.png"
+              alt="Khiên An Ninh Quốc Gia"
+              className={s.shieldIcon}
+            />
           </div>
         </div>
 
@@ -415,7 +474,7 @@ export function OfficerLoginForm() {
                     id="officer-email"
                     type="email"
                     className={s.input}
-                    placeholder="canbo@cosanh.gov.vn"
+                    placeholder="Nhập tài khoản..."
                     autoComplete="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
@@ -451,7 +510,7 @@ export function OfficerLoginForm() {
                     aria-label={showPwd ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
                     tabIndex={-1}
                   >
-                    {showPwd ? '🙈' : '👁'}
+                    <EyeIcon crossed={showPwd} />
                   </button>
                 </div>
               </div>

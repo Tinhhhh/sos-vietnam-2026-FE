@@ -62,16 +62,18 @@
 }
 @media (max-width: 992px) {
   /*  legacy css/tactical-responsive.css:1745  */
+  /* inside the map panel (not fixed under the page header): it stays below the tile bar and the
+     map title instead of covering them, and scrolls within the map's height */
   .tactical-ward-geofence-hud {
-    position: fixed !important;
-    top: calc(var(--tac-header-h, 60px) + 52px + var(--sa-top, 0px)) !important;
+    position: absolute !important;
+    top: 10px !important;
     left: 10px !important;
     right: 10px !important;
     width: auto !important;
     max-width: calc(100% - 20px) !important;
-    max-height: calc(100vh - 220px) !important;
+    max-height: calc(100% - 20px) !important;
     overflow-y: auto !important;
     padding: 10px 14px !important;
-    z-index: 9990 !important;
+    z-index: 400 !important;
   }
 }

@@ -5,16 +5,20 @@ import { useToast } from '@/components/ui/toast/toast-context';
 
 import styles from './account-panels.module.css';
 import { changePasswordApi } from './auth-api';
+import { SESSION_ENDED_KEY } from './auth-context';
+import { useAuth } from './use-auth';
 
 const MIN = 8;
 const EMPTY = { current: '', next: '', confirm: '' };
 
 /**
  * "Đổi mật khẩu" for the signed-in account (Settings menu of the officer console).
+ * The BE then logs out every session of the account (all devices), so this one goes back to the login page.
  * @param {{ open: boolean, onClose: () => void }} props
  */
 export function ChangePasswordDialog({ open, onClose }) {
   const toast = useToast();
+  const { logout } = useAuth();
   const [form, setForm] = useState(EMPTY);
   const [show, setShow] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -45,9 +49,18 @@ export function ChangePasswordDialog({ open, onClose }) {
     setError(null);
     try {
       await changePasswordApi({ currentPassword: form.current, newPassword: form.next });
-      toast.show('Đã đổi mật khẩu. Lần đăng nhập sau dùng mật khẩu mới.', { tone: 'success' });
+      toast.show('Đã đổi mật khẩu. Vui lòng đăng nhập lại bằng mật khẩu mới.', { tone: 'success' });
       setForm(EMPTY);
       onClose();
+      try {
+        sessionStorage.setItem(
+          SESSION_ENDED_KEY,
+          'Đã đổi mật khẩu. Vui lòng đăng nhập lại bằng mật khẩu mới.',
+        );
+      } catch {
+        // storage blocked: the login page just won't say why
+      }
+      await logout();
     } catch (err) {
       setError(err.message);
     } finally {

@@ -53,7 +53,7 @@ export function CitizenCallScreen({
         stream={call.remoteStream}
         fallback={<div className={styles.avatar}>👮</div>}
       >
-        <span className={styles.pipLabel}>CÁN BỘ</span>
+        <span className={styles.pipLabel}>LỰC LƯỢNG TIẾP NHẬN</span>
       </VideoTile>
 
       <div className={styles.callTop}>
@@ -64,7 +64,7 @@ export function CitizenCallScreen({
             : 'SOS'}
         </span>
         <span className={styles.callBadge} style={{ marginRight: 'min(32vw, 160px)' }}>
-          {officerName || 'Lực lượng chức năng'}
+          {officerName || 'Lực lượng tiếp nhận'}
         </span>
       </div>
 

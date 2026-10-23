@@ -213,7 +213,6 @@ export function IncidentHistoryPanel({
       <Pager
         page={page}
         totalPages={state.totalPages}
-        total={state.total}
         onPage={setPage}
         disabled={state.status === 'loading'}
       />
