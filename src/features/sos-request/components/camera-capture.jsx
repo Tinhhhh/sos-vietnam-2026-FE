@@ -18,13 +18,24 @@ const stamp = () => new Date().toISOString().replace(/[-:T]/g, '').slice(0, 14);
  * In-page camera for the SOS form ("Chụp Camera"): photo or ≤30 s video, a torch button (off by
  * default, so the phone camera app's auto flash no longer fires) and front/back switch.
  * Each shot goes to `onCapture(file)` and the camera stays open for more; "Xong" closes it.
+ * `confirm` (used where a shot is sent at once, e.g. "Bổ sung ảnh / video"): each shot is shown first with
+ * "Chụp lại / Quay lại" and `confirmLabel` (default "Gửi"); only that button hands it to `onCapture`.
  * If the camera can't be opened (denied, no device) a button runs `onFallback()` to open the phone
  * camera app (it must come from a tap: browsers block opening the file picker on their own).
  *
  * @param {{ open: boolean, onClose: () => void, onCapture: (file: File) => void, onFallback: () => void,
- *   photosLeft: number, videosLeft: number }} props
+ *   photosLeft: number, videosLeft: number, confirm?: boolean, confirmLabel?: string }} props
  */
-export function CameraCapture({ open, onClose, onCapture, onFallback, photosLeft, videosLeft }) {
+export function CameraCapture({
+  open,
+  onClose,
+  onCapture,
+  onFallback,
+  photosLeft,
+  videosLeft,
+  confirm = false,
+  confirmLabel = 'Gửi',
+}) {
   const videoRef = useRef(null);
   const streamRef = useRef(null);
   const recorderRef = useRef(null);
@@ -37,6 +48,34 @@ export function CameraCapture({ open, onClose, onCapture, onFallback, photosLeft
   const [flash, setFlash] = useState(false);
   const [error, setError] = useState(null);
   const [blocked, setBlocked] = useState(false); // camera could not be opened in the page
+  const [pending, setPending] = useState(null); // { file, url, kind } waiting for "Gửi" (confirm mode)
+
+  const deliver = (file) => {
+    if (!confirm) {
+      onCapture(file);
+      return;
+    }
+    setPending({
+      file,
+      url: URL.createObjectURL(file),
+      kind: file.type.startsWith('video/') ? 'video' : 'image',
+    });
+  };
+  const discardPending = () => {
+    setPending((p) => {
+      if (p) URL.revokeObjectURL(p.url);
+      return null;
+    });
+  };
+  const sendPending = () => {
+    if (!pending) return;
+    onCapture(pending.file);
+    discardPending();
+  };
+  const close = () => {
+    discardPending();
+    onClose();
+  };
 
   const stopStream = useCallback(() => {
     streamRef.current?.getTracks().forEach((t) => t.stop());
@@ -110,7 +149,13 @@ export function CameraCapture({ open, onClose, onCapture, onFallback, photosLeft
     const onKey = (e) => {
       if (e.key !== 'Escape') return;
       e.stopPropagation();
-      if (!recorderRef.current) onClose();
+      if (!recorderRef.current) {
+        setPending((p) => {
+          if (p) URL.revokeObjectURL(p.url);
+          return null;
+        });
+        onClose();
+      }
     };
     window.addEventListener('keydown', onKey, true);
     return () => window.removeEventListener('keydown', onKey, true);
@@ -150,7 +195,7 @@ export function CameraCapture({ open, onClose, onCapture, onFallback, photosLeft
     canvas.toBlob(
       (blob) => {
         if (!blob) return;
-        onCapture(new File([blob], `anh-hien-truong-${stamp()}.jpg`, { type: 'image/jpeg' }));
+        deliver(new File([blob], `anh-hien-truong-${stamp()}.jpg`, { type: 'image/jpeg' }));
         setFlash(true);
         setTimeout(() => setFlash(false), 180);
       },
@@ -179,7 +224,7 @@ export function CameraCapture({ open, onClose, onCapture, onFallback, photosLeft
       const blob = new Blob(chunks, { type: mime.split(';')[0] });
       if (blob.size) {
         const ext = mime.includes('mp4') ? 'mp4' : 'webm';
-        onCapture(new File([blob], `video-hien-truong-${stamp()}.${ext}`, { type: blob.type }));
+        deliver(new File([blob], `video-hien-truong-${stamp()}.${ext}`, { type: blob.type }));
       }
     };
     recorderRef.current = recorder;
@@ -219,7 +264,7 @@ export function CameraCapture({ open, onClose, onCapture, onFallback, photosLeft
         <button
           type="button"
           className={styles.roundBtn}
-          onClick={onClose}
+          onClick={close}
           disabled={!!recording}
           aria-label="Đóng camera"
         >
@@ -279,7 +324,7 @@ export function CameraCapture({ open, onClose, onCapture, onFallback, photosLeft
           ))}
         </div>
         <div className={styles.controls}>
-          <button type="button" className={styles.doneBtn} onClick={onClose} disabled={!!recording}>
+          <button type="button" className={styles.doneBtn} onClick={close} disabled={!!recording}>
             Xong
           </button>
           <button
@@ -302,6 +347,31 @@ export function CameraCapture({ open, onClose, onCapture, onFallback, photosLeft
           </button>
         </div>
       </div>
+
+      {pending && (
+        <div className={styles.review} role="dialog" aria-label="Xem lại trước khi gửi">
+          {pending.kind === 'video' ? (
+            <video className={styles.reviewMedia} src={pending.url} controls playsInline autoPlay />
+          ) : (
+            <img className={styles.reviewMedia} src={pending.url} alt="Ảnh vừa chụp" />
+          )}
+          <div className={styles.reviewBar}>
+            <p>
+              {pending.kind === 'video'
+                ? 'Gửi video này cho lực lượng chức năng?'
+                : 'Gửi ảnh này cho lực lượng chức năng?'}
+            </p>
+            <div className={styles.reviewActions}>
+              <button type="button" className={styles.retakeBtn} onClick={discardPending}>
+                {pending.kind === 'video' ? 'Quay lại' : 'Chụp lại'}
+              </button>
+              <button type="button" className={styles.sendBtn} onClick={sendPending}>
+                {confirmLabel}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>,
     document.body,
   );

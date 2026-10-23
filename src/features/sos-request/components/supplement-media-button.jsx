@@ -10,7 +10,8 @@ import styles from './supplement-media-button.module.css';
 /**
  * "Bổ sung ảnh / video" on the tracking screen once an officer took the report: shoot with the in-page
  * camera (torch off by default) or pick from the gallery, same compression and limits as the SOS form
- * (BE counts what was already sent: 5 photos + 1 video in total). Each shot is sent right away.
+ * (BE counts what was already sent: 5 photos + 1 video in total). Each shot is shown first and only
+ * sent after "Gửi" ("Chụp lại / Quay lại" throws it away).
  *
  * @param {{ incidentId: string, token: string, notify: Function, className?: string, style?: object }} props
  */
@@ -50,7 +51,14 @@ export function SupplementMediaButton({ incidentId, token, notify, className, st
     send(files);
   };
   const closeCamera = useCallback(() => setCameraOpen(false), []);
-  const captured = useCallback((file) => send([file]), [send]);
+  // confirm mode: only a shot the citizen accepted with "Gửi" arrives here; back to the call screen
+  const captured = useCallback(
+    (file) => {
+      setCameraOpen(false);
+      send([file]);
+    },
+    [send],
+  );
   const nativeCamera = useCallback(() => {
     setCameraOpen(false);
     cameraInputRef.current?.click();
@@ -93,6 +101,8 @@ export function SupplementMediaButton({ incidentId, token, notify, className, st
         onFallback={nativeCamera}
         photosLeft={MAX_IMAGES}
         videosLeft={MAX_VIDEOS}
+        confirm
+        confirmLabel="Gửi"
       />
     </div>
   );
