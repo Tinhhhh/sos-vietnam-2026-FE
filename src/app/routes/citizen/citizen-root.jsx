@@ -7,6 +7,7 @@ import { useToast } from '@/components/ui/toast/toast-context';
 import { paths } from '@/config/paths';
 import { FamilySosModal } from '@/features/family-sos/components/family-sos-modal';
 import { IncidentLookupModal } from '@/features/incident-lookup';
+import { InstallGuideModal, useInstallApp } from '@/features/install-app';
 import { CitizenDocumentButton } from '@/features/incident-report';
 import { useGeolocation } from '@/features/location/hooks/use-geolocation';
 import { SurvivalGuideModal } from '@/features/survival-guide/components/survival-guide-modal';
@@ -21,12 +22,13 @@ export function CitizenRoot() {
   const toast = useToast();
   const [openModal, setOpenModal] = useState(null);
   const closeModal = useCallback(() => setOpenModal(null), []);
+  const installApp = useInstallApp(toast.show);
 
   return (
     <CitizenLayout
       dock={
         <CitizenDock
-          onInstallApp={() => toast.show('Cài lối tắt (PWA) sẽ có ở module PWA.', { tone: 'info' })}
+          onInstallApp={installApp.install}
           onOpenFamilySos={() => setOpenModal('family')}
           onOpenSurvivalGuide={() => setOpenModal('guide')}
           onOpenLookup={() => setOpenModal('lookup')}
@@ -42,6 +44,11 @@ export function CitizenRoot() {
             notify={toast.show}
           />
           <SurvivalGuideModal open={openModal === 'guide'} onClose={closeModal} />
+          <InstallGuideModal
+            open={!!installApp.guide}
+            platform={installApp.guide}
+            onClose={installApp.closeGuide}
+          />
           <IncidentLookupModal
             open={openModal === 'lookup'}
             onClose={closeModal}
