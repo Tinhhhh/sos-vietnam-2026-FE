@@ -19,9 +19,9 @@ const AGENCIES = [
   ['HOSPITAL', 'Y tế 115'],
 ];
 
-function readFilter() {
+function readFilter(key) {
   try {
-    return { ...EMPTY_FILTER, ...JSON.parse(localStorage.getItem(FILTER_KEY) || '{}') };
+    return { ...EMPTY_FILTER, ...JSON.parse(localStorage.getItem(key) || '{}') };
   } catch {
     return EMPTY_FILTER;
   }
@@ -31,13 +31,18 @@ function readFilter() {
  * Window "Thành viên" (also Settings → "Trạng thái cán bộ"): one page of the officers of ONE unit with
  * their status (online = command console open, busy = holding a case) and basic info. While I hold a
  * case I can hand it over to a colleague who is online and free (reason required, like the handover dialog).
- * An officer always sees their own unit; an ADMIN first picks the unit: level + province (+ ward for
+ * A ward officer always sees their own unit; a province officer sees their own unit or picks one ward of
+ * their province (same force's ward unit); an ADMIN first picks the unit: level + province (+ ward for
  * ward units), force optional (the BE refuses to list the whole country). "Chỉ trực tuyến" for everyone.
  *
- * @param {{ holding?: object|null, onChange?: (incident) => void, isAdmin?: boolean }} props
- *   holding = the case I hold (from the live queue), onChange = apply the handed-over case to the queue.
+ * @param {{ holding?: object|null, onChange?: (incident) => void, isAdmin?: boolean,
+ *           provinceScope?: string|null }} props
+ *   holding = the case I hold (from the live queue), onChange = apply the handed-over case to the queue,
+ *   provinceScope = province_id of a province-level officer (enables the ward picker), null otherwise.
  */
-export function OfficerStatusPanel({ holding, onChange, isAdmin = false }) {
+export function OfficerStatusPanel({ holding, onChange, isAdmin = false, provinceScope = null }) {
+  const pickWard = !isAdmin && !!provinceScope; // province officer: own unit or one ward of the province
+  const filterKey = `${FILTER_KEY}:${isAdmin ? 'admin' : 'province'}`;
   const toast = useToast();
   const [result, setResult] = useState({
     status: 'loading',
@@ -50,21 +55,25 @@ export function OfficerStatusPanel({ holding, onChange, isAdmin = false }) {
   const [handoverTo, setHandoverTo] = useState(null); // memberId with the reason box open
   const [note, setNote] = useState('');
   const [busy, setBusy] = useState(false);
-  const [filter, setFilterState] = useState(() => (isAdmin ? readFilter() : EMPTY_FILTER));
+  const [filter, setFilterState] = useState(() =>
+    isAdmin || pickWard ? readFilter(`${FILTER_KEY}:${isAdmin ? 'admin' : 'province'}`) : EMPTY_FILTER,
+  );
   const [onlineOnly, setOnlineOnly] = useState(false);
   const [page, setPage] = useState(0);
   const [provinces, setProvinces] = useState([]);
   const [wards, setWards] = useState([]);
 
-  // ADMIN must pick one unit before anything is fetched
-  const ready =
-    !isAdmin || (!!filter.level && !!filter.provinceId && (filter.level !== 'WARD' || !!filter.wardId));
+  // ADMIN must pick one unit before anything is fetched; a province officer picking "cấp xã" needs a ward
+  const ready = isAdmin
+    ? !!filter.level && !!filter.provinceId && (filter.level !== 'WARD' || !!filter.wardId)
+    : !pickWard || filter.level !== 'WARD' || !!filter.wardId;
+  const wardProvince = isAdmin ? filter.provinceId : provinceScope;
 
   const setFilter = (patch) => {
     setFilterState((f) => {
       const next = { ...f, ...patch };
       try {
-        localStorage.setItem(FILTER_KEY, JSON.stringify(next));
+        localStorage.setItem(filterKey, JSON.stringify(next));
       } catch {
         // storage blocked: the filter only lasts while the window is open
       }
@@ -85,20 +94,26 @@ export function OfficerStatusPanel({ holding, onChange, isAdmin = false }) {
   }, [isAdmin]);
 
   useEffect(() => {
-    if (!isAdmin || filter.level !== 'WARD' || !filter.provinceId) return undefined;
+    if ((!isAdmin && !pickWard) || filter.level !== 'WARD' || !wardProvince) return undefined;
     let alive = true;
-    getWardOptions(filter.provinceId)
+    getWardOptions(wardProvince)
       .then((list) => alive && setWards(list))
       .catch(() => alive && setWards([]));
     return () => {
       alive = false;
     };
-  }, [isAdmin, filter.level, filter.provinceId]);
+  }, [isAdmin, pickWard, filter.level, wardProvince]);
 
   useEffect(() => {
     if (!ready) return undefined;
     let alive = true;
-    getOfficerStatus({ ...filter, online: onlineOnly, pageNo: page, pageSize: PAGE_SIZE })
+    // an officer's unit filters: only "this ward" (province officers); the BE keeps them in their scope
+    const params = isAdmin
+      ? filter
+      : pickWard && filter.level === 'WARD'
+        ? { level: 'WARD', wardId: filter.wardId }
+        : {};
+    getOfficerStatus({ ...params, online: onlineOnly, pageNo: page, pageSize: PAGE_SIZE })
       .then((r) => alive && setResult({ status: 'ready', ...r, error: null }))
       .catch((err) => alive && setResult((r) => ({ ...r, status: 'error', error: err.message })));
     const t = setTimeout(() => setTick((n) => n + 1), REFRESH_MS);
@@ -106,11 +121,12 @@ export function OfficerStatusPanel({ holding, onChange, isAdmin = false }) {
       alive = false;
       clearTimeout(t);
     };
-  }, [tick, ready, filter, onlineOnly, page]);
+  }, [tick, ready, isAdmin, pickWard, filter, onlineOnly, page]);
 
   const items = ready ? result.items : [];
   const onlineCount = items.filter((o) => o.online).length;
-  const canHandOver = holding && holding.heldByMe;
+  // a case is only handed over inside my own unit, not to the ward unit I am looking at
+  const canHandOver = holding && holding.heldByMe && !(pickWard && filter.level === 'WARD');
 
   const confirm = async (officer) => {
     if (note.trim().length < MIN_REASON) return;
@@ -134,6 +150,34 @@ export function OfficerStatusPanel({ holding, onChange, isAdmin = false }) {
 
   return (
     <div className={styles.panel}>
+      {pickWard && (
+        <div className={styles.filters}>
+          <select
+            className={styles.select}
+            aria-label="Đơn vị"
+            value={filter.level}
+            onChange={(e) => setFilter({ level: e.target.value, wardId: '' })}
+          >
+            <option value="">Đơn vị của tôi (cấp tỉnh)</option>
+            <option value="WARD">Đơn vị cấp xã trong tỉnh</option>
+          </select>
+          {filter.level === 'WARD' && (
+            <select
+              className={styles.select}
+              aria-label="Xã / phường"
+              value={filter.wardId}
+              onChange={(e) => setFilter({ wardId: e.target.value })}
+            >
+              <option value="">Chọn xã / phường</option>
+              {wards.map((w) => (
+                <option key={w.id} value={w.id}>
+                  {w.name}
+                </option>
+              ))}
+            </select>
+          )}
+        </div>
+      )}
       {isAdmin && (
         <div className={styles.filters}>
           <select
@@ -234,7 +278,9 @@ export function OfficerStatusPanel({ holding, onChange, isAdmin = false }) {
       <div className={styles.list}>
         {!ready && (
           <div className={styles.note}>
-            Chọn cấp và tỉnh / thành phố (cấp xã: chọn thêm xã / phường) để xem cán bộ của một đơn vị.
+            {pickWard
+              ? 'Chọn xã / phường để xem cán bộ của đơn vị cấp xã.'
+              : 'Chọn cấp và tỉnh / thành phố (cấp xã: chọn thêm xã / phường) để xem cán bộ của một đơn vị.'}
           </div>
         )}
         {ready && result.status === 'loading' && items.length === 0 && (

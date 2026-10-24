@@ -218,7 +218,14 @@ export function OfficerDashboardRoute() {
     members: {
       title: 'Thành viên đơn vị',
       icon: <SvgIcon name="users" color="blue" />,
-      body: <OfficerStatusPanel holding={holding} onChange={queue.upsert} isAdmin={officer.isAdmin} />,
+      body: (
+        <OfficerStatusPanel
+          holding={holding}
+          onChange={queue.upsert}
+          isAdmin={officer.isAdmin}
+          provinceScope={officer.level === 'province' ? user?.province_id : null}
+        />
+      ),
     },
     stations: {
       title: officer.stationsTabTitle,

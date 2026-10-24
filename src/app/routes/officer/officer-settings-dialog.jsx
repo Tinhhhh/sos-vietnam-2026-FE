@@ -150,7 +150,12 @@ export function OfficerSettingsDialog({
             keywords: 'trực tuyến ngoại tuyến đang giữ ca giao ca',
             render: () => (
               <SettingsFill>
-                <OfficerStatusPanel holding={holding} onChange={onIncidentChange} isAdmin={officer.isAdmin} />
+                <OfficerStatusPanel
+                  holding={holding}
+                  onChange={onIncidentChange}
+                  isAdmin={officer.isAdmin}
+                  provinceScope={officer.level === 'province' ? user?.province_id : null}
+                />
               </SettingsFill>
             ),
           },
