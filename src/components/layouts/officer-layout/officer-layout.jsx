@@ -8,7 +8,6 @@ const SIDE_KEY = 'callMapWidth';
 const MIN_SIDE = 280;
 const MIN_CALL = 380;
 const DEFAULT_SIDE_RATIO = 0.34; // GPS widget about a third of the stage, on the right
-const ACTIONS_KEY = 'consoleActionsHidden';
 const CALL_LAYOUT_KEY = 'callLayout';
 // During a call: call + GPS map side by side, the call alone, or the map with the call as a small floating tile
 const CALL_LAYOUTS = [
@@ -28,15 +27,6 @@ function readCallLayout() {
   }
 }
 
-// Folded by default (more room for the map); '0' = the officer opened it and wants it kept open
-function readActionsHidden() {
-  try {
-    return localStorage.getItem(ACTIONS_KEY) !== '0';
-  } catch {
-    return true;
-  }
-}
-
 function readSideWidth() {
   try {
     const v = Number(localStorage.getItem(SIDE_KEY));
@@ -50,8 +40,10 @@ function readSideWidth() {
  * Officer console shell (national dispatch layout):
  *
  *   [ header                                                       ]
- *   [rail] [ action bar: tiles that open the console windows        ]
  *   [rail] [ stage: map full size | during a call: call  ║  GPS map ]
+ *
+ * The rail holds every console tool (queue, directories, statistics, GPS, settings, logout); on
+ * phones it becomes a bottom tab bar.
  *
  * The map element keeps one place in the tree, so MapLibre is not re-created when a call starts:
  * CSS moves its cell to the right column (the "real-time GPS tracking" widget) and the call pane
@@ -63,8 +55,6 @@ function readSideWidth() {
  * @param {{
  *   header: React.ReactNode,
  *   rail: React.ReactNode,
- *   actions: React.ReactNode,
- *   actionsBadge?: number,
  *   map: React.ReactNode,
  *   mapTitle: React.ReactNode,
  *   mapTitlePrefix?: string,
@@ -76,8 +66,6 @@ function readSideWidth() {
 export function OfficerLayout({
   header,
   rail,
-  actions,
-  actionsBadge,
   map,
   mapTitle,
   mapTitlePrefix,
@@ -115,18 +103,6 @@ export function OfficerLayout({
     if (callLayout === 'map') setCallLayout('split'); // the tiny tile is not what they want full screen
     callRef.current?.requestFullscreen?.().catch(() => {});
   };
-  // The tile bar is folded into a "Chức năng" button on the map header (with the pending count) unless opened
-  const [actionsHidden, setActionsHidden] = useState(readActionsHidden);
-  const toggleActions = () =>
-    setActionsHidden((hidden) => {
-      try {
-        localStorage.setItem(ACTIONS_KEY, hidden ? '0' : '1');
-      } catch {
-        // storage blocked: only lasts this session
-      }
-      return !hidden;
-    });
-
   useEffect(() => {
     if (!inCall || sideWidth != null || !stageRef.current) return;
     setSideWidth(Math.round(stageRef.current.clientWidth * DEFAULT_SIDE_RATIO));
@@ -174,21 +150,6 @@ export function OfficerLayout({
           {rail}
         </nav>
         <div className={styles.workspace}>
-          {!actionsHidden && (
-            <div className={styles.actionsRow}>
-              <div className={styles.actions}>{actions}</div>
-              <button
-                type="button"
-                className={styles.actionsToggle}
-                aria-expanded
-                aria-label="Thu gọn thanh chức năng"
-                title="Thu gọn thanh chức năng"
-                onClick={toggleActions}
-              >
-                <SvgIcon name="chevronUp" size="sm" />
-              </button>
-            </div>
-          )}
           {inCall && (
             <div className={styles.callToolbar} role="toolbar" aria-label="Bố cục cuộc gọi">
               {CALL_LAYOUTS.map((l) => (
@@ -260,19 +221,6 @@ export function OfficerLayout({
                 </span>
                 <span className={styles.panelEnd}>
                   {inCall && <span className={styles.panelBadge}>GPS</span>}
-                  {actionsHidden && (
-                    <button
-                      type="button"
-                      className={styles.actionsOpen}
-                      aria-expanded={false}
-                      title="Mở thanh chức năng (hàng đợi, lịch sử, danh bạ, thống kê)"
-                      onClick={toggleActions}
-                    >
-                      Chức năng
-                      {actionsBadge > 0 && <em className={styles.actionsOpenCount}>{actionsBadge}</em>}
-                      <SvgIcon name="chevronUp" size="sm" style={{ transform: 'rotate(180deg)' }} />
-                    </button>
-                  )}
                 </span>
               </header>
               <div className={styles.mapBody}>
@@ -299,49 +247,32 @@ export function OfficerLayout({
   );
 }
 
-/** One rail button (icon + short label). `tone="danger"` for logout. */
-export function RailButton({ icon, label, title, active, tone, onClick, buttonRef, badge }) {
+/**
+ * One rail button (icon + short label). `tone="danger"` for logout.
+ * `badge` > 0 shows a red count dot on the icon (like the header bell), e.g. cases waiting in the queue.
+ * `desktopOnly`: hidden in the phone tab bar (no room; e.g. "Chỉ huy", phones close windows with ×).
+ */
+export function RailButton({ icon, label, title, active, tone, onClick, buttonRef, badge, desktopOnly }) {
+  const tip = title || label;
   return (
     <button
       ref={buttonRef}
       type="button"
-      title={title || label}
-      className={`${styles.railBtn} ${active ? styles.railActive : ''} ${tone === 'danger' ? styles.railDanger : ''}`}
+      title={tip}
+      aria-label={badge > 0 ? `${label}: ${badge} mới` : undefined}
+      aria-pressed={active === undefined ? undefined : !!active}
+      className={`${styles.railBtn} ${active ? styles.railActive : ''} ${tone === 'danger' ? styles.railDanger : ''} ${desktopOnly ? styles.railDesktopOnly : ''}`}
       onClick={onClick}
     >
       <SvgIcon name={icon} size="sm" />
       <span className={styles.railLabel}>{label}</span>
-      {badge ? <em className={styles.railBadge}>{badge}</em> : null}
+      {badge > 0 ? <em className={styles.railBadge}>{badge > 99 ? '99+' : badge}</em> : null}
     </button>
   );
 }
 
 export function RailSpacer() {
   return <div className={styles.railSpacer} />;
-}
-
-/**
- * Action-bar tile like the reference design: coloured border, title + subtitle.
- * @param {{ tone?: 'red'|'amber'|'orange'|'blue'|'cyan'|'purple'|'green', active?: boolean, count?: number }} props
- */
-export function ActionTile({ icon, title, subtitle, tone = 'blue', active, count, onClick }) {
-  return (
-    <button
-      type="button"
-      className={`${styles.tile} ${styles[`tone_${tone}`] || ''} ${active ? styles.tileActive : ''}`}
-      aria-pressed={!!active}
-      onClick={onClick}
-    >
-      <span className={styles.tileIcon}>
-        <SvgIcon name={icon} size="sm" />
-      </span>
-      <span className={styles.tileText}>
-        <span className={styles.tileTitle}>{title}</span>
-        <span className={styles.tileSub}>{subtitle}</span>
-      </span>
-      {count > 0 && <em className={styles.tileCount}>{count}</em>}
-    </button>
-  );
 }
 
 /**

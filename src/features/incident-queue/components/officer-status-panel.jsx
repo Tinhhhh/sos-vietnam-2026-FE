@@ -2,41 +2,114 @@ import { useEffect, useState } from 'react';
 
 import { useToast } from '@/components/ui/toast/toast-context';
 
-import { getOfficerStatus, releaseIncident } from '../api/incidents';
+import { getOfficerStatus, getProvinceOptions, getWardOptions, releaseIncident } from '../api/incidents';
+import { Pager } from './list-controls';
 import styles from './officer-status.module.css';
 
 const MIN_REASON = 5;
 const REFRESH_MS = 15000;
+const PAGE_SIZE = 50;
+const FILTER_KEY = 'officerStatusFilter'; // ADMIN's last unit, per browser
+const EMPTY_FILTER = { level: '', provinceId: '', wardId: '', agency: '' };
+// Mirrors be-v2 AgencyType; CSGT / PCCC call their levels Đội / Phòng
+const AGENCIES = [
+  ['POLICE', 'Công an'],
+  ['CSGT', 'Cảnh sát giao thông'],
+  ['FIRE', 'PCCC & CNCH'],
+  ['HOSPITAL', 'Y tế 115'],
+];
+
+function readFilter() {
+  try {
+    return { ...EMPTY_FILTER, ...JSON.parse(localStorage.getItem(FILTER_KEY) || '{}') };
+  } catch {
+    return EMPTY_FILTER;
+  }
+}
 
 /**
- * Window "Cán bộ": officers of my unit with their status (online = command console open,
- * busy = holding a case) and basic info. While I hold a case I can hand it over to a colleague
- * who is online and free (reason required, like the handover dialog).
+ * Window "Thành viên" (also Settings → "Trạng thái cán bộ"): one page of the officers of ONE unit with
+ * their status (online = command console open, busy = holding a case) and basic info. While I hold a
+ * case I can hand it over to a colleague who is online and free (reason required, like the handover dialog).
+ * An officer always sees their own unit; an ADMIN first picks the unit: level + province (+ ward for
+ * ward units), force optional (the BE refuses to list the whole country). "Chỉ trực tuyến" for everyone.
  *
- * @param {{ holding?: object|null, onChange?: (incident) => void }} props
+ * @param {{ holding?: object|null, onChange?: (incident) => void, isAdmin?: boolean }} props
  *   holding = the case I hold (from the live queue), onChange = apply the handed-over case to the queue.
  */
-export function OfficerStatusPanel({ holding, onChange }) {
+export function OfficerStatusPanel({ holding, onChange, isAdmin = false }) {
   const toast = useToast();
-  const [result, setResult] = useState({ status: 'loading', items: [], error: null });
+  const [result, setResult] = useState({
+    status: 'loading',
+    items: [],
+    total: 0,
+    totalPages: 1,
+    error: null,
+  });
   const [tick, setTick] = useState(0);
-  const [handoverTo, setHandoverTo] = useState(null); // accountId with the reason box open
+  const [handoverTo, setHandoverTo] = useState(null); // memberId with the reason box open
   const [note, setNote] = useState('');
   const [busy, setBusy] = useState(false);
+  const [filter, setFilterState] = useState(() => (isAdmin ? readFilter() : EMPTY_FILTER));
+  const [onlineOnly, setOnlineOnly] = useState(false);
+  const [page, setPage] = useState(0);
+  const [provinces, setProvinces] = useState([]);
+  const [wards, setWards] = useState([]);
+
+  // ADMIN must pick one unit before anything is fetched
+  const ready =
+    !isAdmin || (!!filter.level && !!filter.provinceId && (filter.level !== 'WARD' || !!filter.wardId));
+
+  const setFilter = (patch) => {
+    setFilterState((f) => {
+      const next = { ...f, ...patch };
+      try {
+        localStorage.setItem(FILTER_KEY, JSON.stringify(next));
+      } catch {
+        // storage blocked: the filter only lasts while the window is open
+      }
+      return next;
+    });
+    setPage(0);
+  };
 
   useEffect(() => {
+    if (!isAdmin) return undefined;
     let alive = true;
-    getOfficerStatus()
-      .then((items) => alive && setResult({ status: 'ready', items, error: null }))
+    getProvinceOptions()
+      .then((list) => alive && setProvinces(list))
+      .catch(() => alive && setProvinces([]));
+    return () => {
+      alive = false;
+    };
+  }, [isAdmin]);
+
+  useEffect(() => {
+    if (!isAdmin || filter.level !== 'WARD' || !filter.provinceId) return undefined;
+    let alive = true;
+    getWardOptions(filter.provinceId)
+      .then((list) => alive && setWards(list))
+      .catch(() => alive && setWards([]));
+    return () => {
+      alive = false;
+    };
+  }, [isAdmin, filter.level, filter.provinceId]);
+
+  useEffect(() => {
+    if (!ready) return undefined;
+    let alive = true;
+    getOfficerStatus({ ...filter, online: onlineOnly, pageNo: page, pageSize: PAGE_SIZE })
+      .then((r) => alive && setResult({ status: 'ready', ...r, error: null }))
       .catch((err) => alive && setResult((r) => ({ ...r, status: 'error', error: err.message })));
     const t = setTimeout(() => setTick((n) => n + 1), REFRESH_MS);
     return () => {
       alive = false;
       clearTimeout(t);
     };
-  }, [tick]);
+  }, [tick, ready, filter, onlineOnly, page]);
 
-  const onlineCount = result.items.filter((o) => o.online).length;
+  const items = ready ? result.items : [];
+  const onlineCount = items.filter((o) => o.online).length;
   const canHandOver = holding && holding.heldByMe;
 
   const confirm = async (officer) => {
@@ -44,7 +117,7 @@ export function OfficerStatusPanel({ holding, onChange }) {
     setBusy(true);
     try {
       const updated = await releaseIncident(holding.id, {
-        toAccountId: officer.accountId,
+        toMemberId: officer.memberId,
         note: note.trim(),
       });
       if (updated) onChange?.(updated);
@@ -61,13 +134,96 @@ export function OfficerStatusPanel({ holding, onChange }) {
 
   return (
     <div className={styles.panel}>
+      {isAdmin && (
+        <div className={styles.filters}>
+          <select
+            className={styles.select}
+            aria-label="Cấp đơn vị"
+            value={filter.level}
+            onChange={(e) => setFilter({ level: e.target.value, wardId: '' })}
+          >
+            <option value="">Chọn cấp</option>
+            <option value="PROVINCE">Cấp tỉnh / phòng</option>
+            <option value="WARD">Cấp xã / đội</option>
+          </select>
+          <select
+            className={styles.select}
+            aria-label="Tỉnh / thành phố"
+            value={filter.provinceId}
+            onChange={(e) => setFilter({ provinceId: e.target.value, wardId: '' })}
+          >
+            <option value="">Chọn tỉnh / thành phố</option>
+            {provinces.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name}
+              </option>
+            ))}
+          </select>
+          {filter.level === 'WARD' && (
+            <select
+              className={styles.select}
+              aria-label="Xã / phường"
+              value={filter.wardId}
+              disabled={!filter.provinceId}
+              onChange={(e) => setFilter({ wardId: e.target.value })}
+            >
+              <option value="">{filter.provinceId ? 'Chọn xã / phường' : 'Chọn tỉnh trước'}</option>
+              {wards.map((w) => (
+                <option key={w.id} value={w.id}>
+                  {w.name}
+                </option>
+              ))}
+            </select>
+          )}
+          <select
+            className={styles.select}
+            aria-label="Lực lượng"
+            value={filter.agency}
+            onChange={(e) => setFilter({ agency: e.target.value })}
+          >
+            <option value="">Tất cả lực lượng</option>
+            {AGENCIES.map(([v, l]) => (
+              <option key={v} value={v}>
+                {l}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
       <div className={styles.summary}>
         <span>
-          {result.items.length} cán bộ · <b className={styles.onlineText}>{onlineCount} trực tuyến</b>
+          {ready && result.status === 'loading' && items.length === 0 ? (
+            'Đang tải…'
+          ) : ready ? (
+            <>
+              {result.total} cán bộ · <b className={styles.onlineText}>{onlineCount} trực tuyến</b>
+              {result.totalPages > 1 && ' (trang này)'}
+            </>
+          ) : (
+            'Chưa chọn đơn vị'
+          )}
         </span>
-        <button type="button" className={styles.refresh} onClick={() => setTick((n) => n + 1)}>
-          Làm mới
-        </button>
+        <span className={styles.summaryActions}>
+          <label className={styles.onlineToggle}>
+            <input
+              type="checkbox"
+              checked={onlineOnly}
+              onChange={(e) => {
+                setOnlineOnly(e.target.checked);
+                setPage(0);
+              }}
+            />
+            Chỉ trực tuyến
+          </label>
+          <button
+            type="button"
+            className={styles.refresh}
+            disabled={!ready}
+            onClick={() => setTick((n) => n + 1)}
+          >
+            Làm mới
+          </button>
+        </span>
       </div>
       {canHandOver && (
         <div className={styles.holding}>
@@ -76,20 +232,27 @@ export function OfficerStatusPanel({ holding, onChange }) {
       )}
 
       <div className={styles.list}>
-        {result.status === 'loading' && result.items.length === 0 && (
+        {!ready && (
+          <div className={styles.note}>
+            Chọn cấp và tỉnh / thành phố (cấp xã: chọn thêm xã / phường) để xem cán bộ của một đơn vị.
+          </div>
+        )}
+        {ready && result.status === 'loading' && items.length === 0 && (
           <div className={styles.note}>Đang tải...</div>
         )}
-        {result.status === 'error' && (
+        {ready && result.status === 'error' && (
           <div className={styles.error}>Không tải được danh sách: {result.error}</div>
         )}
-        {result.status === 'ready' && result.items.length === 0 && (
-          <div className={styles.note}>Đơn vị chưa có tài khoản cán bộ nào khác.</div>
+        {ready && result.status === 'ready' && items.length === 0 && (
+          <div className={styles.note}>
+            {onlineOnly ? 'Không có cán bộ nào đang trực tuyến.' : 'Đơn vị chưa có tài khoản cán bộ nào.'}
+          </div>
         )}
-        {result.items.map((o) => {
+        {items.map((o) => {
           const canTake = canHandOver && !o.isMe && o.online && !o.busy;
-          const open = handoverTo === o.accountId;
+          const open = handoverTo === o.memberId;
           return (
-            <div key={o.accountId} className={`${styles.row} ${o.online ? '' : styles.offline}`}>
+            <div key={o.memberId} className={`${styles.row} ${o.online ? '' : styles.offline}`}>
               <div className={styles.rowMain}>
                 <span className={styles.avatar} aria-hidden="true">
                   {initials(o.fullName)}
@@ -125,7 +288,7 @@ export function OfficerStatusPanel({ holding, onChange }) {
                   type="button"
                   className={styles.handoverBtn}
                   onClick={() => {
-                    setHandoverTo(o.accountId);
+                    setHandoverTo(o.memberId);
                     setNote('');
                   }}
                 >
@@ -134,11 +297,11 @@ export function OfficerStatusPanel({ holding, onChange }) {
               )}
               {open && (
                 <div className={styles.handoverBox}>
-                  <label className={styles.reasonLabel} htmlFor={`reason-${o.accountId}`}>
+                  <label className={styles.reasonLabel} htmlFor={`reason-${o.memberId}`}>
                     Lý do giao ca *
                   </label>
                   <textarea
-                    id={`reason-${o.accountId}`}
+                    id={`reason-${o.memberId}`}
                     className={styles.reason}
                     rows={2}
                     maxLength={255}
@@ -168,6 +331,9 @@ export function OfficerStatusPanel({ holding, onChange }) {
           );
         })}
       </div>
+      {ready && result.totalPages > 1 && (
+        <Pager page={page} totalPages={result.totalPages} onPage={setPage} />
+      )}
     </div>
   );
 }

@@ -1,0 +1,608 @@
+/* Settings window (hand-written): same flat dark look as the console windows. Rendered in a portal on
+   <body>, so colors are literal instead of the console --c-* tokens. */
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 99990; /* under the legacy .modal-backdrop (100000): dialogs opened from a section stay on top */
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgba(2, 6, 16, 0.6);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+.dialog {
+  width: min(980px, 100%);
+  height: min(680px, 100%);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  border-radius: 16px;
+  background: #0b1222;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.6);
+  color: #e8eef8;
+  font-family:
+    'Be Vietnam Pro',
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    sans-serif;
+  outline: none;
+}
+
+.header {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px 14px 22px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.16);
+}
+
+.title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.close {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: #cbd5e1;
+  cursor: pointer;
+}
+
+.close:hover,
+.close:focus-visible {
+  outline: none;
+  background: rgba(148, 163, 184, 0.14);
+}
+
+.body {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr);
+}
+
+/* ---- left: search + sections ---- */
+.nav {
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 10px 14px 14px;
+  border-right: 1px solid rgba(148, 163, 184, 0.16);
+}
+
+/* profile card at the top of the list (where the search box used to be) */
+.profile {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 12px;
+  background: rgba(30, 41, 59, 0.45);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.profile:hover,
+.profile:focus-visible {
+  outline: none;
+  background: rgba(51, 65, 85, 0.55);
+}
+
+.profileActive {
+  border-color: rgba(96, 165, 250, 0.45);
+}
+
+.avatar {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #1d4ed8, #0ea5e9);
+  box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.45);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 900;
+}
+
+.profileText {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.profileName {
+  overflow: hidden;
+  color: #f8fafc;
+  font-size: 14px;
+  font-weight: 800;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.profileSub {
+  overflow: hidden;
+  color: #94a3b8;
+  font-size: 12px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* search pinned to the bottom of the list: stays put while the rows scroll under it, and the
+   translucent box blurs whatever it covers */
+.searchDock {
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
+  margin-top: auto;
+  padding-top: 10px;
+}
+
+.search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  height: 38px;
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  border-radius: 10px;
+  background: rgba(15, 23, 42, 0.55);
+  backdrop-filter: blur(10px) saturate(140%);
+  -webkit-backdrop-filter: blur(10px) saturate(140%);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+
+.search:focus-within {
+  border-color: #60a5fa;
+}
+
+.search svg {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: #94a3b8;
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+/* !important: legacy-global.css styles every text input / select with !important (glass box, padding 11px 16px) */
+.search input {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  outline: none;
+  background: transparent !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  color: inherit !important;
+  font: inherit;
+  font-size: 14px !important;
+}
+
+.navScroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-right: 4px;
+  scrollbar-width: thin;
+}
+
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.groupLabel {
+  padding: 2px 10px 4px;
+  color: #94a3b8;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.navItem {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 9px 10px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: #e2e8f0;
+  font: inherit;
+  font-size: 14.5px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.navItem:hover,
+.navItem:focus-visible {
+  outline: none;
+  background: rgba(148, 163, 184, 0.1);
+}
+
+.navActive,
+.navActive:hover {
+  background: rgba(148, 163, 184, 0.18);
+  color: #fff;
+  font-weight: 700;
+}
+
+.empty {
+  padding: 10px;
+  color: #94a3b8;
+  font-size: 13px;
+}
+
+/* ---- right: content ---- */
+/* flex column: a panel made for the console windows (flex: 1, own scrolling list) fills the height */
+.content {
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  padding: 22px 28px 32px;
+}
+
+.content > * {
+  flex-shrink: 0;
+}
+
+.content > .fill {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.section + .section {
+  margin-top: 30px;
+}
+
+.sectionTitle {
+  margin: 0 0 6px;
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 16px 0;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.14);
+}
+
+.rowText {
+  min-width: 0;
+}
+
+.rowTitle {
+  font-size: 14.5px;
+  font-weight: 600;
+  color: #f1f5f9;
+}
+
+.rowDesc {
+  margin-top: 4px;
+  color: #94a3b8;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.rowControl {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn,
+.btnPrimary {
+  height: 36px;
+  padding: 0 14px;
+  border-radius: 9px;
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.btn {
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  background: rgba(30, 41, 59, 0.7);
+  color: #e2e8f0;
+}
+
+.btn:hover:not(:disabled) {
+  background: rgba(51, 65, 85, 0.85);
+}
+
+.btnPrimary {
+  border: 1px solid #3b82f6;
+  background: #2563eb;
+  color: #fff;
+}
+
+.btnPrimary:hover:not(:disabled) {
+  background: #1d4ed8;
+}
+
+.btn:disabled,
+.btnPrimary:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.select {
+  min-width: 220px;
+  max-width: 100%;
+  padding: 8px 12px !important;
+  border: 1px solid rgba(148, 163, 184, 0.35) !important;
+  border-radius: 9px !important;
+  background: #0f172a !important;
+  box-shadow: none !important;
+  color: #e2e8f0 !important;
+  font: inherit;
+  font-size: 13.5px !important;
+  line-height: 1.35;
+}
+
+.select:focus {
+  outline: none;
+  border-color: #60a5fa !important;
+  box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.2) !important;
+}
+
+/* desktop: the card wrapper and chevrons are invisible */
+.groupCard {
+  display: contents;
+}
+
+.navLabel {
+  flex: 1;
+  min-width: 0;
+}
+
+.chevron,
+.backIcon {
+  flex-shrink: 0;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.chevron {
+  display: none;
+  width: 18px;
+  height: 18px;
+  color: #64748b;
+}
+
+.backIcon {
+  width: 24px;
+  height: 24px;
+}
+
+.back {
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  border-radius: 50%;
+  background: rgba(30, 41, 59, 0.7);
+  color: #e2e8f0;
+  cursor: pointer;
+}
+
+/* Phones (iOS settings look): full screen; list page = grouped rounded cards with chevrons,
+   item page = its content under a header with a back button */
+@media (max-width: 720px) {
+  .backdrop {
+    padding: 0;
+  }
+
+  .dialog {
+    width: 100%;
+    height: 100%;
+    border: 0;
+    border-radius: 0;
+  }
+
+  .body {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  /* header: [back] title (centered) [close] */
+  .headerPhone {
+    display: grid;
+    grid-template-columns: 40px minmax(0, 1fr) 40px;
+    gap: 8px;
+    padding: 10px 14px;
+    padding-top: max(10px, env(safe-area-inset-top));
+  }
+
+  .headerPhone .title {
+    grid-column: 2;
+    text-align: center;
+    font-size: 17px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .headerPhone .back {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .headerPhone .close {
+    grid-column: 3;
+    width: 40px;
+    height: 40px;
+    border: 1px solid rgba(148, 163, 184, 0.25);
+    border-radius: 50%;
+    background: rgba(30, 41, 59, 0.7);
+  }
+
+  .nav {
+    padding: 12px 16px 24px;
+    border-right: 0;
+    overflow-y: auto;
+  }
+
+  .bodyPage .nav {
+    display: none;
+  }
+
+  /* grows to the screen height so the search dock sits at the bottom even with a short list */
+  .navScroll {
+    flex: 1 0 auto;
+    overflow: visible;
+    gap: 22px;
+    padding: 0;
+  }
+
+  /* Apple ID style card on top of the list */
+  .profile {
+    gap: 14px;
+    padding: 14px 14px 14px 16px;
+    border: 0;
+    border-radius: 18px;
+    background: rgba(30, 41, 59, 0.55);
+  }
+
+  .profileActive {
+    border: 0;
+  }
+
+  .avatar {
+    width: 56px;
+    height: 56px;
+    font-size: 19px;
+  }
+
+  .profileName {
+    font-size: 18px;
+  }
+
+  .profileSub {
+    font-size: 13.5px;
+  }
+
+  /* floating pill above the bottom edge, like iOS */
+  .searchDock {
+    bottom: max(12px, env(safe-area-inset-bottom));
+    padding-top: 6px;
+  }
+
+  .search {
+    height: 46px;
+    padding: 0 16px;
+    border-radius: 23px;
+    background: rgba(30, 41, 59, 0.55);
+    backdrop-filter: blur(16px) saturate(160%);
+    -webkit-backdrop-filter: blur(16px) saturate(160%);
+  }
+
+  .groupLabel {
+    padding: 0 6px 8px;
+    font-size: 14px;
+    font-weight: 600;
+  }
+
+  .groupCard {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border-radius: 18px;
+    background: rgba(30, 41, 59, 0.55);
+  }
+
+  .navItem {
+    position: relative;
+    gap: 14px;
+    min-height: 54px;
+    padding: 12px 14px 12px 16px;
+    border-radius: 0;
+    font-size: 16px;
+  }
+
+  /* hairline between rows, starting under the label like iOS */
+  .navItem + .navItem::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 52px;
+    right: 0;
+    border-top: 1px solid rgba(148, 163, 184, 0.16);
+  }
+
+  .navActive,
+  .navActive:hover {
+    background: transparent;
+    font-weight: 400;
+  }
+
+  .navItem:active {
+    background: rgba(148, 163, 184, 0.14);
+  }
+
+  .chevron {
+    display: block;
+  }
+
+  .content {
+    padding: 16px;
+  }
+
+  .row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .rowControl {
+    flex-wrap: wrap;
+  }
+
+  .select {
+    min-width: 0;
+    width: 100%;
+  }
+}

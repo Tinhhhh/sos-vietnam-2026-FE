@@ -13,7 +13,7 @@ import { cleanTags, normalizeHistoryItem, normalizeIncident } from '../utils/inc
  *     -> data: { content: [{ id, emergency_type, status, routed_agency, routed_level, province, ward,
  *                 address, latitude, longitude, incident_tags, description, citizen_name, phone,
  *                 media_count, created_at, escalate_at, escalated_at,
- *                 handler: { account_id, full_name } | null, held_by_me, can_handle }],
+ *                 handler: { member_id, full_name } | null, held_by_me, can_handle }],
  *                page_no, page_size, total_elements, total_pages, last }
  *     Active incidents only (not resolved / cancelled), newest first.
  *
@@ -34,9 +34,9 @@ import { cleanTags, normalizeHistoryItem, normalizeIncident } from '../utils/inc
  *     media url = GET /api/v1/incidents/{id}/media/{file} (public, R2 redirects to a signed link)
  *
  *   POST /api/v1/incidents/{id}/claim                -> data: <incident>   409 = taken / already holding one
- *   POST /api/v1/incidents/{id}/release  body?: { to_account_id?, note? }
- *        no to_account_id = back to the shared queue, otherwise hand over to that officer
- *   GET  /api/v1/incidents/{id}/handover-candidates -> data: [{ account_id, full_name, online, busy }]
+ *   POST /api/v1/incidents/{id}/release  body?: { to_member_id?, note? }
+ *        no to_member_id = back to the shared queue, otherwise hand over to that officer
+ *   GET  /api/v1/incidents/{id}/handover-candidates -> data: [{ member_id, full_name, online, busy }]
  *   POST /api/v1/incidents/{id}/request-dispatch     -> data: <incident>  VERIFYING -> RESOLVING (holder only)
  *   POST /api/v1/incidents/{id}/escalate             -> ward incident goes to the province now (PENDING, no holder)
  *
@@ -68,10 +68,10 @@ export async function claimIncident(id) {
   return normalizeIncident(body?.data);
 }
 
-/** @param {{ toAccountId?: string, note?: string }} [options] */
-export async function releaseIncident(id, { toAccountId, note } = {}) {
+/** @param {{ toMemberId?: string, note?: string }} [options] */
+export async function releaseIncident(id, { toMemberId, note } = {}) {
   const payload = {};
-  if (toAccountId) payload.to_account_id = toAccountId;
+  if (toMemberId) payload.to_member_id = toMemberId;
   if (note) payload.note = note;
   const body = await api.post(`/api/v1/incidents/${encodeURIComponent(id)}/release`, payload);
   return normalizeIncident(body?.data);
@@ -100,7 +100,7 @@ export async function escalateIncident(id, reason) {
 export async function getHandoverCandidates(id) {
   const body = await api.get(`/api/v1/incidents/${encodeURIComponent(id)}/handover-candidates`);
   return (body?.data || []).map((c) => ({
-    accountId: c.account_id,
+    memberId: c.member_id,
     fullName: c.full_name || 'Cán bộ',
     online: c.online === true,
     busy: c.busy === true,
@@ -187,15 +187,34 @@ export async function getIncidentDetail(id) {
 }
 
 /*
- * GET /api/v1/officers/status  (OFFICER: own unit incl. self; ADMIN: every active officer)
- *   -> data: [{ account_id, full_name, email, phone, agency_type, unit_level, unit_label, province, ward,
- *               online, busy, is_me, held_incident: { id, status, status_label, emergency_type } | null }]
- *   online = has the command console open (STOMP), busy = holds an incident.
+ * GET /api/v1/officers/status?level&province_id&ward_id&agency&online&pageNo&pageSize
+ *   OFFICER: always own unit incl. self (unit filters ignored). ADMIN: one unit, level=PROVINCE|WARD +
+ *   province_id (+ ward_id for WARD), agency optional; missing / wrong -> 400. online=true: only online.
+ *   -> data: ListResponse { content: [{ member_id, full_name, email, phone, agency_type, unit_level,
+ *               unit_label, province, ward, online, busy, is_me,
+ *               held_incident: { id, status, status_label, emergency_type } | null }],
+ *             page_no, page_size, total_elements, total_pages, last }
+ *   online = has the command console open (STOMP), busy = holds an incident. pageSize max 100.
  */
-export async function getOfficerStatus() {
-  const body = await api.get('/api/v1/officers/status');
-  return (body?.data || []).map((o) => ({
-    accountId: o.account_id,
+export async function getOfficerStatus({
+  level,
+  provinceId,
+  wardId,
+  agency,
+  online,
+  pageNo = 0,
+  pageSize = 50,
+} = {}) {
+  const params = { pageNo, pageSize };
+  if (level) params.level = level;
+  if (provinceId) params.province_id = provinceId;
+  if (wardId) params.ward_id = wardId;
+  if (agency) params.agency = agency;
+  if (online) params.online = true;
+  const body = await api.get('/api/v1/officers/status', { params });
+  const data = body?.data || {};
+  const items = (data.content || []).map((o) => ({
+    memberId: o.member_id,
     fullName: o.full_name || 'Cán bộ',
     email: o.email,
     phone: o.phone || '',
@@ -209,6 +228,24 @@ export async function getOfficerStatus() {
       ? { id: o.held_incident.id, status: o.held_incident.status, statusLabel: o.held_incident.status_label }
       : null,
   }));
+  return {
+    items,
+    total: data.total_elements ?? items.length,
+    pageNo: data.page_no ?? 0,
+    totalPages: data.total_pages ?? 1,
+  };
+}
+
+/* Area pickers of the ADMIN officer filter (public):
+ *   GET /api/v1/geo/provinces -> [{ code, name }], GET /api/v1/geo/provinces/{id}/wards -> [{ id, name }] */
+export async function getProvinceOptions() {
+  const body = await api.get('/api/v1/geo/provinces');
+  return (body?.data || []).map((p) => ({ id: p.code, name: p.name }));
+}
+
+export async function getWardOptions(provinceId) {
+  const body = await api.get(`/api/v1/geo/provinces/${encodeURIComponent(provinceId)}/wards`);
+  return (body?.data || []).map((w) => ({ id: w.id, name: w.name }));
 }
 
 /** Officer holding the case ends it once forces are on the way / at the scene: RESOLVED, report FORCED. */

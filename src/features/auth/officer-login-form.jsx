@@ -17,6 +17,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router';
 
 import { SESSION_ENDED_KEY } from './auth-context';
+import { MemberPinStep } from './member-pin-step';
 import { useAuth } from './use-auth';
 import { paths } from '@/config/paths';
 import s from './officer-login.module.css';
@@ -257,6 +258,8 @@ export function OfficerLoginForm() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(sessionEnded);
   const [showProgress, setShowProgress] = useState(false);
+  // unit account logged in, waiting for step 2 (pick officer + PIN)
+  const [unitToken, setUnitToken] = useState(null);
 
   const { pct, label, startProgress } = useLoginProgress();
 
@@ -275,6 +278,7 @@ export function OfficerLoginForm() {
     setPassword('');
     setShowProgress(false);
     setSubmitting(false);
+    setUnitToken(null);
     setIsModalOpen(true);
   }
 
@@ -288,19 +292,30 @@ export function OfficerLoginForm() {
     if (submitting) return;
     setError(null);
     setSubmitting(true);
-    setShowProgress(true);
-    startProgress();
 
     try {
-      await login({ email: email.trim(), password });
-      // Wait for progress animation to complete
-      await new Promise((r) => setTimeout(r, 1800));
-      navigate(paths.officer.dashboard.getHref(), { replace: true });
+      const result = await login({ email: email.trim(), password });
+      if (result.unitToken) {
+        setSubmitting(false);
+        setPassword('');
+        setUnitToken(result.unitToken);
+        return;
+      }
+      await enterConsole();
     } catch (err) {
       setShowProgress(false);
       setSubmitting(false);
       setError(err.message || 'Tài khoản hoặc mật khẩu không chính xác!');
     }
+  }
+
+  async function enterConsole() {
+    setSubmitting(true);
+    setShowProgress(true);
+    startProgress();
+    // Wait for progress animation to complete
+    await new Promise((r) => setTimeout(r, 1800));
+    navigate(paths.officer.dashboard.getHref(), { replace: true });
   }
 
   return (
@@ -459,112 +474,114 @@ export function OfficerLoginForm() {
               XÁC THỰC AN NINH NỘI BỘ
             </div>
 
-            <h2 className={s.modalTitle}>ĐĂNG NHẬP CÁN BỘ</h2>
-            <p className={s.modalSubtitle}>Vui lòng nhập tài khoản email và mật khẩu cán bộ được cấp.</p>
+            <h2 className={s.modalTitle}>{unitToken ? 'CÁN BỘ VÀO TRỰC' : 'ĐĂNG NHẬP ĐƠN VỊ'}</h2>
+            <p className={s.modalSubtitle}>
+              {unitToken
+                ? 'Chọn tên của bạn trong danh sách cán bộ đơn vị và nhập mã PIN cá nhân.'
+                : 'Vui lòng nhập email và mật khẩu tài khoản đơn vị được cấp.'}
+            </p>
+
+            {unitToken && !showProgress && (
+              <MemberPinStep
+                unitToken={unitToken}
+                s={s}
+                onDone={enterConsole}
+                onBack={() => {
+                  setUnitToken(null);
+                  setError(null);
+                }}
+              />
+            )}
 
             {/* Form */}
-            <form className={s.form} onSubmit={handleSubmit} noValidate>
-              {/* Email */}
-              <div>
-                <label className={s.fieldLabel} htmlFor="officer-email">
-                  Email tài khoản cán bộ *
-                </label>
-                <div className={s.inputWrap}>
-                  <input
-                    id="officer-email"
-                    type="email"
-                    className={s.input}
-                    placeholder="Nhập tài khoản..."
-                    autoComplete="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                    disabled={submitting}
-                    autoFocus
-                  />
-                </div>
-              </div>
-
-              {/* Password */}
-              <div>
-                <label className={s.fieldLabel} htmlFor="officer-password">
-                  Mật khẩu bảo mật đơn vị *
-                </label>
-                <div className={s.inputWrap}>
-                  <input
-                    id="officer-password"
-                    type={showPwd ? 'text' : 'password'}
-                    className={s.input}
-                    placeholder="Nhập mật khẩu đơn vị..."
-                    autoComplete="current-password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    disabled={submitting}
-                    style={{ paddingRight: '2.5rem' }}
-                  />
-                  <button
-                    type="button"
-                    className={s.togglePwd}
-                    onClick={() => setShowPwd((v) => !v)}
-                    aria-label={showPwd ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
-                    tabIndex={-1}
-                  >
-                    <EyeIcon crossed={showPwd} />
-                  </button>
-                </div>
-              </div>
-
-              {/* Error Box */}
-              {error && (
-                <div className={s.errorBox} role="alert">
-                  {error}
-                </div>
-              )}
-
-              {/* Submit Button */}
-              <button
-                id="officer-login-submit"
-                type="submit"
-                className={s.submitBtn}
-                disabled={submitting || !email || !password}
-              >
-                {submitting ? (
-                  <>
-                    <span className={s.spinner} /> Đang xác thực...
-                  </>
-                ) : (
-                  <>
-                    <img
-                      src="/assets/icons/khien.png"
-                      alt=""
-                      style={{ width: 18, height: 18, objectFit: 'contain' }}
+            {!unitToken && (
+              <form className={s.form} onSubmit={handleSubmit} noValidate>
+                {/* Email */}
+                <div>
+                  <label className={s.fieldLabel} htmlFor="officer-email">
+                    Email tài khoản đơn vị *
+                  </label>
+                  <div className={s.inputWrap}>
+                    <input
+                      id="officer-email"
+                      type="email"
+                      className={s.input}
+                      placeholder="Nhập tài khoản..."
+                      autoComplete="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      required
+                      disabled={submitting}
+                      autoFocus
                     />
-                    XÁC THỰC TRUY CẬP AN NINH
-                  </>
-                )}
-              </button>
-
-              {/* Progress Bar Animation */}
-              {showProgress && (
-                <div className={s.progressBox}>
-                  <div className={s.progressTop}>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <span className={s.spinner} style={{ width: 12, height: 12 }} />
-                      {label}
-                    </span>
-                    <span className={s.progressPercent}>{pct}%</span>
-                  </div>
-                  <div className={s.progressTrack}>
-                    <div className={s.progressBar} style={{ width: `${pct}%` }} />
-                  </div>
-                  <div className={s.progressDetail}>
-                    <span>🌐</span>
-                    <span>Đang tải thông tin địa giới hành chính 34 tỉnh thành & 3.321 xã/phường...</span>
                   </div>
                 </div>
-              )}
-            </form>
+
+                {/* Password */}
+                <div>
+                  <label className={s.fieldLabel} htmlFor="officer-password">
+                    Mật khẩu bảo mật đơn vị *
+                  </label>
+                  <div className={s.inputWrap}>
+                    <input
+                      id="officer-password"
+                      type={showPwd ? 'text' : 'password'}
+                      className={s.input}
+                      placeholder="Nhập mật khẩu đơn vị..."
+                      autoComplete="current-password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                      disabled={submitting}
+                      style={{ paddingRight: '2.5rem' }}
+                    />
+                    <button
+                      type="button"
+                      className={s.togglePwd}
+                      onClick={() => setShowPwd((v) => !v)}
+                      aria-label={showPwd ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+                      tabIndex={-1}
+                    >
+                      <EyeIcon crossed={showPwd} />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Error Box */}
+                {error && (
+                  <div className={s.errorBox} role="alert">
+                    {error}
+                  </div>
+                )}
+
+                {/* Submit Button */}
+                <button
+                  id="officer-login-submit"
+                  type="submit"
+                  className={s.submitBtn}
+                  disabled={submitting || !email || !password}
+                >
+                  {submitting ? (
+                    <>
+                      <span className={s.spinner} /> Đang xác thực...
+                    </>
+                  ) : (
+                    <>
+                      <img
+                        src="/assets/icons/khien.png"
+                        alt=""
+                        style={{ width: 18, height: 18, objectFit: 'contain' }}
+                      />
+                      XÁC THỰC TRUY CẬP AN NINH
+                    </>
+                  )}
+                </button>
+
+                {showProgress && <ProgressBox pct={pct} label={label} s={s} />}
+              </form>
+            )}
+
+            {unitToken && showProgress && <ProgressBox pct={pct} label={label} s={s} />}
           </div>
         </div>
       )}
@@ -575,6 +592,27 @@ export function OfficerLoginForm() {
           HỆ THỐNG ĐIỀU PHỐI CỨU HỘ KHẨN CẤP QUỐC GIA 2026 • PHÒNG THỦ KHÔNG GIAN SỐ
         </span>
       </footer>
+    </div>
+  );
+}
+
+function ProgressBox({ pct, label, s }) {
+  return (
+    <div className={s.progressBox}>
+      <div className={s.progressTop}>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span className={s.spinner} style={{ width: 12, height: 12 }} />
+          {label}
+        </span>
+        <span className={s.progressPercent}>{pct}%</span>
+      </div>
+      <div className={s.progressTrack}>
+        <div className={s.progressBar} style={{ width: `${pct}%` }} />
+      </div>
+      <div className={s.progressDetail}>
+        <span>🌐</span>
+        <span>Đang tải thông tin địa giới hành chính 34 tỉnh thành & 3.321 xã/phường...</span>
+      </div>
     </div>
   );
 }

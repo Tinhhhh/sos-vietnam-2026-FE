@@ -37,7 +37,7 @@ const AGENCY_LOGO = {
 };
 
 const STATIONS_TAB_TITLE = {
-  police: 'Công An',
+  police: 'Cơ quan',
   csgt: 'CSGT',
   fire: 'PCCC',
   hospital: 'Trạm 115',
@@ -75,7 +75,17 @@ export function buildOfficerProfile(me) {
 
   return {
     accountId: me.account_id,
-    fullName: me.full_name || me.email,
+    // unit accounts: the officer who entered the PIN (me.member), with rank
+    fullName: me.member
+      ? [me.member.rank_label, me.member.full_name].filter(Boolean).join(' ')
+      : me.full_name || me.email,
+    roleLabel: me.member
+      ? me.member.is_duty_officer
+        ? 'Trực ban'
+        : me.member.unit_role === 'COMMANDER'
+          ? 'Chỉ huy'
+          : 'Cán bộ'
+      : null,
     email: me.email,
     phone: me.phone,
     isAdmin,

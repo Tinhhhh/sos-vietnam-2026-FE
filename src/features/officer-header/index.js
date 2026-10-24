@@ -1,1 +1,1 @@
-export { OfficerHeader, SettingsMenu } from './components/officer-header';
+export { OfficerHeader } from './components/officer-header';

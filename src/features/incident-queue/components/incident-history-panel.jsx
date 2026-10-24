@@ -107,6 +107,7 @@ export function IncidentHistoryPanel({
       style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}
     >
       <div style={{ padding: '8px 4px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {/* buttons: flex 0 0 auto, the legacy .btn-refresh-loc grows to 100% on phones and squeezes the search */}
         <div style={{ display: 'flex', gap: 6 }}>
           <input
             type="search"
@@ -122,7 +123,7 @@ export function IncidentHistoryPanel({
             className="btn-refresh-loc"
             title="Tải lại"
             aria-label="Tải lại lịch sử"
-            style={{ padding: '4px 9px' }}
+            style={{ flex: '0 0 auto', padding: '4px 9px' }}
             onClick={reload}
           >
             <SvgIcon name="refresh" color="blue" />
@@ -132,7 +133,7 @@ export function IncidentHistoryPanel({
             className="btn-refresh-loc"
             title="Xuất bảng kê lịch sử ra Excel (.xlsx)"
             aria-label="Xuất Excel"
-            style={{ padding: '4px 9px', color: '#34d399', borderColor: '#10b981' }}
+            style={{ flex: '0 0 auto', padding: '4px 9px', color: '#34d399', borderColor: '#10b981' }}
             onClick={onExportExcel}
           >
             <SvgIcon name="file" color="emerald" />
@@ -142,7 +143,12 @@ export function IncidentHistoryPanel({
             className="btn-refresh-loc"
             title="Dọn dẹp danh sách lịch sử"
             aria-label="Dọn dẹp lịch sử"
-            style={{ padding: '4px 9px', color: '#f87171', borderColor: 'rgba(239,68,68,0.4)' }}
+            style={{
+              flex: '0 0 auto',
+              padding: '4px 9px',
+              color: '#f87171',
+              borderColor: 'rgba(239,68,68,0.4)',
+            }}
             onClick={onClear}
           >
             <SvgIcon name="trash" color="red" />
@@ -156,7 +162,7 @@ export function IncidentHistoryPanel({
                 key={f.key}
                 type="button"
                 className={`btn-refresh-loc ${styles.historyFilterBtn} ${filter === f.key ? `${styles.isActive} is-active` : ''}`}
-                style={{ padding: '3px 8px', fontSize: 11 }}
+                style={{ flex: '0 0 auto', padding: '3px 8px', fontSize: 11 }}
                 aria-pressed={filter === f.key}
                 onClick={() => {
                   setFilter(f.key);

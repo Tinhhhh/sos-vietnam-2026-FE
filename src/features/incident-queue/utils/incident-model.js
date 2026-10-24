@@ -4,7 +4,7 @@ import { cleanIncidentLabel } from '@/config/incident-suggestions';
  * One incident shape for the officer console.
  *   { id, type, agency, level, status, province, ward, address, lat, lng, tags, description,
  *     citizenName, phone, mediaCount, imageCount, videoCount, createdAt, escalateAt, escalatedAt,
- *     handler: { accountId, fullName } | null, heldByMe, canHandle }
+ *     handler: { memberId, fullName } | null, heldByMe, canHandle }
  * Dates are Date objects (null when missing). agency uses the console keys
  * (police | csgt | fire | hospital), level is 'ward' | 'province' | 'national'.
  */
@@ -65,7 +65,7 @@ export function normalizeIncident(raw) {
     transferReason: raw.transfer_reason || null,
     escalationNote: raw.escalation_note || null,
     handler: raw.handler
-      ? { accountId: raw.handler.account_id, fullName: raw.handler.full_name || 'Cán bộ' }
+      ? { memberId: raw.handler.member_id, fullName: raw.handler.full_name || 'Cán bộ' }
       : null,
     heldByMe: raw.held_by_me === true,
     canHandle: raw.can_handle === true,
@@ -82,7 +82,7 @@ export function normalizeIncident(raw) {
           fromOfficer: raw.delegation.from_officer,
           assignedTo: raw.delegation.assigned_to
             ? {
-                accountId: raw.delegation.assigned_to.account_id,
+                memberId: raw.delegation.assigned_to.member_id,
                 fullName: raw.delegation.assigned_to.full_name,
               }
             : null,

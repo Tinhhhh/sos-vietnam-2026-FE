@@ -271,10 +271,10 @@ export function IncidentQueuePanel({
       <HandoverDialog
         incident={handoverOf}
         onClose={() => setHandoverOf(null)}
-        onConfirm={async (toAccountId, note) => {
+        onConfirm={async (toMemberId, note) => {
           const ok = await run(
             handoverOf,
-            () => releaseIncident(handoverOf.id, { toAccountId, note }),
+            () => releaseIncident(handoverOf.id, { toMemberId, note }),
             `Đã giao ca ${handoverOf.id}`,
           );
           if (ok) setHandoverOf(null);

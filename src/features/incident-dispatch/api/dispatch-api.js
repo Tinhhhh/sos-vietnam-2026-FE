@@ -4,7 +4,7 @@
  *   GET /api/v1/incidents/{id}/dispatch-plan   officer JWT, or the citizen with header X-SOS-Access-Token
  *       -> data: <plan> | null (no starting station chosen yet)
  *   GET  .../dispatch-plan/candidates          officers of the chosen ward station's unit (step 2)
- *   POST .../dispatch-plan/delegate { account_id }   "Lập tức liên hệ": hand it to that officer
+ *   POST .../dispatch-plan/delegate { member_id }   "Lập tức liên hệ": hand it to that officer
  *   POST .../dispatch-plan/withdraw   delegating officer takes back an unanswered delegation
  *   POST .../dispatch-plan/accept | reject { reason } | depart   the assigned (ward) officer
  *   POST .../dispatch-plan/confirm   step 4 "đã xử lý xong" (unit on site JWT, or the citizen token)
@@ -67,7 +67,7 @@ export function normalizePlan(raw) {
       : null,
     assignedTo: raw.assigned_to
       ? {
-          accountId: raw.assigned_to.account_id,
+          memberId: raw.assigned_to.member_id,
           fullName: raw.assigned_to.full_name,
           phone: raw.assigned_to.phone || '',
         }
@@ -122,7 +122,7 @@ const planPath = (id, tail = '') => `/api/v1/incidents/${encodeURIComponent(id)}
 export async function getDelegationCandidates(incidentId) {
   const body = await api.get(planPath(incidentId, '/candidates'));
   return (body.data || []).map((o) => ({
-    accountId: o.account_id,
+    memberId: o.member_id,
     fullName: o.full_name,
     email: o.email,
     phone: o.phone || '',
@@ -136,8 +136,8 @@ export async function getDelegationCandidates(incidentId) {
   }));
 }
 
-export async function delegateDispatch(incidentId, accountId) {
-  const body = await api.post(planPath(incidentId, '/delegate'), { account_id: accountId });
+export async function delegateDispatch(incidentId, memberId) {
+  const body = await api.post(planPath(incidentId, '/delegate'), { member_id: memberId });
   return normalizePlan(body.data);
 }
 

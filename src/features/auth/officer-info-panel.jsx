@@ -6,7 +6,7 @@ const ROLE = { ADMIN: 'Quản trị hệ thống', OFFICER: 'Cán bộ', CITIZEN
 const DATE = new Intl.DateTimeFormat('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
 
 /**
- * Window "Hồ sơ cán bộ": the signed-in account (GET /auth/me), read-only.
+ * Settings → "Hồ sơ": the signed-in account (GET /auth/me), read-only.
  * @param {{ user: object, unitName?: string }} props  user = /auth/me data (snake_case)
  */
 export function OfficerInfoPanel({ user, unitName }) {
@@ -45,7 +45,7 @@ export function OfficerInfoPanel({ user, unitName }) {
         ))}
       </dl>
       <div className={styles.hint}>
-        Cần sửa thông tin? Liên hệ quản trị hệ thống. Đổi mật khẩu ở mục Cài đặt.
+        Cần sửa thông tin? Liên hệ quản trị hệ thống. Đổi mật khẩu / PIN ở mục Bảo mật.
       </div>
     </div>
   );

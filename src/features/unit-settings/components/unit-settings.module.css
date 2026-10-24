@@ -1,0 +1,366 @@
+/* Create-account page: same dark tactical look as the statistics dashboard. */
+.page {
+  --ac-bg: #060912;
+  --ac-surface: #0e1424;
+  --ac-surface-2: #141c31;
+  --ac-line: #22304d;
+  --ac-fg: #e8eef8;
+  --ac-muted: #94a3b8;
+  --ac-accent: #8b5cf6;
+  --ac-ok: #34d399;
+  --ac-crit: #ff4d6a;
+  /* The officer console locks body scrolling, so this page scrolls inside its own box */
+  height: 100vh;
+  height: 100dvh;
+  overflow-y: auto;
+  box-sizing: border-box;
+  background: var(--ac-bg);
+  color: var(--ac-fg);
+  font-family:
+    'Be Vietnam Pro',
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    sans-serif;
+  padding: 16px clamp(12px, 3vw, 28px) 40px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+/* Inside the Settings window: the window scrolls, cards take its width */
+.embedded {
+  height: auto;
+  overflow: visible;
+  padding: 0;
+  background: transparent;
+  align-items: stretch;
+}
+
+.embedded .card,
+.embedded .tabs {
+  max-width: none;
+}
+
+.topBar {
+  width: 100%;
+  max-width: 760px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.back {
+  flex-shrink: 0;
+  padding: 7px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--ac-line);
+  background: var(--ac-surface);
+  color: var(--ac-fg);
+  font-size: 12.5px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.subtitle {
+  color: var(--ac-muted);
+  font-size: 13px;
+}
+
+.card {
+  width: 100%;
+  max-width: 760px;
+  box-sizing: border-box;
+  background: var(--ac-surface);
+  border: 1px solid var(--ac-line);
+  border-radius: 14px;
+  padding: 18px clamp(14px, 3vw, 24px);
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.group {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+.group legend {
+  padding: 0;
+  margin-bottom: 10px;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ac-muted);
+}
+
+.row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.label {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--ac-fg);
+}
+
+.field input,
+.field select {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 9px 11px;
+  border-radius: 9px;
+  border: 1px solid var(--ac-line);
+  background: var(--ac-surface-2);
+  color: var(--ac-fg);
+  font: inherit;
+  font-size: 14px;
+}
+
+.field input:focus,
+.field select:focus {
+  outline: 2px solid var(--ac-accent);
+  outline-offset: 0;
+}
+
+.field input:disabled,
+.field select:disabled {
+  opacity: 0.55;
+}
+
+.search {
+  font-size: 13px !important;
+}
+
+.fieldError {
+  color: var(--ac-crit);
+  font-size: 12px;
+}
+
+.segment {
+  display: inline-flex;
+  align-self: flex-start;
+  border: 1px solid var(--ac-line);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.seg,
+.segOn {
+  padding: 8px 18px;
+  border: 0;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.seg {
+  background: var(--ac-surface-2);
+  color: var(--ac-muted);
+}
+
+.segOn {
+  background: var(--ac-accent);
+  color: #fff;
+}
+
+.hint {
+  margin: 0;
+  color: var(--ac-muted);
+  font-size: 13px;
+}
+
+.preview {
+  padding: 10px 12px;
+  border-radius: 9px;
+  border: 1px dashed var(--ac-line);
+  font-size: 13.5px;
+}
+
+.preview span {
+  color: var(--ac-muted);
+}
+
+.error {
+  padding: 10px 12px;
+  border-radius: 9px;
+  border: 1px solid var(--ac-crit);
+  color: var(--ac-crit);
+  font-size: 13.5px;
+}
+
+.success {
+  color: var(--ac-ok);
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.summary {
+  margin: 0;
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 8px 16px;
+  font-size: 14px;
+}
+
+.summary dt {
+  color: var(--ac-muted);
+}
+
+.summary dd {
+  margin: 0;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.primary,
+.secondary {
+  padding: 10px 18px;
+  border-radius: 10px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 800;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.primary {
+  border: 0;
+  background: var(--ac-accent);
+  color: #fff;
+}
+
+.primary:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.secondary {
+  border: 1px solid var(--ac-line);
+  background: transparent;
+  color: var(--ac-fg);
+}
+
+/* ── Unit settings additions ── */
+.tabs {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+  max-width: 760px;
+}
+
+.list {
+  display: grid;
+  gap: 8px;
+}
+
+.member {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--ac-line);
+  border-radius: 12px;
+  background: var(--ac-surface-2);
+}
+
+.memberText {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.memberName {
+  font-weight: 700;
+}
+
+.memberSub {
+  color: var(--ac-muted);
+  font-size: 12.5px;
+}
+
+.tag {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  background: rgba(139, 92, 246, 0.18);
+  color: #c4b5fd;
+}
+
+.tagWarn {
+  background: rgba(255, 77, 106, 0.16);
+  color: #ff8fa3;
+}
+
+.rowActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.small {
+  padding: 6px 10px;
+  border-radius: 9px;
+  border: 1px solid var(--ac-line);
+  background: var(--ac-surface);
+  color: var(--ac-fg);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.small:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.code {
+  font-family: ui-monospace, 'Cascadia Mono', monospace;
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: 3px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: var(--ac-surface-2);
+  border: 1px dashed var(--ac-accent);
+  text-align: center;
+}
+
+@media (max-width: 560px) {
+  .member {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}

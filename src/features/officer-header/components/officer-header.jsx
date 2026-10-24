@@ -1,17 +1,13 @@
-import { useEffect, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
-
 import { SvgIcon } from '@/components/ui/svg-icon/svg-icon';
 
 import { useVnClock } from '../hooks/use-vn-clock';
 import { useWeather } from '../hooks/use-weather';
 import ui from './console-header.module.css';
-import menu from './settings-menu.module.css';
 
 /**
  * Officer console header (flat bar, national dispatch design): crest + system title on the left;
  * VN clock, weather, unit location, incident bell (pending count, opens the queue window) and
- * the signed-in officer on the right. Settings / logout live in the console's left rail (SettingsMenu).
+ * the signed-in officer on the right. Settings (OfficerSettingsDialog) / logout live in the console's left rail.
  *
  * @param {{
  *   officer: ReturnType<import('@/features/auth').buildOfficerProfile>,
@@ -85,7 +81,7 @@ export function OfficerHeader({ officer, unitCoords, onLocateUnit, pendingCount 
           <span className={ui.profileText}>
             <span className={ui.infoMain}>{officer.fullName}</span>
             <span className={ui.infoSub}>
-              {officer.isAdmin ? 'Quản trị hệ thống' : 'Cán bộ · Đang trực tuyến'}
+              {officer.isAdmin ? 'Quản trị hệ thống' : `${officer.roleLabel || 'Cán bộ'} · Đang trực tuyến`}
             </span>
           </span>
         </div>
@@ -126,110 +122,6 @@ function WeatherInfo({ weather }) {
       <span className={ui.infoText}>
         <span className={ui.infoMain}>{primary}</span>
         <span className={ui.infoSub}>{secondary}</span>
-      </span>
-    </button>
-  );
-}
-
-/**
- * Settings popover (admin tools, change password; logout is its own rail button). The trigger is supplied by the caller
- * (the console rail button): renderTrigger({ ref, onClick, open }). The menu opens to the right
- * of the trigger, or below it on narrow screens.
- */
-export function SettingsMenu({ isAdmin, onOpenAdmin, onChangePassword, renderTrigger }) {
-  const [pos, setPos] = useState(null); // null = closed
-  const btnRef = useRef(null);
-  const menuRef = useRef(null);
-
-  useEffect(() => {
-    if (!pos) return undefined;
-    const close = (e) => {
-      if (btnRef.current?.contains(e.target) || menuRef.current?.contains(e.target)) return;
-      setPos(null);
-    };
-    document.addEventListener('click', close);
-    return () => document.removeEventListener('click', close);
-  }, [pos]);
-
-  const toggle = () => {
-    if (pos) {
-      setPos(null);
-      return;
-    }
-    const rect = btnRef.current.getBoundingClientRect();
-    const menuHeight = 180;
-    if (window.innerWidth <= 992) {
-      // rail is at the bottom on phones: open above the button
-      setPos({
-        bottom: window.innerHeight - rect.top + 10,
-        left: Math.max(8, Math.min(rect.left, window.innerWidth - 300)),
-      });
-    } else {
-      setPos({
-        top: Math.max(8, Math.min(rect.top, window.innerHeight - menuHeight - 8)),
-        left: rect.right + 10,
-      });
-    }
-  };
-
-  const pick = (fn) => () => {
-    setPos(null);
-    fn?.();
-  };
-
-  return (
-    <>
-      {renderTrigger({ ref: btnRef, onClick: toggle, open: !!pos })}
-
-      {pos &&
-        createPortal(
-          <div
-            ref={menuRef}
-            className={menu.menu}
-            role="menu"
-            style={{ top: pos.top ?? 'auto', bottom: pos.bottom ?? 'auto', left: pos.left }}
-          >
-            <div className={menu.head}>
-              <SvgIcon name="gear" color="blue" size="sm" />
-              Cài đặt
-            </div>
-            <div className={menu.list}>
-              {isAdmin && (
-                <MenuItem
-                  icon="shield"
-                  color="purple"
-                  title="Phân quyền & quản trị"
-                  desc="Tạo tài khoản cán bộ, phân quyền đơn vị"
-                  onClick={pick(onOpenAdmin)}
-                />
-              )}
-              <MenuItem
-                icon="lock"
-                color="blue"
-                title="Đổi mật khẩu"
-                desc="Mật khẩu đăng nhập của tài khoản này"
-                onClick={pick(onChangePassword)}
-              />
-            </div>
-          </div>,
-          document.body,
-        )}
-    </>
-  );
-}
-
-function MenuItem({ icon, color, title, desc, onClick }) {
-  return (
-    <button type="button" role="menuitem" className={menu.item} onClick={onClick}>
-      <span className={menu.icon}>
-        <SvgIcon name={icon} color={color} />
-      </span>
-      <span className={menu.text}>
-        <span className={menu.title}>{title}</span>
-        <span className={menu.desc}>{desc}</span>
-      </span>
-      <span className={menu.chevron} aria-hidden="true">
-        ›
       </span>
     </button>
   );
