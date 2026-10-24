@@ -37,6 +37,8 @@ api.interceptors.response.use(
       data?.message ||
       fieldErrors ||
       (unreachable ? 'Không kết nối được máy chủ' : null) ||
+      // nginx rate limit (HTML body, no JSON)
+      (status === 429 ? 'Bạn thao tác quá nhanh, vui lòng thử lại sau ít phút' : null) ||
       data?.error ||
       error.message;
     return Promise.reject(new ApiError(message, { status, data, config: error.config }));
