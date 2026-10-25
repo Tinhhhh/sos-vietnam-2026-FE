@@ -6,7 +6,9 @@
  *   GET  .../dispatch-plan/candidates          officers of the chosen ward station's unit (step 2)
  *   POST .../dispatch-plan/delegate { member_id }   "Lập tức liên hệ": hand it to that officer
  *   POST .../dispatch-plan/withdraw   delegating officer takes back an unanswered delegation
- *   POST .../dispatch-plan/accept | reject { reason } | depart   the assigned (ward) officer
+ *   POST .../dispatch-plan/accept | reject { reason } | depart { member_id }   the assigned (ward) officer
+ *   GET  .../dispatch-plan/field-candidates   my unit's officers, to pick the field officer (GPS phone)
+ *   PUT  .../dispatch-plan/field-member { member_id }   change the field officer while EN_ROUTE
  *   POST .../dispatch-plan/confirm   step 4 "đã xử lý xong" (unit on site JWT, or the citizen token)
  *   POST .../dispatch-plan/finish { result, summary, forces, note, force }   closing report -> RESOLVED
  *   POST .../dispatch-plan/arrive   "Khởi hành ngay": at the scene, step 4 (assigned officer, or holder of own unit)
@@ -90,6 +92,7 @@ export function normalizePlan(raw) {
     // field officer (delegated officer, else the dispatching one): name, badge (= Traccar device id), phone
     tracker: raw.tracker
       ? {
+          memberId: raw.tracker.member_id,
           fullName: raw.tracker.full_name,
           phone: raw.tracker.phone || '',
           badgeNumber: raw.tracker.badge_number || '',
@@ -141,7 +144,10 @@ export async function getDispatchPlan(incidentId, { citizenToken } = {}) {
  * @param {{ stationId: string, destination: {lat,lng,address,source}, route?: {distanceM,durationS,coords,provider,estimated},
  *           delegate: boolean }} plan
  */
-export async function saveDispatchPlan(incidentId, { stationId, destination, route, delegate }) {
+export async function saveDispatchPlan(
+  incidentId,
+  { stationId, destination, route, delegate, fieldMemberId },
+) {
   const body = await api.put(`/api/v1/incidents/${encodeURIComponent(incidentId)}/dispatch-plan`, {
     station_id: Number(stationId),
     destination: {
@@ -159,6 +165,8 @@ export async function saveDispatchPlan(incidentId, { stationId, destination, rou
         }
       : null,
     delegate,
+    // own unit goes: the field officer (carries the GPS phone); a delegated unit picks it when setting off
+    field_member_id: delegate ? null : fieldMemberId || null,
   });
   return normalizePlan(body.data);
 }
@@ -198,8 +206,35 @@ export async function rejectDelegation(incidentId, reason) {
   return normalizePlan(body.data);
 }
 
-export async function departDelegation(incidentId) {
-  const body = await api.post(planPath(incidentId, '/depart'));
+/** The delegated unit sets off with its field officer (người phụ trách hiện trường). */
+export async function departDelegation(incidentId, fieldMemberId) {
+  const body = await api.post(planPath(incidentId, '/depart'), { member_id: fieldMemberId });
+  return normalizePlan(body.data);
+}
+
+/**
+ * Officers of MY unit to pick the field officer from (holder of the case, or the delegated officer).
+ * Online is only informative: they may be out working. selectable=false: no badge / on another trip.
+ */
+export async function getFieldCandidates(incidentId) {
+  const body = await api.get(planPath(incidentId, '/field-candidates'));
+  return (body.data || []).map((o) => ({
+    memberId: o.member_id,
+    fullName: o.full_name,
+    badgeNumber: o.badge_number || '',
+    position: o.position || '',
+    commander: o.unit_role === 'COMMANDER',
+    phone: o.phone || '',
+    online: !!o.online,
+    me: !!o.is_me,
+    selectable: !!o.selectable,
+    unavailableReason: o.unavailable_reason || '',
+  }));
+}
+
+/** Change the field officer while the force is on the way (stops a running simulation). */
+export async function changeFieldMember(incidentId, fieldMemberId) {
+  const body = await api.put(planPath(incidentId, '/field-member'), { member_id: fieldMemberId });
   return normalizePlan(body.data);
 }
 

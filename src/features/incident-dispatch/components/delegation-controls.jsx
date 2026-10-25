@@ -7,6 +7,7 @@ import { acceptDelegation, arriveDispatch, departDelegation, rejectDelegation } 
 import { useDispatchPlan } from '../hooks/use-dispatch-plan';
 import styles from './delegation.module.css';
 import { DispatchTrackingView } from './dispatch-tracking-view';
+import { FieldOfficerChange, FieldOfficerPicker } from './field-officer-picker';
 import { FinishPanel } from './finish-panel';
 
 const MIN_REASON = 5;
@@ -14,7 +15,8 @@ const MIN_REASON = 5;
 /**
  * Controls of a queue card that a higher unit delegated to my ward unit (step 2 "Uỷ quyền"):
  * - assigned to me, waiting: "Chấp nhận" / "Từ chối" (reason required, like a handover)
- * - accepted: "Lập tức điều động" (we set off: step 3, the citizen starts tracking)
+ * - accepted: pick the field officer (người phụ trách hiện trường, GPS phone), then "Lập tức điều động"
+ *   (we set off: step 3, the citizen starts tracking)
  * - on the way: "Theo dõi" opens the tracking map
  * Colleagues of the unit see who it was given to.
  *
@@ -28,6 +30,7 @@ export function DelegationControls({ incident, onFinished }) {
   const [reason, setReason] = useState('');
   const [tracking, setTracking] = useState(false);
   const [finishing, setFinishing] = useState(false);
+  const [fieldId, setFieldId] = useState(null);
 
   const run = async (fn, success) => {
     setBusy(true);
@@ -130,17 +133,25 @@ export function DelegationControls({ incident, onFinished }) {
       )}
 
       {mine && d.status === 'ACCEPTED' && (
-        <button
-          type="button"
-          className={styles.depart}
-          disabled={busy}
-          onClick={stop(() =>
-            run(() => departDelegation(incident.id), 'Đã điều động: người báo tin đang theo dõi lực lượng'),
-          )}
-        >
-          {busy ? 'Đang gửi...' : 'Lập tức điều động'}
-        </button>
+        <>
+          <FieldOfficerPicker incidentId={incident.id} value={fieldId} onChange={setFieldId} compact />
+          <button
+            type="button"
+            className={styles.depart}
+            disabled={busy || !fieldId}
+            onClick={stop(() =>
+              run(
+                () => departDelegation(incident.id, fieldId),
+                'Đã điều động: người báo tin đang theo dõi lực lượng',
+              ),
+            )}
+          >
+            {busy ? 'Đang gửi...' : fieldId ? 'Lập tức điều động' : 'Chọn người phụ trách để điều động'}
+          </button>
+        </>
       )}
+
+      {mine && d.status === 'EN_ROUTE' && <EnRouteFieldOfficer incident={incident} />}
 
       {mine && d.status === 'EN_ROUTE' && (
         <button
@@ -180,6 +191,12 @@ export function DelegationControls({ incident, onFinished }) {
       )}
     </div>
   );
+}
+
+/** Who carries the GPS phone, with "Đổi người" (the plan is re-read on every queue push). */
+function EnRouteFieldOfficer({ incident }) {
+  const { plan } = useDispatchPlan({ incidentId: incident.id, refreshKey: incident });
+  return plan ? <FieldOfficerChange incidentId={incident.id} plan={plan} /> : null;
 }
 
 function TrackingModal({ incident, onClose }) {

@@ -19,6 +19,7 @@ import { DelegationStep } from './delegation-step';
 import delegationStyles from './delegation.module.css';
 import { DispatchStepper } from './dispatch-stepper';
 import { DispatchTrackingView } from './dispatch-tracking-view';
+import { FieldOfficerChange, FieldOfficerPicker } from './field-officer-picker';
 import { FinishPanel } from './finish-panel';
 import { RouteMap } from './route-map';
 
@@ -126,6 +127,8 @@ function DispatchWindowBody({
   );
   const [selectedId, setSelectedId] = useState(draft?.origin?.stationId ?? null);
   const [pickerOpen, setPickerOpen] = useState(false);
+  // own unit goes: who goes out with the GPS phone (a delegated unit picks it on its card)
+  const [fieldId, setFieldId] = useState(draft?.tracker?.memberId ?? null);
 
   const { mode, stations: candidates } = useMemo(
     () => originCandidates(officer, incident, stations),
@@ -189,6 +192,10 @@ function DispatchWindowBody({
   const confirmOrigin = async () => {
     if (!selected || !destination) return;
     const delegate = needsDelegation(officer, selected);
+    if (!delegate && !fieldId) {
+      toast.show('Chọn người phụ trách hiện trường trước', { tone: 'error' });
+      return;
+    }
     setSaving(true);
     try {
       const next = await saveDispatchPlan(incident.id, {
@@ -199,6 +206,7 @@ function DispatchWindowBody({
           coords: null,
         },
         delegate,
+        fieldMemberId: fieldId,
       });
       setDraft(next);
       setEditing(false);
@@ -289,6 +297,9 @@ function DispatchWindowBody({
                 hasDestination={!!destination}
               />
             )}
+            {selected && !needsDelegation(officer, selected) && (
+              <FieldOfficerPicker incidentId={incident.id} value={fieldId} onChange={setFieldId} />
+            )}
           </div>
           <div className={styles.mapCol}>
             <RouteMap origin={selected} destination={destination} coords={currentRoute?.coords || null} />
@@ -312,7 +323,9 @@ function DispatchWindowBody({
             <button
               type="button"
               className={styles.btnPrimary}
-              disabled={!selected || !destination || saving}
+              disabled={
+                !selected || !destination || saving || (!needsDelegation(officer, selected) && !fieldId)
+              }
               onClick={confirmOrigin}
             >
               {saving
@@ -328,7 +341,10 @@ function DispatchWindowBody({
       ) : (
         <>
           {step >= 3 ? (
-            <DispatchTrackingView plan={draft} incidentId={incident.id} />
+            <>
+              <DispatchTrackingView plan={draft} incidentId={incident.id} />
+              {canArrive && <FieldOfficerChange incidentId={incident.id} plan={draft} onPlan={setDraft} />}
+            </>
           ) : (
             <div className={delegationStyles.panel}>
               <ChosenSummary
