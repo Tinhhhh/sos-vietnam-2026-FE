@@ -67,6 +67,7 @@ export function DispatchTrackingView({ plan, incidentId, citizenToken, variant =
           destination={plan.destination}
           coords={route?.coords || null}
           vehicle={position ? { ...position, stale } : null}
+          citizen={plan.sosPoint}
           className={sheet ? styles.mapFill : styles.mapInline}
           padding={MAP_PADDING}
         />
@@ -145,7 +146,7 @@ export function DispatchTrackingView({ plan, incidentId, citizenToken, variant =
 /**
  * "Mô phỏng" (officers, any incident, step 3 of the dispatch window): the BE plays the field officer's
  * phone and drives along the route, one point every 5 s, so the live tracking can be shown without going
- * outside. The trip status is untouched: "Tới nơi" is still pressed by hand.
+ * outside. The trip status is untouched: "Đã đến" is still pressed by hand (officer or citizen).
  */
 function SimulateControl({ incidentId, simulation }) {
   const toast = useToast();

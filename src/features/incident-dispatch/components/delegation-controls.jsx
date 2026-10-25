@@ -162,13 +162,13 @@ export function DelegationControls({ incident, onFinished }) {
             run(() => arriveDispatch(incident.id), 'Đã tới hiện trường: chuyển sang bước Kết thúc'),
           )}
         >
-          {busy ? 'Đang gửi...' : 'Khởi hành ngay'}
+          {busy ? 'Đang gửi...' : 'Đã đến'}
         </button>
       )}
 
       {mine && d.status === 'ARRIVED' && (
         <button type="button" className={styles.depart} onClick={stop(() => setFinishing(true))}>
-          Kết thúc xử lý
+          Đã xử lý xong
         </button>
       )}
 

@@ -2,7 +2,7 @@ import { useState } from 'react';
 
 import { useToast } from '@/components/ui/toast/toast-context';
 
-import { confirmHandled, finishIncident } from '../api/dispatch-api';
+import { finishIncident } from '../api/dispatch-api';
 import styles from './finish.module.css';
 
 const RESULTS = [
@@ -12,43 +12,26 @@ const RESULTS = [
 const MIN_SUMMARY = 10;
 
 /**
- * Step 4 "Kết thúc": the unit on site and the citizen both confirm the incident is handled, then an officer
- * writes the closing report (result, what was done, forces, note) and the case becomes RESOLVED.
+ * Step 4 "Đã xử lý xong": one side is enough (25/10/2026). The officer presses it and writes the closing report
+ * (result, what was done, forces, note) -> RESOLVED; if the citizen presses it first, the case closes on its own
+ * (the queue card goes away) and the report can still be written from the history.
  *
- * @param {{ incidentId: string, plan: object, canConfirm: boolean, onPlan: (plan) => void,
+ * @param {{ incidentId: string, plan: object, canConfirm?: boolean, onPlan?: (plan) => void,
  *           onFinished?: () => void }} props
- *   canConfirm = this officer is the unit on site (own unit, or the assigned officer of a delegated unit)
  */
-export function FinishPanel({ incidentId, plan, canConfirm, onPlan, onFinished }) {
+export function FinishPanel({ incidentId, plan, onFinished }) {
   const toast = useToast();
   const [busy, setBusy] = useState(false);
   const [form, setForm] = useState({ result: 'RESOLVED', summary: '', forces: '', note: '' });
-  const officerOk = !!plan.officerConfirmedAt;
-  const citizenOk = !!plan.citizenConfirmedAt;
-  const both = officerOk && citizenOk;
-  // CHỈ ĐỂ TEST (gỡ cùng DemoIncidentSeeder): mở văn bản ngay, không chờ xác nhận; BE chỉ nhận khi DEMO_INCIDENTS=true
-  const [finishNow, setFinishNow] = useState(false);
-  const showForm = both || finishNow;
+  const [showForm, setShowForm] = useState(false);
   const set = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }));
-
-  const confirm = async () => {
-    setBusy(true);
-    try {
-      onPlan(await confirmHandled(incidentId));
-      toast.show('Đã xác nhận xử lý xong, chờ người báo tin xác nhận', { tone: 'success' });
-    } catch (err) {
-      toast.show(err.message, { tone: 'error' });
-    } finally {
-      setBusy(false);
-    }
-  };
 
   const submit = async (e) => {
     e.preventDefault();
     if (form.summary.trim().length < MIN_SUMMARY) return;
     setBusy(true);
     try {
-      await finishIncident(incidentId, { ...form, force: false, skipConfirm: !both });
+      await finishIncident(incidentId, { ...form, force: false });
       toast.show(`Đã lập văn bản và kết thúc ca ${incidentId}`, { tone: 'success' });
       onFinished?.();
     } catch (err) {
@@ -60,41 +43,15 @@ export function FinishPanel({ incidentId, plan, canConfirm, onPlan, onFinished }
 
   return (
     <div className={styles.panel}>
-      <div className={styles.title}>Xác nhận đã xử lý xong</div>
-      <ul className={styles.checks}>
-        <li className={officerOk ? styles.ok : styles.wait}>
-          <span className={styles.mark} aria-hidden="true">
-            {officerOk ? '✓' : ''}
-          </span>
-          Đơn vị xử lý ({plan.assignedTo?.fullName || plan.origin.name})
-          {officerOk ? ' đã xác nhận' : ' chưa xác nhận'}
-        </li>
-        <li className={citizenOk ? styles.ok : styles.wait}>
-          <span className={styles.mark} aria-hidden="true">
-            {citizenOk ? '✓' : ''}
-          </span>
-          Người báo tin {citizenOk ? 'đã xác nhận' : 'chưa xác nhận'}
-        </li>
-      </ul>
-
-      {canConfirm && !officerOk && (
-        <button type="button" className={styles.primary} disabled={busy} onClick={confirm}>
-          {busy ? 'Đang gửi...' : 'Xác nhận đã xử lý xong'}
-        </button>
-      )}
-      {!both && (officerOk || !canConfirm) && (
-        <div className={styles.hint}>
-          Khi cả đơn vị xử lý và người báo tin cùng xác nhận, văn bản kết thúc ca sẽ mở ra tại đây.
-        </div>
-      )}
-      {!both && !finishNow && (
-        <button
-          type="button"
-          className={styles.testBtn}
-          title="Chỉ để test: mở văn bản kết thúc ngay, không chờ xác nhận (BE chỉ cho khi bật DEMO_INCIDENTS)"
-          onClick={() => setFinishNow(true)}
-        >
-          Kết thúc ngay (test)
+      <div className={styles.title}>Lực lượng đã tới hiện trường</div>
+      <div className={styles.hint}>
+        {plan.citizenConfirmedAt
+          ? 'Người báo tin đã xác nhận sự việc được xử lý xong.'
+          : 'Xử lý xong thì bấm "Đã xử lý xong" (cán bộ hoặc người báo tin bấm là đủ).'}
+      </div>
+      {!showForm && (
+        <button type="button" className={styles.primary} onClick={() => setShowForm(true)}>
+          Đã xử lý xong
         </button>
       )}
 

@@ -9,16 +9,22 @@
  *   POST .../dispatch-plan/accept | reject { reason } | depart { member_id }   the assigned (ward) officer
  *   GET  .../dispatch-plan/field-candidates   my unit's officers, to pick the field officer (GPS phone)
  *   PUT  .../dispatch-plan/field-member { member_id }   change the field officer while EN_ROUTE
- *   POST .../dispatch-plan/confirm   step 4 "đã xử lý xong" (unit on site JWT, or the citizen token)
+ *   POST .../dispatch-plan/confirm   step 4 "Đã xử lý xong": the citizen token closes the case at once;
+ *                                    the unit on site (JWT) only records it and closes with /finish
  *   POST .../dispatch-plan/finish { result, summary, forces, note, force }   closing report -> RESOLVED
- *   POST .../dispatch-plan/arrive   "Khởi hành ngay": at the scene, step 4 (assigned officer, or holder of own unit)
+ *                                    (no citizen confirmation needed)
+ *   POST .../dispatch-plan/arrive   "Đã đến": at the scene, step 4. One side is enough: the unit on site, the field
+ *                                    officer, or the citizen (token)
+ *   GET  /api/v1/geo/road-snap?lat&lng   where the vehicle should stop (big road outside an alley)
+ *        -> { latitude, longitude, road_name, distance_m, source: MAIN_ROAD | NEAREST_ROAD | NONE }
  *   PUT /api/v1/incidents/{id}/dispatch-plan   officer holding the case (RESOLVING)
  *       body { station_id, destination { latitude, longitude, address, source }, route { distance_m,
  *              duration_s, polyline, provider }, delegate }
  *
  * <plan> = { dispatch_id, status, status_label, step (1..4), needs_delegation,
  *            station { id, name, agency_type, level, address, phone, latitude, longitude },
- *            destination { latitude, longitude, address, source },
+ *            destination { latitude, longitude, address, source: CITIZEN_GPS | OFFICER_EDIT | ROAD_SNAP },
+ *            sos_point { latitude, longitude }   where the citizen is (differs from destination on ROAD_SNAP),
  *            route { origin { latitude, longitude }, distance_m, duration_s, duration_traffic_s, polyline, provider },
  *            dispatched_at, departed_at, arrived_at }
  *
@@ -72,6 +78,7 @@ export function normalizePlan(raw) {
       lng: s.longitude,
     },
     destination: point(raw.destination),
+    sosPoint: point(raw.sos_point),
     route: raw.route
       ? {
           distanceM: raw.route.distance_m,
@@ -238,9 +245,26 @@ export async function changeFieldMember(incidentId, fieldMemberId) {
   return normalizePlan(body.data);
 }
 
-export async function arriveDispatch(incidentId) {
-  const body = await api.post(planPath(incidentId, '/arrive'));
+/** "Đã đến": the unit on site / field officer (JWT) or the citizen (citizenToken). */
+export async function arriveDispatch(incidentId, { citizenToken } = {}) {
+  const body = await api.post(planPath(incidentId, '/arrive'), null, {
+    headers: citizenToken ? { [CITIZEN_TOKEN_HEADER]: citizenToken } : undefined,
+  });
   return normalizePlan(body.data);
+}
+
+/** Where the vehicle should stop for this SOS point: nearest big road (null when nothing better was found). */
+export async function getRoadSnap({ lat, lng }) {
+  const body = await api.get('/api/v1/geo/road-snap', { params: { lat, lng } });
+  const d = body?.data;
+  if (!d || d.source === 'NONE' || d.latitude == null) return null;
+  return {
+    lat: d.latitude,
+    lng: d.longitude,
+    roadName: d.road_name || '',
+    distanceM: d.distance_m ?? 0,
+    big: d.source === 'MAIN_ROAD',
+  };
 }
 
 /** Step 4: the unit on site (officer JWT) or the citizen (citizenToken) confirms the incident is handled. */
@@ -252,17 +276,13 @@ export async function confirmHandled(incidentId, { citizenToken } = {}) {
 }
 
 /** Closing report: { result: RESOLVED|FALSE_ALARM, summary, forces, note, force } */
-export async function finishIncident(
-  incidentId,
-  { result, summary, forces, note, force = false, skipConfirm = false },
-) {
+export async function finishIncident(incidentId, { result, summary, forces, note, force = false }) {
   await api.post(planPath(incidentId, '/finish'), {
     result: force ? null : result,
     summary: summary?.trim() || null,
     forces: forces?.trim() || null,
     note: note?.trim() || null,
     force,
-    skip_confirm: skipConfirm, // CHỈ ĐỂ TEST: "Kết thúc ngay (test)"
   });
 }
 

@@ -3,6 +3,7 @@ import { useEffect, useRef } from 'react';
 import { LngLatBounds, Map, Marker } from '@/lib/maplibre';
 
 import { STATION_ICON } from '../utils/origin-candidates';
+import { locateOnRoute, splitRoute } from '../utils/route-progress';
 import styles from './dispatch.module.css';
 
 // Same raster base map as the command map (Vietnamese labels)
@@ -36,6 +37,27 @@ function sosEl() {
   return el;
 }
 
+/** Where the citizen really is, when the vehicle stops elsewhere (big road outside an alley). */
+function citizenEl() {
+  const el = document.createElement('div');
+  el.className = styles.citizenPin;
+  el.title = 'Vị trí người báo tin';
+  return el;
+}
+
+const EMPTY = { type: 'FeatureCollection', features: [] };
+// the plan is fetched again every 5 s and its polyline decoded into a new array: compare routes by content
+const routeKey = (c) => (c && c.length > 1 ? `${c.length}|${c[0]}|${c[c.length - 1]}` : '');
+const lineOf = (coords) =>
+  coords && coords.length > 1
+    ? {
+        type: 'FeatureCollection',
+        features: [
+          { type: 'Feature', geometry: { type: 'LineString', coordinates: coords }, properties: {} },
+        ],
+      }
+    : EMPTY;
+
 /** Moving field officer: blue dot with a heading arrow (rotated by setRotation, not CSS). */
 function vehicleEl() {
   const el = document.createElement('div');
@@ -48,18 +70,30 @@ function vehicleEl() {
  * Map of one dispatch: the station (its own emblem), the SOS point and the road route between
  * them (green line like a ride-hailing app). Fits both points whenever they change.
  * `vehicle` (live GPS of the field officer) only moves its marker: the view is not re-fitted on every point.
+ * The part of the route already driven turns grey (only forward: GPS noise never "un-drives" it).
+ * `citizen`: the reporter's own position when the destination is a stop point elsewhere (big road outside an
+ * alley); shown as a small orange dot joined to the stop point by a dashed walking line.
  *
  * The map follows its box: when the box changes size (modal animation, phone rotation, bottom sheet)
  * it redraws and fits the route again, so tiles never stay stretched.
  *
  * @param {{ origin?: {lat,lng,agency}|null, destination?: {lat,lng}|null, coords?: number[][]|null,
- *           vehicle?: {lat,lng,heading?,stale?}|null,
+ *           vehicle?: {lat,lng,heading?,stale?}|null, citizen?: {lat,lng}|null,
  *           className?: string, padding?: number | object }} props  className replaces the default fixed height
  */
-export function RouteMap({ origin, destination, coords, vehicle = null, className, padding = 48 }) {
+export function RouteMap({
+  origin,
+  destination,
+  coords,
+  vehicle = null,
+  citizen = null,
+  className,
+  padding = 48,
+}) {
   const containerRef = useRef(null);
   const mapRef = useRef(null);
-  const markersRef = useRef({ origin: null, dest: null, vehicle: null });
+  const markersRef = useRef({ origin: null, dest: null, vehicle: null, citizen: null });
+  const progressRef = useRef(null); // { key, at }: furthest point reached on the current route
   const boundsRef = useRef(null); // last fitted area, re-fitted after a resize
   const paddingRef = useRef(padding);
   useEffect(() => {
@@ -76,7 +110,23 @@ export function RouteMap({ origin, destination, coords, vehicle = null, classNam
     });
     mapRef.current = map;
     map.on('load', () => {
-      map.addSource('route', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
+      map.addSource('walk', { type: 'geojson', data: EMPTY });
+      map.addLayer({
+        id: 'walk-line',
+        type: 'line',
+        source: 'walk',
+        layout: { 'line-cap': 'round' },
+        paint: { 'line-color': '#f97316', 'line-width': 3, 'line-dasharray': [1, 2] },
+      });
+      map.addSource('route-done', { type: 'geojson', data: EMPTY });
+      map.addLayer({
+        id: 'route-done-line',
+        type: 'line',
+        source: 'route-done',
+        layout: { 'line-cap': 'round', 'line-join': 'round' },
+        paint: { 'line-color': '#9ca3af', 'line-width': 6, 'line-opacity': 0.9 },
+      });
+      map.addSource('route', { type: 'geojson', data: EMPTY });
       map.addLayer({
         id: 'route-casing',
         type: 'line',
@@ -98,11 +148,14 @@ export function RouteMap({ origin, destination, coords, vehicle = null, classNam
       markers.origin = null;
       markers.dest = null;
       markers.vehicle = null;
+      markers.citizen = null;
       map.remove();
       mapRef.current = null;
     };
   }, []);
 
+  const cLat = citizen?.lat;
+  const cLng = citizen?.lng;
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return undefined;
@@ -121,16 +174,37 @@ export function RouteMap({ origin, destination, coords, vehicle = null, classNam
           .addTo(map)
       : null;
 
+    // citizen away from the stop point (> 10 m): small dot + dashed walking line
+    const away =
+      cLat != null &&
+      !!destination &&
+      Math.hypot(cLat - destination.lat, (cLng - destination.lng) * Math.cos((cLat * Math.PI) / 180)) *
+        111_320 >
+        10;
+    markers.citizen?.remove();
+    markers.citizen = away
+      ? new Marker({ element: citizenEl(), anchor: 'center' }).setLngLat([cLng, cLat]).addTo(map)
+      : null;
+
     const draw = () => {
-      const line =
-        coords && coords.length > 1
-          ? { type: 'Feature', geometry: { type: 'LineString', coordinates: coords }, properties: {} }
-          : null;
-      map.getSource('route')?.setData({ type: 'FeatureCollection', features: line ? [line] : [] });
+      // a new route starts undriven; the vehicle effect below greys out what is behind it
+      const progress = progressRef.current?.key === routeKey(coords) ? progressRef.current : null;
+      const { done, rest } = splitRoute(coords, progress?.at);
+      map.getSource('route')?.setData(lineOf(rest));
+      map.getSource('route-done')?.setData(lineOf(done));
+      map.getSource('walk')?.setData(
+        away
+          ? lineOf([
+              [destination.lng, destination.lat],
+              [cLng, cLat],
+            ])
+          : EMPTY,
+      );
       const pts = [
         ...(coords || []),
         origin && [origin.lng, origin.lat],
         destination && [destination.lng, destination.lat],
+        away && [cLng, cLat],
       ].filter(Boolean);
       if (pts.length === 1) {
         boundsRef.current = null;
@@ -145,7 +219,7 @@ export function RouteMap({ origin, destination, coords, vehicle = null, classNam
     if (map.getSource('route')) draw();
     else map.once('route-ready', draw);
     return () => map.off('route-ready', draw);
-  }, [origin, destination, coords]);
+  }, [origin, destination, coords, cLat, cLng]);
 
   const vLat = vehicle?.lat;
   const vLng = vehicle?.lng;
@@ -170,7 +244,17 @@ export function RouteMap({ origin, destination, coords, vehicle = null, classNam
     markers.vehicle.setRotation(vHeading ?? 0);
     markers.vehicle.getElement().classList.toggle(styles.vehicleStale, vStale);
     markers.vehicle.getElement().classList.toggle(styles.vehicleNoHeading, vHeading == null);
-  }, [vLat, vLng, vHeading, vStale]);
+
+    // grey out the driven part: only move forward along this route
+    if (!coords || coords.length < 2) return;
+    const prev = progressRef.current?.key === routeKey(coords) ? progressRef.current.at : null;
+    const at = locateOnRoute(coords, { lat: vLat, lng: vLng }, { fromIndex: prev?.index ?? 0 });
+    if (!at) return;
+    progressRef.current = { key: routeKey(coords), at };
+    const { done, rest } = splitRoute(coords, at);
+    map.getSource('route')?.setData(lineOf(rest));
+    map.getSource('route-done')?.setData(lineOf(done));
+  }, [vLat, vLng, vHeading, vStale, coords]);
 
   useEffect(() => {
     const el = containerRef.current;
