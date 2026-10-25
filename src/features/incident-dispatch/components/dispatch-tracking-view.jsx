@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { useToast } from '@/components/ui/toast/toast-context';
 import { useNow } from '@/hooks/use-now';
 
-import { startSimulation, stopSimulation } from '../api/dispatch-api';
+import { detourSimulation, startSimulation, stopSimulation } from '../api/dispatch-api';
 import { formatDistance, formatDuration } from '../api/routing';
 import { useLivePosition } from '../hooks/use-live-position';
 import { STATION_ICON } from '../utils/origin-candidates';
@@ -30,11 +30,6 @@ const telOf = (phone) => (phone || '').replace(/[^0-9+]/g, '');
  */
 export function DispatchTrackingView({ plan, incidentId, citizenToken, variant = 'inline', footer = null }) {
   const o = plan.origin;
-  const route = plan.route;
-  const eta =
-    plan.departedAt && route?.durationS != null
-      ? new Date(plan.departedAt.getTime() + route.durationS * 1000)
-      : null;
   const arrived = plan.status === 'ARRIVED' || plan.status === 'DONE';
   const enRoute = plan.status === 'EN_ROUTE';
   const phone = telOf(o.phone);
@@ -46,16 +41,27 @@ export function DispatchTrackingView({ plan, incidentId, citizenToken, variant =
     enabled: enRoute,
     initial: plan.lastPosition,
   });
-  const position = live.position;
+  // the BE recalculates the route when the vehicle leaves it: the polled plan may carry a newer one
+  const route = newer(live.route, plan.route);
+  // a recalculated route starts at the vehicle: count its duration from when it was computed
+  const etaFrom = route?.rerouted ? route.computedAt : plan.departedAt;
+  const eta =
+    etaFrom && route?.durationS != null ? new Date(etaFrom.getTime() + route.durationS * 1000) : null;
+  // on the way: the polled point; arrived / done: the last point the BE kept, so the dot stays at the scene
+  const position = enRoute ? live.position : arrived ? plan.lastPosition : null;
   const now = useNow(enRoute, 2000);
-  const stale = !position?.receivedAt || now - position.receivedAt.getTime() > STALE_MS;
-  const gpsChip = !enRoute
-    ? null
-    : !position
-      ? 'Đang chờ tín hiệu GPS…'
-      : stale
-        ? 'Đang kết nối lại…'
-        : `GPS trực tiếp${position.speedKmh != null ? ` · ${Math.round(position.speedKmh)} km/h` : ''}`;
+  const stale = enRoute && (!position?.receivedAt || now - position.receivedAt.getTime() > STALE_MS);
+  const gpsChip = arrived
+    ? position
+      ? `Đã đến · vị trí cuối ${position.receivedAt ? CLOCK.format(position.receivedAt) : ''}`.trim()
+      : null
+    : !enRoute
+      ? null
+      : !position
+        ? 'Đang chờ tín hiệu GPS…'
+        : stale
+          ? 'Đang kết nối lại…'
+          : `GPS trực tiếp${position.speedKmh != null ? ` · ${Math.round(position.speedKmh)} km/h` : ''}`;
   const tracker = plan.tracker;
   const trackerTel = telOf(tracker?.phone) || phone;
 
@@ -71,7 +77,10 @@ export function DispatchTrackingView({ plan, incidentId, citizenToken, variant =
           className={sheet ? styles.mapFill : styles.mapInline}
           padding={MAP_PADDING}
         />
-        <span className={styles.statusChip}>{plan.statusLabel}</span>
+        <span className={styles.statusChip}>
+          {plan.statusLabel}
+          {enRoute && route?.rerouted ? ' · đã tính lại đường' : ''}
+        </span>
         {gpsChip && (
           <span className={`${styles.gpsChip} ${position && !stale ? styles.gpsLive : styles.gpsWait}`}>
             {gpsChip}
@@ -148,6 +157,13 @@ export function DispatchTrackingView({ plan, incidentId, citizenToken, variant =
  * phone and drives along the route, one point every 5 s, so the live tracking can be shown without going
  * outside. The trip status is untouched: "Đã đến" is still pressed by hand (officer or citizen).
  */
+/** The route computed last (null-safe). */
+function newer(a, b) {
+  if (!a) return b;
+  if (!b) return a;
+  return (a.computedAt?.getTime() ?? 0) >= (b.computedAt?.getTime() ?? 0) ? a : b;
+}
+
 function SimulateControl({ incidentId, simulation }) {
   const toast = useToast();
   const [busy, setBusy] = useState(false);
@@ -160,6 +176,19 @@ function SimulateControl({ incidentId, simulation }) {
   }
   const running = override ?? simulation.running;
   if (!simulation.available && !running) return null;
+
+  const detour = async () => {
+    setBusy(true);
+    try {
+      const plan = await detourSimulation(incidentId);
+      setOverride(!!plan?.simulation?.running);
+      toast.show('Xe giả rẽ sang đường khác: chờ hệ thống tự tính lại tuyến', { tone: 'info' });
+    } catch (err) {
+      toast.show(err.message, { tone: 'error' });
+    } finally {
+      setBusy(false);
+    }
+  };
 
   const toggle = async () => {
     setBusy(true);
@@ -179,14 +208,26 @@ function SimulateControl({ incidentId, simulation }) {
       <span className={styles.simulateText}>
         {running ? 'Đang mô phỏng xe chạy theo tuyến…' : 'Chạy thử xe theo tuyến, không cần điện thoại GPS'}
       </span>
-      <button
-        type="button"
-        className={running ? styles.simulateStop : styles.simulateStart}
-        disabled={busy}
-        onClick={toggle}
-      >
-        {running ? '■ Dừng' : '▶ Mô phỏng'}
-      </button>
+      <div className={styles.simulateButtons}>
+        {/* test the automatic re-routing: leave the route on purpose */}
+        <button
+          type="button"
+          className={styles.simulateDetour}
+          disabled={busy}
+          onClick={detour}
+          title="Xe giả rẽ phải khỏi tuyến rồi mới về hiện trường, để thử tự tính lại đường đi"
+        >
+          ↪ Rẽ đường khác
+        </button>
+        <button
+          type="button"
+          className={running ? styles.simulateStop : styles.simulateStart}
+          disabled={busy}
+          onClick={toggle}
+        >
+          {running ? '■ Dừng' : '▶ Mô phỏng'}
+        </button>
+      </div>
     </div>
   );
 }

@@ -69,6 +69,8 @@ export function normalizeIncident(raw) {
       : null,
     heldByMe: raw.held_by_me === true,
     canHandle: raw.can_handle === true,
+    // field officer picked at "Yêu cầu điều động" (step 1 reuses it when my own unit goes)
+    fieldMemberId: raw.field_member_id ?? null,
     dispatchStep: raw.dispatch_step ?? null, // 1-4 of the dispatch, null = no starting station yet
     // Step 2 of a dispatch: the case was handed to a ward unit (null otherwise)
     delegation: raw.delegation

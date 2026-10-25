@@ -11,10 +11,13 @@ import styles from './field-officer.module.css';
  * shown as information: officers may be out doing other work. Officers without a badge or already on
  * another open trip cannot be picked (the BE refuses them too).
  *
- * @param {{ incidentId: string, value: string|null, onChange: (memberId: string) => void, compact?: boolean }} props
+ * @param {{ incidentId: string, value: string|null, onChange: (memberId: string) => void, compact?: boolean,
+ *           collapsible?: boolean }} props  collapsible: once someone is picked (at "Yêu cầu điều động") only
+ *   that person shows, with "Đổi người" to open the whole list again
  */
-export function FieldOfficerPicker({ incidentId, value, onChange, compact = false }) {
+export function FieldOfficerPicker({ incidentId, value, onChange, compact = false, collapsible = false }) {
   const [state, setState] = useState({ status: 'loading', list: [], error: null });
+  const [expanded, setExpanded] = useState(false);
 
   useEffect(() => {
     let alive = true;
@@ -38,7 +41,7 @@ export function FieldOfficerPicker({ incidentId, value, onChange, compact = fals
         <div className={styles.muted}>Đơn vị chưa có cán bộ nào.</div>
       )}
       <div className={styles.list} role="radiogroup" aria-label="Người phụ trách hiện trường">
-        {state.list.map((o) => (
+        {shown(state.list, value, collapsible && !expanded).map((o) => (
           <button
             key={o.memberId}
             type="button"
@@ -69,8 +72,20 @@ export function FieldOfficerPicker({ incidentId, value, onChange, compact = fals
           </button>
         ))}
       </div>
+      {collapsible && !expanded && value && state.status === 'ready' && (
+        <button type="button" className={styles.linkBtn} onClick={() => setExpanded(true)}>
+          Đổi người
+        </button>
+      )}
     </div>
   );
+}
+
+/** Collapsed: only the picked officer (the whole list while nobody / nobody known is picked). */
+function shown(list, value, collapsed) {
+  if (!collapsed || !value) return list;
+  const picked = list.filter((o) => o.memberId === value);
+  return picked.length ? picked : list;
 }
 
 /**

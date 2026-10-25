@@ -87,6 +87,9 @@ export function normalizePlan(raw) {
           coords: raw.route.polyline ? decodePolyline(raw.route.polyline) : null,
           provider: raw.route.provider,
           estimated: raw.route.provider === 'ESTIMATE',
+          // recalculated from the vehicle's position after it left the route
+          rerouted: raw.route.origin_source === 'VEHICLE',
+          computedAt: toDate(raw.route.computed_at),
         }
       : null,
     assignedTo: raw.assigned_to
@@ -129,6 +132,14 @@ export function normalizePlan(raw) {
  */
 export async function startSimulation(incidentId) {
   const body = await api.post(`/api/v1/incidents/${encodeURIComponent(incidentId)}/dispatch-plan/simulate`);
+  return normalizePlan(body.data);
+}
+
+/** DEMO: the simulated vehicle turns off the route, to test the automatic route recalculation. */
+export async function detourSimulation(incidentId) {
+  const body = await api.post(
+    `/api/v1/incidents/${encodeURIComponent(incidentId)}/dispatch-plan/simulate/detour`,
+  );
   return normalizePlan(body.data);
 }
 

@@ -265,8 +265,15 @@
   color: #e9d5ff;
 }
 
+.simulateButtons {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
 .simulateStart,
-.simulateStop {
+.simulateStop,
+.simulateDetour {
   flex-shrink: 0;
   padding: 7px 14px;
   border: 0;
@@ -286,8 +293,13 @@
   background: #b91c1c;
 }
 
+.simulateDetour {
+  background: #c2410c;
+}
+
 .simulateStart:disabled,
-.simulateStop:disabled {
+.simulateStop:disabled,
+.simulateDetour:disabled {
   opacity: 0.6;
   cursor: wait;
 }

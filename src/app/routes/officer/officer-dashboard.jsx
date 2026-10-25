@@ -137,16 +137,16 @@ export function OfficerDashboardRoute() {
     return () => body.classList.remove(officer.theme, 'officer-authenticated');
   }, [officer.theme]);
 
-  // "Yêu cầu điều động" -> confirm -> VERIFYING to RESOLVING -> dispatch window
+  // "Yêu cầu điều động" -> pick the field officer + confirm -> VERIFYING to RESOLVING -> dispatch window
   const askDispatch = (inc) => {
     setDetailId(null);
     setDispatchConfirm(inc);
   };
-  const confirmDispatch = async () => {
+  const confirmDispatch = async (fieldMemberId) => {
     const inc = dispatchConfirm;
     setDispatchBusy(true);
     try {
-      const updated = await requestDispatch(inc.id);
+      const updated = await requestDispatch(inc.id, fieldMemberId);
       if (updated) queue.upsert(updated);
       setDispatchConfirm(null);
       setDispatchId(inc.id);

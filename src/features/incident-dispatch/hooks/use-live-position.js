@@ -12,11 +12,12 @@ const POLL_MS = 5000;
  *
  * @param {{ incidentId?: string, citizenToken?: string, enabled: boolean, initial?: object|null }} options
  *   initial = plan.lastPosition already loaded with the plan
- * @returns {{ position: object|null, simulation: object|null }} position = { lat, lng, speedKmh, heading,
- *   receivedAt }; simulation = latest polled plan.simulation (officers only), null until the first poll
+ * @returns {{ position: object|null, simulation: object|null, route: object|null }} position = { lat, lng,
+ *   speedKmh, heading, receivedAt }; simulation = latest polled plan.simulation (officers only); route = latest
+ *   polled plan.route (the BE recalculates it when the vehicle leaves it); null until the first poll
  */
 export function useLivePosition({ incidentId, citizenToken, enabled, initial = null }) {
-  const [polled, setPolled] = useState({ position: null, simulation: null });
+  const [polled, setPolled] = useState({ position: null, simulation: null, route: null });
   const active = enabled && !!incidentId;
 
   useEffect(() => {
@@ -26,7 +27,11 @@ export function useLivePosition({ incidentId, citizenToken, enabled, initial = n
       getDispatchPlan(incidentId, { citizenToken })
         .then((plan) => {
           if (!alive || !plan) return;
-          setPolled((p) => ({ position: plan.lastPosition || p.position, simulation: plan.simulation }));
+          setPolled((p) => ({
+            position: plan.lastPosition || p.position,
+            simulation: plan.simulation,
+            route: plan.route,
+          }));
         })
         .catch(() => {
           // offline / server busy: the view shows "Đang kết nối lại…" once the point gets old
@@ -39,9 +44,9 @@ export function useLivePosition({ incidentId, citizenToken, enabled, initial = n
     };
   }, [active, incidentId, citizenToken]);
 
-  if (!active) return { position: null, simulation: null };
+  if (!active) return { position: null, simulation: null, route: null };
   // whichever is newer: the point loaded with the plan or the last polled one
   const p = polled.position;
   const position = p && (!initial || p.receivedAt >= initial.receivedAt) ? p : initial || p;
-  return { position, simulation: polled.simulation };
+  return { position, simulation: polled.simulation, route: polled.route };
 }

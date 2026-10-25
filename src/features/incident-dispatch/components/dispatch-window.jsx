@@ -128,7 +128,8 @@ function DispatchWindowBody({
   const [selectedId, setSelectedId] = useState(draft?.origin?.stationId ?? null);
   const [pickerOpen, setPickerOpen] = useState(false);
   // own unit goes: who goes out with the GPS phone (a delegated unit picks it on its card)
-  const [fieldId, setFieldId] = useState(draft?.tracker?.memberId ?? null);
+  // picked at "Yêu cầu điều động" (stored on the case); changeable here before setting off
+  const [fieldId, setFieldId] = useState(draft?.tracker?.memberId ?? incident.fieldMemberId ?? null);
 
   const { mode, stations: candidates } = useMemo(
     () => originCandidates(officer, incident, stations),
@@ -298,7 +299,12 @@ function DispatchWindowBody({
               />
             )}
             {selected && !needsDelegation(officer, selected) && (
-              <FieldOfficerPicker incidentId={incident.id} value={fieldId} onChange={setFieldId} />
+              <FieldOfficerPicker
+                incidentId={incident.id}
+                value={fieldId}
+                onChange={setFieldId}
+                collapsible
+              />
             )}
           </div>
           <div className={styles.mapCol}>
