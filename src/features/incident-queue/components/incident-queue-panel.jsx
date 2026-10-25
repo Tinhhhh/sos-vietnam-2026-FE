@@ -271,10 +271,10 @@ export function IncidentQueuePanel({
       <HandoverDialog
         incident={handoverOf}
         onClose={() => setHandoverOf(null)}
-        onConfirm={async (toAccountId, note) => {
+        onConfirm={async (toMemberId, note) => {
           const ok = await run(
             handoverOf,
-            () => releaseIncident(handoverOf.id, { toAccountId, note }),
+            () => releaseIncident(handoverOf.id, { toMemberId, note }),
             `Đã giao ca ${handoverOf.id}`,
           );
           if (ok) setHandoverOf(null);
@@ -668,7 +668,12 @@ function LevelBadge({ incident: inc, officerLevel }) {
     );
   }
   if (inc.level === 'province') {
-    return <span style={badgeStyle('rgba(139, 92, 246, 0.2)', '#c4b5fd')}>CẤP TỈNH/TP</span>;
+    // ward officers also see cases that went straight to the province (no ward officer was online)
+    return (
+      <span style={badgeStyle('rgba(139, 92, 246, 0.2)', '#c4b5fd')}>
+        CẤP TỈNH/TP{!inc.canHandle && officerLevel === 'ward' ? ' · Tỉnh đang thụ lý' : ''}
+      </span>
+    );
   }
   return (
     <span style={badgeStyle('rgba(0, 136, 255, 0.2)', '#60a5fa')}>

@@ -1,4 +1,11 @@
+import { useState } from 'react';
+
+import { useToast } from '@/components/ui/toast/toast-context';
+import { useNow } from '@/hooks/use-now';
+
+import { startSimulation, stopSimulation } from '../api/dispatch-api';
 import { formatDistance, formatDuration } from '../api/routing';
+import { useLivePosition } from '../hooks/use-live-position';
 import { STATION_ICON } from '../utils/origin-candidates';
 import styles from './dispatch-tracking.module.css';
 import { RouteMap } from './route-map';
@@ -6,19 +13,22 @@ import { RouteMap } from './route-map';
 const CLOCK = new Intl.DateTimeFormat('vi-VN', { hour: '2-digit', minute: '2-digit' });
 const DELAY_NOTE = 'Thời gian thực tế có thể lâu hơn do ùn tắc giao thông hoặc thời tiết không thuận lợi.';
 const MAP_PADDING = { top: 56, bottom: 28, left: 36, right: 36 }; // room for the status chip
+/** No new GPS point for this long: "Đang kết nối lại…" (the app sends one every 5 s). */
+const STALE_MS = 20000;
+
+const telOf = (phone) => (phone || '').replace(/[^0-9+]/g, '');
 
 /**
- * "Theo dõi" like a ride-hailing app: map with the station emblem, the SOS point and the route,
- * then a card with the unit, ETA, distance and a call button. Used by the citizen's tracking sheet
- * and step 3 of the officer's dispatch window.
+ * "Theo dõi" like a ride-hailing app: map with the station emblem, the SOS point, the route and, while
+ * the force is on the way, the live GPS dot of the field officer (Traccar Client on their phone, polled
+ * every 5 s); then a card with the field officer ("Lực lượng phụ trách": name, badge, call), the unit,
+ * ETA and distance. Used by the citizen's tracking sheet, the ward card and step 3 of the dispatch window.
  *
- * The moving vehicle (GPS of the dispatched officer) comes in a later batch; until then the unit is
- * shown at its station and the arrival time is departure + estimated duration.
- *
- * @param {{ plan: object, variant?: 'inline' | 'sheet', footer?: React.ReactNode }} props  plan from normalizePlan();
+ * @param {{ plan: object, incidentId?: string, citizenToken?: string, variant?: 'inline' | 'sheet',
+ *           footer?: React.ReactNode }} props  plan from normalizePlan(); incidentId enables the live GPS;
  *   sheet = fills its (full-screen) parent: map takes the free height, the card sits at the bottom
  */
-export function DispatchTrackingView({ plan, variant = 'inline', footer = null }) {
+export function DispatchTrackingView({ plan, incidentId, citizenToken, variant = 'inline', footer = null }) {
   const o = plan.origin;
   const route = plan.route;
   const eta =
@@ -26,8 +36,28 @@ export function DispatchTrackingView({ plan, variant = 'inline', footer = null }
       ? new Date(plan.departedAt.getTime() + route.durationS * 1000)
       : null;
   const arrived = plan.status === 'ARRIVED' || plan.status === 'DONE';
-  const phone = (o.phone || '').replace(/[^0-9+]/g, '');
+  const enRoute = plan.status === 'EN_ROUTE';
+  const phone = telOf(o.phone);
   const sheet = variant === 'sheet';
+
+  const live = useLivePosition({
+    incidentId,
+    citizenToken,
+    enabled: enRoute,
+    initial: plan.lastPosition,
+  });
+  const position = live.position;
+  const now = useNow(enRoute, 2000);
+  const stale = !position?.receivedAt || now - position.receivedAt.getTime() > STALE_MS;
+  const gpsChip = !enRoute
+    ? null
+    : !position
+      ? 'Đang chờ tín hiệu GPS…'
+      : stale
+        ? 'Đang kết nối lại…'
+        : `GPS trực tiếp${position.speedKmh != null ? ` · ${Math.round(position.speedKmh)} km/h` : ''}`;
+  const tracker = plan.tracker;
+  const trackerTel = telOf(tracker?.phone) || phone;
 
   return (
     <div className={sheet ? styles.sheetBody : styles.wrap}>
@@ -36,10 +66,16 @@ export function DispatchTrackingView({ plan, variant = 'inline', footer = null }
           origin={o}
           destination={plan.destination}
           coords={route?.coords || null}
+          vehicle={position ? { ...position, stale } : null}
           className={sheet ? styles.mapFill : styles.mapInline}
           padding={MAP_PADDING}
         />
         <span className={styles.statusChip}>{plan.statusLabel}</span>
+        {gpsChip && (
+          <span className={`${styles.gpsChip} ${position && !stale ? styles.gpsLive : styles.gpsWait}`}>
+            {gpsChip}
+          </span>
+        )}
       </div>
 
       <div className={sheet ? styles.sheetCard : styles.card}>
@@ -62,13 +98,32 @@ export function DispatchTrackingView({ plan, variant = 'inline', footer = null }
         </div>
         {!arrived && <div className={styles.delay}>{DELAY_NOTE}</div>}
 
+        {enRoute && incidentId && (live.simulation || plan.simulation) && (
+          <SimulateControl incidentId={incidentId} simulation={live.simulation || plan.simulation} />
+        )}
+
+        {tracker && (
+          <div className={styles.tracker}>
+            <div className={styles.unitMain}>
+              <div className={styles.trackerLabel}>Lực lượng phụ trách</div>
+              <div className={styles.unitName}>{tracker.fullName}</div>
+              {tracker.badgeNumber && <div className={styles.unitSub}>Số hiệu {tracker.badgeNumber}</div>}
+            </div>
+            {trackerTel && (
+              <a className={styles.callBtn} href={`tel:${trackerTel}`} title={`Gọi ${tracker.fullName}`}>
+                Gọi
+              </a>
+            )}
+          </div>
+        )}
+
         <div className={styles.unit}>
           <img className={styles.unitIcon} src={STATION_ICON[o.agency] || STATION_ICON.police} alt="" />
           <div className={styles.unitMain}>
             <div className={styles.unitName}>{o.name}</div>
             <div className={styles.unitSub}>Xuất phát từ: {o.address || 'Trụ sở đơn vị'}</div>
           </div>
-          {phone && (
+          {phone && !tracker && (
             <a className={styles.callBtn} href={`tel:${phone}`} title={`Gọi ${o.phone}`}>
               Gọi
             </a>
@@ -83,6 +138,55 @@ export function DispatchTrackingView({ plan, variant = 'inline', footer = null }
         )}
         {footer}
       </div>
+    </div>
+  );
+}
+
+/**
+ * DEMO ONLY: "Mô phỏng di chuyển" (officers, while the "Ca demo" switch is on): the BE plays the field
+ * officer's phone and drives along the route, one point every 5 s, so the live tracking can be tried
+ * without going outside. The trip status is untouched: "Tới nơi" is still pressed by hand.
+ */
+function SimulateControl({ incidentId, simulation }) {
+  const toast = useToast();
+  const [busy, setBusy] = useState(false);
+  // value set by the last click, until the next poll brings the BE's own state
+  const [override, setOverride] = useState(null);
+  const [seen, setSeen] = useState(simulation);
+  if (seen !== simulation) {
+    setSeen(simulation);
+    setOverride(null);
+  }
+  const running = override ?? simulation.running;
+  if (!simulation.available && !running) return null;
+
+  const toggle = async () => {
+    setBusy(true);
+    try {
+      const plan = running ? await stopSimulation(incidentId) : await startSimulation(incidentId);
+      setOverride(!!plan?.simulation?.running);
+      if (!running) toast.show('Đang mô phỏng xe chạy tới hiện trường (5 giây / điểm)', { tone: 'info' });
+    } catch (err) {
+      toast.show(err.message, { tone: 'error' });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className={styles.simulate}>
+      <span className={styles.simulateText}>
+        <b>Ca demo:</b>{' '}
+        {running ? 'đang mô phỏng xe chạy theo tuyến…' : 'thử theo dõi xe không cần điện thoại'}
+      </span>
+      <button
+        type="button"
+        className={running ? styles.simulateStop : styles.simulateStart}
+        disabled={busy}
+        onClick={toggle}
+      >
+        {running ? '■ Dừng' : '▶ Mô phỏng di chuyển'}
+      </button>
     </div>
   );
 }

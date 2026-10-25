@@ -84,9 +84,9 @@ function Candidates({ incidentId, plan, onDone }) {
   }, [incidentId, reload]);
 
   const contact = async (o) => {
-    setBusyId(o.accountId);
+    setBusyId(o.memberId);
     try {
-      const next = await delegateDispatch(incidentId, o.accountId);
+      const next = await delegateDispatch(incidentId, o.memberId);
       toast.show(`Đã chuyển thông tin ca cho ${o.fullName}`, { tone: 'success' });
       onDone(next);
     } catch (err) {
@@ -125,7 +125,7 @@ function Candidates({ incidentId, plan, onDone }) {
       )}
       <ul className={styles.officers}>
         {list.items.map((o) => (
-          <li key={o.accountId} className={`${styles.officer} ${o.online ? '' : styles.offline}`}>
+          <li key={o.memberId} className={`${styles.officer} ${o.online ? '' : styles.offline}`}>
             <span className={styles.avatar} aria-hidden="true">
               {initials(o.fullName)}
               <i className={o.online ? styles.dotOn : styles.dotOff} />
@@ -159,7 +159,7 @@ function Candidates({ incidentId, plan, onDone }) {
               }
               onClick={() => contact(o)}
             >
-              {busyId === o.accountId ? 'Đang gửi...' : o.busy ? 'Đang trong ca' : 'Lập tức liên hệ'}
+              {busyId === o.memberId ? 'Đang gửi...' : o.busy ? 'Đang trong ca' : 'Lập tức liên hệ'}
             </button>
           </li>
         ))}

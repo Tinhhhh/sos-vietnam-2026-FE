@@ -220,6 +220,95 @@
   font-weight: 900;
 }
 
+/* Live GPS state, top right of the map (status chip is top left) */
+.gpsChip {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 2;
+  max-width: 55%;
+  padding: 5px 10px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 800;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+}
+
+.gpsLive {
+  background: rgba(37, 99, 235, 0.94);
+  color: #fff;
+}
+
+.gpsWait {
+  background: rgba(146, 64, 14, 0.94);
+  color: #fef3c7;
+}
+
+/* Demo only: "Mô phỏng di chuyển" bar */
+.simulate {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 8px 10px;
+  border: 1px dashed rgba(168, 85, 247, 0.55);
+  border-radius: 10px;
+  background: rgba(88, 28, 135, 0.18);
+}
+
+.simulateText {
+  font-size: 12.5px;
+  color: #e9d5ff;
+}
+
+.simulateStart,
+.simulateStop {
+  flex-shrink: 0;
+  padding: 7px 14px;
+  border: 0;
+  border-radius: 999px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  color: #fff;
+  cursor: pointer;
+}
+
+.simulateStart {
+  background: #7c3aed;
+}
+
+.simulateStop {
+  background: #b91c1c;
+}
+
+.simulateStart:disabled,
+.simulateStop:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+/* "Lực lượng phụ trách": the officer going to the scene (name, badge, call) */
+.tracker {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(148, 163, 184, 0.15);
+}
+
+.trackerLabel {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #60a5fa;
+}
+
 .unit {
   display: flex;
   align-items: center;

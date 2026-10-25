@@ -1,7 +1,9 @@
 /**
  * AuthContext + AuthProvider
  *
- * Provides: { user, accessToken, loading, login, logout }
+ * Provides: { user, accessToken, loading, login, loginMember, logout }
+ * Unit accounts log in in two steps: login() returns { unitToken } (no session yet), then
+ * loginMember() with the chosen officer + PIN (or activation code) saves that officer's tokens.
  * user = data của GET /api/v1/auth/me (snake_case: full_name, role_name, agency_type, ...).
  * Persists tokens to localStorage (ACCESS_KEY / REFRESH_KEY).
  * Injects Authorization header into all axios requests via api-client interceptor.
@@ -10,7 +12,7 @@
  */
 import { createContext, useState, useEffect, useCallback, useRef } from 'react';
 import { api } from '@/lib/api-client';
-import { loginApi, logoutApi, getMeApi, refreshTokenApi } from './auth-api';
+import { loginApi, logoutApi, getMeApi, refreshTokenApi, pinLoginApi, activateMemberApi } from './auth-api';
 
 const ACCESS_KEY = 'sos_access_v2';
 const REFRESH_KEY = 'sos_refresh_v2';
@@ -18,7 +20,12 @@ const REFRESH_KEY = 'sos_refresh_v2';
 export const SESSION_ENDED_KEY = 'sos_session_ended';
 const SESSION_ENDED_MSG =
   'Phiên đăng nhập đã kết thúc (đổi mật khẩu hoặc đăng xuất ở nơi khác). Vui lòng đăng nhập lại.';
-const AUTH_PATHS = ['/api/v1/auth/login', '/api/v1/auth/refresh-token', '/api/v1/auth/logout'];
+const AUTH_PATHS = [
+  '/api/v1/auth/login',
+  '/api/v1/auth/refresh-token',
+  '/api/v1/auth/logout',
+  '/api/v1/auth/unit/',
+];
 
 export const AuthContext = createContext(null);
 
@@ -121,13 +128,32 @@ export function AuthProvider({ children }) {
     setUser(null);
   }
 
-  const login = useCallback(async ({ email, password }) => {
-    const tokens = await loginApi({ email, password });
+  const startSession = useCallback(async (tokens) => {
     saveTokens(tokens.access_token, tokens.refresh_token);
     const me = await getMeApi();
     setUser(me);
-    return me;
+    return { me };
   }, []);
+
+  const login = useCallback(
+    async ({ email, password }) => {
+      const tokens = await loginApi({ email, password });
+      if (tokens.unit_token) return { unitToken: tokens.unit_token };
+      return startSession(tokens);
+    },
+    [startSession],
+  );
+
+  /** Step 2 for unit accounts: PIN, or activation code + new PIN when activationCode is given. */
+  const loginMember = useCallback(
+    async (unitToken, { memberId, pin, activationCode }) => {
+      const tokens = activationCode
+        ? await activateMemberApi(unitToken, { memberId, activationCode, pin })
+        : await pinLoginApi(unitToken, { memberId, pin });
+      return startSession(tokens);
+    },
+    [startSession],
+  );
 
   const logout = useCallback(async () => {
     try {
@@ -144,6 +170,7 @@ export function AuthProvider({ children }) {
     loading,
     isAuthenticated: !!accessToken && !!user,
     login,
+    loginMember,
     logout,
   };
 

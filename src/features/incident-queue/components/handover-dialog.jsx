@@ -9,7 +9,7 @@ import { getHandoverCandidates } from '../api/incidents';
  * officer is holding. Busy officers (already holding one) are listed but disabled:
  * an officer holds at most one incident.
  *
- * @param {{ incident: object|null, onClose: () => void, onConfirm: (toAccountId: string, note: string) => Promise<void> }} props
+ * @param {{ incident: object|null, onClose: () => void, onConfirm: (toMemberId: string, note: string) => Promise<void> }} props
  */
 const MIN_REASON = 5;
 
@@ -65,15 +65,15 @@ export function HandoverDialog({ incident, onClose, onConfirm }) {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 260, overflowY: 'auto' }}>
           {state.candidates.map((c) => (
             <label
-              key={c.accountId}
+              key={c.memberId}
               style={{
                 display: 'flex',
                 alignItems: 'center',
                 gap: 10,
                 padding: '8px 10px',
                 borderRadius: 8,
-                border: `1px solid ${chosen === c.accountId ? '#38bdf8' : 'rgba(255,255,255,0.12)'}`,
-                background: chosen === c.accountId ? 'rgba(56,189,248,0.12)' : 'rgba(15,23,42,0.6)',
+                border: `1px solid ${chosen === c.memberId ? '#38bdf8' : 'rgba(255,255,255,0.12)'}`,
+                background: chosen === c.memberId ? 'rgba(56,189,248,0.12)' : 'rgba(15,23,42,0.6)',
                 opacity: c.busy ? 0.5 : 1,
                 cursor: c.busy ? 'not-allowed' : 'pointer',
               }}
@@ -81,10 +81,10 @@ export function HandoverDialog({ incident, onClose, onConfirm }) {
               <input
                 type="radio"
                 name="handover-to"
-                value={c.accountId}
+                value={c.memberId}
                 disabled={c.busy}
-                checked={chosen === c.accountId}
-                onChange={() => setChosen(c.accountId)}
+                checked={chosen === c.memberId}
+                onChange={() => setChosen(c.memberId)}
               />
               <span style={{ flex: 1, fontSize: 13, fontWeight: 700, color: '#f1f5f9' }}>{c.fullName}</span>
               <span style={{ fontSize: 11, color: c.online ? '#34d399' : '#64748b' }}>

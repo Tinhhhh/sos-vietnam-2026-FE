@@ -2,36 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router';
 
 import { createAccount, getProvinces, getWardsOfProvince } from '../api/accounts';
+import { AGENCIES } from '../data/agencies';
 import styles from './create-account.module.css';
-
-// Mirrors be-v2 AgencyType.levels / levelLabel
-const AGENCIES = [
-  {
-    value: 'POLICE',
-    label: 'Công an',
-    levels: [
-      ['WARD', 'Công an xã/phường'],
-      ['PROVINCE', 'Công an tỉnh/TP'],
-    ],
-  },
-  {
-    value: 'CSGT',
-    label: 'Cảnh sát giao thông',
-    levels: [
-      ['WARD', 'Cấp Đội'],
-      ['PROVINCE', 'Cấp Phòng'],
-    ],
-  },
-  {
-    value: 'FIRE',
-    label: 'Cảnh sát PCCC & CNCH',
-    levels: [
-      ['WARD', 'Cấp Đội'],
-      ['PROVINCE', 'Cấp Phòng'],
-    ],
-  },
-  { value: 'HOSPITAL', label: 'Y tế - Cấp cứu 115', levels: [['PROVINCE', 'Cấp Tỉnh/TP']] },
-];
 
 const EMPTY = {
   role_name: 'OFFICER',
@@ -235,6 +207,18 @@ export function CreateAccountPage({ backHref }) {
             <dd>{created.full_address || '—'}</dd>
             <dt>Điện thoại</dt>
             <dd>{created.phone || '—'}</dd>
+            {created.activation_code && (
+              <>
+                <dt>Mã kích hoạt</dt>
+                <dd>
+                  <strong style={{ fontSize: 18, letterSpacing: 3 }}>{created.activation_code}</strong>
+                  <div className={styles.hint} style={{ margin: '4px 0 0' }}>
+                    Chỉ hiện một lần, hết hạn sau 72 giờ. Người được tạo là chỉ huy của đơn vị: đăng nhập bằng
+                    email + mật khẩu đơn vị, chọn tên mình, nhập mã này rồi tự đặt PIN.
+                  </div>
+                </dd>
+              </>
+            )}
           </dl>
           <p className={styles.hint}>
             Gửi mật khẩu ban đầu cho cán bộ qua kênh riêng, nhắc họ đổi sau khi đăng nhập.

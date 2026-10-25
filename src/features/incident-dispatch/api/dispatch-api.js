@@ -4,7 +4,7 @@
  *   GET /api/v1/incidents/{id}/dispatch-plan   officer JWT, or the citizen with header X-SOS-Access-Token
  *       -> data: <plan> | null (no starting station chosen yet)
  *   GET  .../dispatch-plan/candidates          officers of the chosen ward station's unit (step 2)
- *   POST .../dispatch-plan/delegate { account_id }   "Lập tức liên hệ": hand it to that officer
+ *   POST .../dispatch-plan/delegate { member_id }   "Lập tức liên hệ": hand it to that officer
  *   POST .../dispatch-plan/withdraw   delegating officer takes back an unanswered delegation
  *   POST .../dispatch-plan/accept | reject { reason } | depart   the assigned (ward) officer
  *   POST .../dispatch-plan/confirm   step 4 "đã xử lý xong" (unit on site JWT, or the citizen token)
@@ -34,6 +34,21 @@ const point = (p) =>
     ? { lat: p.latitude, lng: p.longitude, address: p.address || '', source: p.source }
     : null;
 const toDate = (v) => (v ? new Date(v) : null);
+
+/*
+ * last_position (only while EN_ROUTE): latest Traccar GPS point of the field officer, kept in the BE's RAM
+ *   { latitude, longitude, speed_kmh, heading, accuracy_m, fix_time, received_at }
+ */
+function livePosition(p) {
+  if (!p || p.latitude == null || p.longitude == null) return null;
+  return {
+    lat: p.latitude,
+    lng: p.longitude,
+    speedKmh: p.speed_kmh ?? null,
+    heading: p.heading ?? null,
+    receivedAt: toDate(p.received_at),
+  };
+}
 
 export function normalizePlan(raw) {
   if (!raw) return null;
@@ -67,10 +82,23 @@ export function normalizePlan(raw) {
       : null,
     assignedTo: raw.assigned_to
       ? {
-          accountId: raw.assigned_to.account_id,
+          memberId: raw.assigned_to.member_id,
           fullName: raw.assigned_to.full_name,
           phone: raw.assigned_to.phone || '',
         }
+      : null,
+    // field officer (delegated officer, else the dispatching one): name, badge (= Traccar device id), phone
+    tracker: raw.tracker
+      ? {
+          fullName: raw.tracker.full_name,
+          phone: raw.tracker.phone || '',
+          badgeNumber: raw.tracker.badge_number || '',
+        }
+      : null,
+    lastPosition: livePosition(raw.last_position),
+    // officers only (null for the citizen): demo "Mô phỏng di chuyển" button
+    simulation: raw.simulation
+      ? { available: !!raw.simulation.available, running: !!raw.simulation.running }
       : null,
     rejectReason: raw.reject_reason || null,
     officerConfirmedAt: toDate(raw.officer_confirmed_at),
@@ -80,6 +108,25 @@ export function normalizePlan(raw) {
     departedAt: toDate(raw.departed_at),
     arrivedAt: toDate(raw.arrived_at),
   };
+}
+
+/*
+ * DEMO ONLY ("Ca demo" switch on, trip EN_ROUTE, field officer has a badge):
+ *   POST /dispatch-plan/simulate       -> the BE sends a fake GPS point every 5 s along the route (via Traccar on
+ *                                         the VPS), stopping 30 m before the scene; 403 / 409 otherwise
+ *   POST /dispatch-plan/simulate/stop
+ * Both return the plan (simulation.running).
+ */
+export async function startSimulation(incidentId) {
+  const body = await api.post(`/api/v1/incidents/${encodeURIComponent(incidentId)}/dispatch-plan/simulate`);
+  return normalizePlan(body.data);
+}
+
+export async function stopSimulation(incidentId) {
+  const body = await api.post(
+    `/api/v1/incidents/${encodeURIComponent(incidentId)}/dispatch-plan/simulate/stop`,
+  );
+  return normalizePlan(body.data);
 }
 
 /** @param {{ citizenToken?: string }} [opts] the citizen's tracking screen passes its access token */
@@ -122,7 +169,7 @@ const planPath = (id, tail = '') => `/api/v1/incidents/${encodeURIComponent(id)}
 export async function getDelegationCandidates(incidentId) {
   const body = await api.get(planPath(incidentId, '/candidates'));
   return (body.data || []).map((o) => ({
-    accountId: o.account_id,
+    memberId: o.member_id,
     fullName: o.full_name,
     email: o.email,
     phone: o.phone || '',
@@ -136,8 +183,8 @@ export async function getDelegationCandidates(incidentId) {
   }));
 }
 
-export async function delegateDispatch(incidentId, accountId) {
-  const body = await api.post(planPath(incidentId, '/delegate'), { account_id: accountId });
+export async function delegateDispatch(incidentId, memberId) {
+  const body = await api.post(planPath(incidentId, '/delegate'), { member_id: memberId });
   return normalizePlan(body.data);
 }
 

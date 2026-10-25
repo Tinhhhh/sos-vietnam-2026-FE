@@ -52,6 +52,12 @@ const router = createBrowserRouter([
         }),
       },
       {
+        path: 'unit',
+        lazy: async () => ({
+          Component: (await import('./routes/officer/officer-unit')).OfficerUnitRoute,
+        }),
+      },
+      {
         path: 'accounts/new',
         lazy: async () => ({
           Component: (await import('./routes/officer/officer-accounts-new')).OfficerAccountsNewRoute,

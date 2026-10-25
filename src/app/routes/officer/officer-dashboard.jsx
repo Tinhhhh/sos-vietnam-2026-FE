@@ -1,8 +1,9 @@
 /**
  * /officer/dashboard — officer console after login (national dispatch layout).
- * Header, left rail (home, ward officer status, settings, logout), action tiles that open the
- * console windows (queue, history, directories, statistics), and the stage: the command map,
- * or during a video call the call in the main panel with the map as the GPS widget on the right.
+ * Header, left rail (bottom tab bar on phones) with every console tool: map, incident queue (red
+ * count dot), the case being dispatched, directories, statistics, unit GPS, settings, logout.
+ * History has its own rail button (red dot = newly closed cases); officer status and profile live in Settings. The stage: the command map, or
+ * during a video call the call in the main panel with the map as the GPS widget on the right.
  */
 import '@/styles/officer-theme.css';
 
@@ -10,7 +11,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
 
 import {
-  ActionTile,
   ConsoleWindow,
   OfficerLayout,
   RailButton,
@@ -19,7 +19,7 @@ import {
 import { SvgIcon } from '@/components/ui/svg-icon/svg-icon';
 import { useToast } from '@/components/ui/toast/toast-context';
 import { paths } from '@/config/paths';
-import { ChangePasswordDialog, OfficerInfoPanel, buildOfficerProfile, useAuth } from '@/features/auth';
+import { ChangePasswordDialog, ChangePinDialog, buildOfficerProfile, useAuth } from '@/features/auth';
 import { CommandMap, ServiceDirectoryPanel, StationDirectory, useStations } from '@/features/command-map';
 import { CallMapCard, IncomingCallDialog, OfficerCallView, useOfficerCall } from '@/features/incident-call';
 import { DelegationControls, DispatchConfirmDialog, DispatchWindow } from '@/features/incident-dispatch';
@@ -35,9 +35,12 @@ import {
   playIncidentAlert,
   stopIncidentAlert,
   unlockIncidentAlertAudio,
+  useHistoryUnseen,
   useIncidentQueue,
 } from '@/features/incident-queue';
-import { OfficerHeader, SettingsMenu } from '@/features/officer-header';
+import { OfficerHeader } from '@/features/officer-header';
+
+import { OfficerSettingsDialog } from './officer-settings-dialog';
 
 const LATER = {
   incidents: 'Xoá / xuất danh sách sự cố thuộc module Lịch sử & Thống kê (làm sau).',
@@ -57,6 +60,13 @@ export function OfficerDashboardRoute() {
   const [selectedIncidentId, setSelectedIncidentId] = useState(null);
   const [detailId, setDetailId] = useState(null); // "Chi tiết" box
   const [passwordOpen, setPasswordOpen] = useState(false);
+  const [pinOpen, setPinOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  // stable callbacks: the settings window memoizes its sections on them
+  const closeSettings = useCallback(() => setSettingsOpen(false), []);
+  const openPassword = useCallback(() => setPasswordOpen(true), []);
+  const openPin = useCallback(() => setPinOpen(true), []);
+  const openCreateAccount = useCallback(() => navigate(paths.officer.newAccount.getHref()), [navigate]);
   const [dispatchConfirm, setDispatchConfirm] = useState(null); // incident waiting for "Xác nhận điều động"
   const [dispatchBusy, setDispatchBusy] = useState(false);
   const [dispatchId, setDispatchId] = useState(null); // dispatch window
@@ -92,6 +102,12 @@ export function OfficerDashboardRoute() {
     },
   });
   const pendingCount = queue.incidents.filter((i) => i.status === 'PENDING' && i.canHandle).length;
+  // Red dot on "Lịch sử": cases closed since this officer last opened it (recount when a case leaves the queue)
+  const historyUnseen = useHistoryUnseen({
+    who: user?.member?.member_id || user?.email || null,
+    open: openWindow === 'history',
+    closedSignal: queue.incidents.map((i) => i.id).join(','),
+  });
 
   // Video call with the citizen (one at a time). Calling from a card claims the incident first.
   const phone = useOfficerCall({ getToken: () => tokenRef.current });
@@ -147,9 +163,15 @@ export function OfficerDashboardRoute() {
   const dispatchIncident = dispatchId ? queue.incidents.find((i) => i.id === dispatchId) || null : null;
 
   const later = (key) => () => toast.show(LATER[key], { tone: 'info' });
+  const historyLater = useCallback(() => toast.show(LATER.incidents, { tone: 'info' }), [toast]);
   const toggleWindow = (key) => setOpenWindow((cur) => (cur === key ? null : key));
   const closeWindow = useCallback(() => setOpenWindow(null), []);
+  // Phones: a window covers the whole stage, so map tools close it first to show the map
+  const showMap = () => {
+    if (window.matchMedia('(max-width: 992px)').matches) setOpenWindow(null);
+  };
 
+  const holding = queue.incidents.find((i) => i.heldByMe) || null;
   const windows = {
     incidents: {
       title: `Hàng đợi sự cố (${queue.incidents.length})`,
@@ -180,15 +202,28 @@ export function OfficerDashboardRoute() {
     },
     history: {
       title: 'Lịch sử sự cố',
-      icon: <SvgIcon name="file" color="amber" />,
+      icon: <SvgIcon name="clock" color="amber" />,
       body: (
         <IncidentHistoryPanel
           agency={officer.agency}
-          onExportExcel={later('incidents')}
-          onClear={later('incidents')}
+          onExportExcel={historyLater}
+          onClear={historyLater}
           onOpenDetail={setDetailId}
           onOpenDocument={setReportId}
           refreshKey={historyKey}
+        />
+      ),
+    },
+    // shortcut to Settings → "Trạng thái cán bộ": who is online / holding a case, hand over
+    members: {
+      title: 'Thành viên đơn vị',
+      icon: <SvgIcon name="users" color="blue" />,
+      body: (
+        <OfficerStatusPanel
+          holding={holding}
+          onChange={queue.upsert}
+          isAdmin={officer.isAdmin}
+          provinceScope={officer.level === 'province' ? user?.province_id : null}
         />
       ),
     },
@@ -210,21 +245,6 @@ export function OfficerDashboardRoute() {
       icon: <SvgIcon name="car" color="amber" />,
       body: <ServiceDirectoryPanel kind="enterprises" onAdminAction={later('directory')} />,
     },
-    officers: {
-      title: 'Cán bộ đơn vị',
-      icon: <SvgIcon name="users" color="blue" />,
-      body: (
-        <OfficerStatusPanel
-          holding={queue.incidents.find((i) => i.heldByMe) || null}
-          onChange={queue.upsert}
-        />
-      ),
-    },
-    profile: {
-      title: 'Hồ sơ cán bộ',
-      icon: <SvgIcon name="user" color="blue" />,
-      body: <OfficerInfoPanel user={user} unitName={officer.unitName} />,
-    },
     hospitals: {
       title: 'Bệnh viện & cấp cứu 115',
       icon: <SvgIcon name="building" color="emerald" />,
@@ -236,113 +256,103 @@ export function OfficerDashboardRoute() {
   // Shortcut back into the dispatch window of the case I am dispatching (the queue card may be far down)
   const dispatching = queue.incidents.find((i) => i.heldByMe && i.status === 'RESOLVING') || null;
 
-  const actions = (
+  // Left rail (bottom tab bar on phones): every console tool. Profile and security are in Settings;
+  // "Thành viên" is a shortcut to the officer status that Settings also lists. The queue / history
+  // buttons carry a red count (cases waiting for me / newly closed), like the bell.
+  const rail = (
     <>
+      <RailButton
+        icon="home"
+        label="Chỉ huy"
+        title="Bàn chỉ huy: đóng cửa sổ đang mở, xem bản đồ"
+        active={!openWindow}
+        onClick={closeWindow}
+        desktopOnly
+      />
+      <RailButton
+        icon="alert"
+        label="Sự cố"
+        title={
+          pendingCount > 0
+            ? `Hàng đợi sự cố: ${pendingCount} ca chờ tiếp nhận`
+            : `Hàng đợi sự cố: ${queue.incidents.length} ca đang mở`
+        }
+        badge={pendingCount}
+        active={openWindow === 'incidents'}
+        onClick={() => toggleWindow('incidents')}
+      />
+      <RailButton
+        icon="clock"
+        label="Lịch sử"
+        title={
+          historyUnseen > 0 ? `Lịch sử sự cố: ${historyUnseen} ca mới đóng` : 'Lịch sử sự cố: ca đã đóng'
+        }
+        badge={historyUnseen}
+        active={openWindow === 'history'}
+        onClick={() => toggleWindow('history')}
+      />
+      <RailButton
+        icon="users"
+        label="Thành viên"
+        title="Thành viên đơn vị: ai đang trực tuyến, ai đang giữ ca, giao ca"
+        active={openWindow === 'members'}
+        onClick={() => toggleWindow('members')}
+      />
       {dispatching && (
-        <ActionTile
+        <RailButton
           icon="car"
-          tone="green"
-          title="Ca đang điều động"
-          subtitle={`${dispatching.id} · mở lại`}
+          label="Điều động"
+          title={`Ca đang điều động ${dispatching.id}: mở lại cửa sổ điều động`}
           active={dispatchId === dispatching.id}
           onClick={() => openDispatch(dispatching)}
         />
       )}
-      <ActionTile
-        icon="alert"
-        tone="red"
-        title="Hàng đợi sự cố"
-        subtitle={
-          pendingCount > 0 ? `${pendingCount} ca chờ tiếp nhận` : `${queue.incidents.length} ca đang mở`
-        }
-        count={pendingCount}
-        active={openWindow === 'incidents'}
-        onClick={() => toggleWindow('incidents')}
-      />
-      <ActionTile
-        icon="file"
-        tone="amber"
-        title="Lịch sử"
-        subtitle="Ca đã điều phối"
-        active={openWindow === 'history'}
-        onClick={() => toggleWindow('history')}
-      />
-      <ActionTile
+      <RailButton
         icon="building"
-        tone="blue"
-        title={officer.stationsTabTitle}
-        subtitle="Danh bạ trụ sở"
+        label={officer.stationsTabTitle}
+        title={`${officer.stationsTabTitle}: danh bạ trụ sở`}
         active={openWindow === 'stations'}
         onClick={() => toggleWindow('stations')}
       />
       {officer.isAdmin && (
         <>
-          <ActionTile
+          <RailButton
             icon="car"
-            tone="orange"
-            title="Cứu hộ"
-            subtitle="Doanh nghiệp cứu hộ"
+            label="Cứu hộ"
+            title="Doanh nghiệp cứu hộ"
             active={openWindow === 'enterprises'}
             onClick={() => toggleWindow('enterprises')}
           />
-          <ActionTile
+          <RailButton
             icon="plus"
-            tone="green"
-            title="Bệnh viện"
-            subtitle="Cấp cứu 115"
+            label="Bệnh viện"
+            title="Bệnh viện & cấp cứu 115"
             active={openWindow === 'hospitals'}
             onClick={() => toggleWindow('hospitals')}
           />
         </>
       )}
-      <ActionTile
+      <RailButton
         icon="chart"
-        tone="purple"
-        title="Thống kê"
-        subtitle="Báo cáo đơn vị"
+        label="Thống kê"
+        title="Thống kê: báo cáo đơn vị"
         onClick={() => navigate(paths.officer.statistics.getHref())}
       />
-      <ActionTile
+      <RailButton
         icon="pin"
-        tone="cyan"
-        title="GPS đơn vị"
-        subtitle={officer.unitName}
-        onClick={() => mapApi.current?.focusUnit()}
-      />
-    </>
-  );
-
-  const rail = (
-    <>
-      <RailButton icon="home" label="Chỉ huy" title="Bàn chỉ huy" active />
-      <RailButton
-        icon="users"
-        label="Cán bộ"
-        title="Cán bộ của đơn vị: trực tuyến / ngoại tuyến / đang giữ ca, giao ca"
-        active={openWindow === 'officers'}
-        onClick={() => toggleWindow('officers')}
+        label="GPS"
+        title={`GPS đơn vị: ${officer.unitName}`}
+        onClick={() => {
+          showMap();
+          mapApi.current?.focusUnit();
+        }}
       />
       <RailButton
-        icon="user"
-        label="Hồ sơ"
-        title="Thông tin cán bộ: hồ sơ, đơn vị công tác"
-        active={openWindow === 'profile'}
-        onClick={() => toggleWindow('profile')}
-      />
-      <SettingsMenu
-        isAdmin={officer.isAdmin}
-        onOpenAdmin={() => navigate(paths.officer.newAccount.getHref())}
-        onChangePassword={() => setPasswordOpen(true)}
-        renderTrigger={({ ref, onClick, open }) => (
-          <RailButton
-            buttonRef={ref}
-            icon="gear"
-            label="Cài đặt"
-            title="Cài đặt hệ thống & quản trị"
-            active={open}
-            onClick={onClick}
-          />
-        )}
+        icon="gear"
+        label="Cài đặt"
+        title="Cài đặt: hồ sơ, bảo mật, cán bộ, quản trị"
+        active={settingsOpen}
+        onClick={() => setSettingsOpen(true)}
       />
       <RailSpacer />
       <RailButton icon="logout" label="Đăng xuất" title="Đăng xuất" tone="danger" onClick={logout} />
@@ -362,8 +372,6 @@ export function OfficerDashboardRoute() {
           />
         }
         rail={rail}
-        actions={actions}
-        actionsBadge={pendingCount}
         mapTitle={inCall ? 'Theo dõi GPS thời gian thực' : officer.unitName}
         mapTitlePrefix={inCall ? null : 'Bản đồ tác chiến · '}
         map={
@@ -413,12 +421,28 @@ export function OfficerDashboardRoute() {
         incidentId={detailId}
         onClose={() => setDetailId(null)}
         live={detailId ? queue.incidents.find((i) => i.id === detailId) || null : null}
-        holding={queue.incidents.find((i) => i.heldByMe) || null}
+        holding={holding}
         onChange={queue.upsert}
         onRequestDispatch={askDispatch}
         onOpenDispatch={openDispatch}
       />
+      <OfficerSettingsDialog
+        open={settingsOpen}
+        onClose={closeSettings}
+        user={user}
+        officer={officer}
+        onChangePassword={openPassword}
+        onChangePin={openPin}
+        onCreateAccount={openCreateAccount}
+        holding={holding}
+        onIncidentChange={queue.upsert}
+        onOpenDetail={setDetailId}
+        onOpenDocument={setReportId}
+        onHistoryAction={historyLater}
+        historyKey={historyKey}
+      />
       <ChangePasswordDialog open={passwordOpen} onClose={() => setPasswordOpen(false)} />
+      <ChangePinDialog open={pinOpen} onClose={() => setPinOpen(false)} />
       <DispatchConfirmDialog
         incident={dispatchConfirm}
         busy={dispatchBusy}

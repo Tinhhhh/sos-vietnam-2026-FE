@@ -193,7 +193,7 @@ function TrackingModal({ incident, onClose }) {
       title={<span className={styles.title}>Theo dõi lực lượng · Ca {incident.id}</span>}
     >
       {plan ? (
-        <DispatchTrackingView plan={plan} />
+        <DispatchTrackingView plan={plan} incidentId={incident.id} />
       ) : (
         <div className={styles.meta}>
           {status === 'error' ? 'Không tải được kế hoạch điều động.' : 'Đang tải...'}

@@ -20,6 +20,55 @@
   color: #34d399;
 }
 
+/* ADMIN unit picker: level, province, ward, force (wraps on narrow windows) */
+.filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 6px;
+}
+
+/* !important: legacy-global.css styles every select with !important (glass box, padding 11px 16px) */
+.select {
+  min-width: 0;
+  width: 100%;
+  padding: 7px 10px !important;
+  border: 1px solid rgba(148, 163, 184, 0.3) !important;
+  border-radius: 8px !important;
+  background: #0f172a !important;
+  box-shadow: none !important;
+  color: #e2e8f0 !important;
+  font: inherit;
+  font-size: 12.5px !important;
+}
+
+.select:focus {
+  outline: none;
+  border-color: #60a5fa !important;
+}
+
+.select:disabled {
+  opacity: 0.55;
+}
+
+.summaryActions {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.onlineToggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: #cbd5e1;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.onlineToggle input {
+  accent-color: #34d399;
+}
+
 .refresh {
   padding: 4px 10px;
   border: 1px solid rgba(148, 163, 184, 0.3);

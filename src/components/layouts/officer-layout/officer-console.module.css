@@ -1,4 +1,4 @@
-/* Officer console shell: header, left rail, action tiles, stage (map / call + GPS widget), windows. */
+/* Officer console shell: header, left rail (bottom tab bar on phones), stage (map / call + GPS widget), windows. */
 .console {
   --c-bg: #050a16;
   --c-panel: rgba(10, 17, 33, 0.92);
@@ -36,10 +36,13 @@
   padding: 10px 0;
   border-right: 1px solid var(--c-line);
   background: rgba(8, 14, 28, 0.6);
+  overflow-y: auto; /* short laptop screens: the admin rail scrolls instead of being cut */
+  scrollbar-width: none;
 }
 
 .railBtn {
   position: relative;
+  flex-shrink: 0;
   width: 52px;
   padding: 8px 0 6px;
   display: flex;
@@ -92,20 +95,41 @@
   max-width: 56px;
 }
 
+/* Red count dot on the icon's top-right corner, like the header bell */
 .railBadge {
   position: absolute;
-  top: 3px;
-  right: 6px;
-  min-width: 16px;
-  height: 16px;
+  top: 2px;
+  left: calc(50% + 1px);
+  min-width: 18px;
+  height: 18px;
   padding: 0 4px;
-  border-radius: 8px;
+  box-sizing: border-box;
+  border: 2px solid #08101f;
+  border-radius: 9px;
   background: #ef4444;
   color: #fff;
   font-size: 10px;
   font-style: normal;
   font-weight: 800;
-  line-height: 16px;
+  line-height: 14px;
+  text-align: center;
+  box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.6);
+  animation: railBadgePulse 1.8s ease-out infinite;
+}
+
+@keyframes railBadgePulse {
+  70% {
+    box-shadow: 0 0 0 6px rgba(239, 68, 68, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .railBadge {
+    animation: none;
+  }
 }
 
 .railSpacer {
@@ -121,210 +145,12 @@
   gap: 10px;
 }
 
-.actionsRow {
-  flex-shrink: 0;
-  display: flex;
-  align-items: stretch;
-  gap: 8px;
-}
-
-.actions {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  gap: 8px;
-  overflow-x: auto;
-  scrollbar-width: none;
-}
-
-.actionsToggle {
-  flex: 0 0 32px;
-  display: grid;
-  place-items: center;
-  border: 1px solid var(--c-line-strong);
-  border-radius: 10px;
-  background: rgba(8, 14, 28, 0.85);
-  color: var(--c-muted);
-  cursor: pointer;
-}
-
-/* Folded tile bar: one button on the map header, with the pending-case count */
+/* Right end of the map header (GPS badge during a call) */
 .panelEnd {
   display: flex;
   align-items: center;
   gap: 8px;
   flex-shrink: 0;
-}
-
-.actionsOpen {
-  display: inline-flex;
-  /* keep its own size on touch screens (global rule gives every button min-height 44px) */
-  min-height: 0;
-  align-items: center;
-  gap: 6px;
-  height: 28px;
-  padding: 0 10px;
-  border: 1px solid var(--c-line-strong);
-  border-radius: 8px;
-  background: rgba(8, 14, 28, 0.85);
-  color: #e2e8f0;
-  font-size: 12px;
-  font-weight: 700;
-  white-space: nowrap;
-  cursor: pointer;
-}
-
-.actionsOpen:hover {
-  border-color: var(--c-accent);
-  color: #fff;
-}
-
-.actionsOpenCount {
-  min-width: 18px;
-  height: 18px;
-  padding: 0 5px;
-  border-radius: 9px;
-  background: #ef4444;
-  color: #fff;
-  font-size: 11px;
-  font-style: normal;
-  font-weight: 800;
-  line-height: 18px;
-  text-align: center;
-}
-
-.actionsToggle:hover {
-  color: #fff;
-  border-color: var(--c-accent);
-}
-
-.actionsToggle:focus-visible {
-  outline: 2px solid var(--c-accent);
-  outline-offset: 2px;
-}
-
-.actions::-webkit-scrollbar {
-  display: none;
-}
-
-.tile {
-  --tone: #38bdf8;
-  --tone-bg: rgba(56, 189, 248, 0.1);
-  position: relative;
-  flex: 1 0 168px;
-  max-width: 260px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 12px;
-  border: 1px solid color-mix(in srgb, var(--tone) 55%, transparent);
-  border-radius: 10px;
-  background: linear-gradient(135deg, var(--tone-bg), rgba(8, 14, 28, 0.85));
-  color: var(--c-fg);
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-  transition:
-    transform 0.12s,
-    box-shadow 0.15s,
-    border-color 0.15s;
-}
-
-.tile:hover {
-  border-color: var(--tone);
-  box-shadow: 0 0 16px color-mix(in srgb, var(--tone) 30%, transparent);
-}
-
-.tile:focus-visible {
-  outline: 2px solid var(--tone);
-  outline-offset: 2px;
-}
-
-.tileActive {
-  border-color: var(--tone);
-  box-shadow:
-    0 0 0 1px var(--tone) inset,
-    0 0 18px color-mix(in srgb, var(--tone) 35%, transparent);
-}
-
-.tone_red {
-  --tone: #ef4444;
-  --tone-bg: rgba(239, 68, 68, 0.2);
-}
-.tone_amber {
-  --tone: #f59e0b;
-  --tone-bg: rgba(245, 158, 11, 0.16);
-}
-.tone_orange {
-  --tone: #fb923c;
-  --tone-bg: rgba(251, 146, 60, 0.16);
-}
-.tone_blue {
-  --tone: #3b82f6;
-  --tone-bg: rgba(59, 130, 246, 0.16);
-}
-.tone_cyan {
-  --tone: #22d3ee;
-  --tone-bg: rgba(34, 211, 238, 0.13);
-}
-.tone_purple {
-  --tone: #a78bfa;
-  --tone-bg: rgba(167, 139, 250, 0.15);
-}
-.tone_green {
-  --tone: #34d399;
-  --tone-bg: rgba(52, 211, 153, 0.13);
-}
-
-.tileIcon {
-  flex-shrink: 0;
-  width: 30px;
-  height: 30px;
-  display: grid;
-  place-items: center;
-  border-radius: 8px;
-  background: color-mix(in srgb, var(--tone) 22%, transparent);
-  color: var(--tone);
-}
-
-.tileText {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
-
-.tileTitle {
-  font-size: 12.5px;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.02em;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.tileSub {
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--tone);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.tileCount {
-  margin-left: auto;
-  min-width: 22px;
-  height: 22px;
-  padding: 0 6px;
-  border-radius: 11px;
-  background: var(--tone);
-  color: #fff;
-  font-size: 12px;
-  font-style: normal;
-  font-weight: 900;
-  line-height: 22px;
-  text-align: center;
 }
 
 /* ---- stage: map | call + GPS widget ----------------------------------- */
@@ -656,22 +482,50 @@
     gap: 8px;
   }
 
+  /* bottom tab bar: buttons share the width; more than fit (admin) scroll sideways */
   .rail {
     flex: 0 0 auto;
     flex-direction: row;
-    justify-content: space-around;
-    padding: 4px 0 calc(4px + env(safe-area-inset-bottom));
+    justify-content: space-between;
+    gap: 0;
+    padding: 4px 2px calc(4px + env(safe-area-inset-bottom));
     border-right: 0;
     border-top: 1px solid var(--c-line);
     margin: 0 -8px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+  }
+
+  .rail::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* at least as wide as its label, spare width shared (officer: 9 fit a 360px phone; admin: 11 scroll) */
+  .railBtn {
+    flex: 1 0 auto;
+    min-width: 34px;
+    width: auto;
+    padding: 8px 2px 6px;
+  }
+
+  .railActive {
+    box-shadow: inset 0 3px 0 var(--c-accent);
+  }
+
+  .railDesktopOnly {
+    display: none;
+  }
+
+  /* one line, so every tab has the same height ("Bệnh viện" wrapped) */
+  .railLabel {
+    max-width: none;
+    white-space: nowrap;
+    font-size: 9px;
   }
 
   .railSpacer {
     display: none;
-  }
-
-  .tile {
-    flex: 0 0 150px;
   }
 
   .stage.inCall {

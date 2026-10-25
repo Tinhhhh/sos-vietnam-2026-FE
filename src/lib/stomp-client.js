@@ -1,6 +1,7 @@
 import { Client } from '@stomp/stompjs';
 
 import { env } from '@/config/env';
+import { api } from '@/lib/api-client';
 
 /*
  * STOMP over a plain WebSocket to be-v2 (endpoint /ws-raw; dev: Vite proxies /ws*,
@@ -12,6 +13,8 @@ import { env } from '@/config/env';
  * refreshed token is used on reconnect.
  */
 const RECONNECT_DELAY_MS = 5000;
+/** BE closes an officer's socket with 1008 when the session ended (password changed elsewhere). */
+const POLICY_VIOLATION = 1008;
 
 function socketUrl() {
   // VITE_API_URL may point at another host in some builds; default is same origin.
@@ -48,7 +51,11 @@ export function connectStomp({ getToken, getHeaders, onConnect, onStatusChange }
       onStatusChange?.('live');
       onConnect(client);
     },
-    onWebSocketClose: () => onStatusChange?.('reconnecting'),
+    onWebSocketClose: (evt) => {
+      onStatusChange?.('reconnecting');
+      // any REST call now gets 401 -> the auth interceptor refreshes or sends the user to login
+      if (getToken && evt?.code === POLICY_VIOLATION) api.get('/api/v1/auth/me').catch(() => {});
+    },
     onStompError: () => onStatusChange?.('reconnecting'),
   });
   onStatusChange?.('connecting');
