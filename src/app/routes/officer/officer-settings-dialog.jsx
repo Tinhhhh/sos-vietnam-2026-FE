@@ -5,6 +5,7 @@
  *               account; change PIN: officer of a unit account)
  *   Sự cố     : closed-case history (documents, detail)
  *   Đơn vị    : officer status (online / holding a case, hand over), officers & duty officer (unit account)
+ *   Hệ thống  : demo incidents switch (every account: stop generating / hide [DEMO] cases)
  *   Quản trị  : create account, export accounts to Excel (ADMIN)
  * The old rail buttons "Cán bộ", "Hồ sơ" and the "Lịch sử" tile now live here.
  */
@@ -19,6 +20,7 @@ import {
 } from '@/components/ui/settings-dialog/settings-dialog';
 import { ExportAccountsPanel } from '@/features/account-admin';
 import { OfficerInfoPanel } from '@/features/auth';
+import { DemoModePanel } from '@/features/demo-mode';
 import { IncidentHistoryPanel, OfficerStatusPanel } from '@/features/incident-queue';
 import { UnitSettingsPage } from '@/features/unit-settings';
 
@@ -174,6 +176,20 @@ export function OfficerSettingsDialog({
         ],
       },
     ];
+
+    list.push({
+      label: 'Hệ thống',
+      items: [
+        {
+          id: 'demo',
+          icon: 'eyeOff',
+          color: 'amber',
+          label: 'Ca demo',
+          keywords: 'demo thử nghiệm test ẩn tắt tự sinh ca giả',
+          render: () => <DemoModePanel />,
+        },
+      ],
+    });
 
     if (officer.isAdmin) {
       list.push({
