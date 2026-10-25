@@ -1,5 +1,9 @@
+import { useState } from 'react';
+
+import { useToast } from '@/components/ui/toast/toast-context';
 import { useNow } from '@/hooks/use-now';
 
+import { startSimulation, stopSimulation } from '../api/dispatch-api';
 import { formatDistance, formatDuration } from '../api/routing';
 import { useLivePosition } from '../hooks/use-live-position';
 import { STATION_ICON } from '../utils/origin-candidates';
@@ -36,12 +40,13 @@ export function DispatchTrackingView({ plan, incidentId, citizenToken, variant =
   const phone = telOf(o.phone);
   const sheet = variant === 'sheet';
 
-  const position = useLivePosition({
+  const live = useLivePosition({
     incidentId,
     citizenToken,
     enabled: enRoute,
     initial: plan.lastPosition,
   });
+  const position = live.position;
   const now = useNow(enRoute, 2000);
   const stale = !position?.receivedAt || now - position.receivedAt.getTime() > STALE_MS;
   const gpsChip = !enRoute
@@ -93,6 +98,10 @@ export function DispatchTrackingView({ plan, incidentId, citizenToken, variant =
         </div>
         {!arrived && <div className={styles.delay}>{DELAY_NOTE}</div>}
 
+        {enRoute && incidentId && (live.simulation || plan.simulation) && (
+          <SimulateControl incidentId={incidentId} simulation={live.simulation || plan.simulation} />
+        )}
+
         {tracker && (
           <div className={styles.tracker}>
             <div className={styles.unitMain}>
@@ -129,6 +138,55 @@ export function DispatchTrackingView({ plan, incidentId, citizenToken, variant =
         )}
         {footer}
       </div>
+    </div>
+  );
+}
+
+/**
+ * DEMO ONLY: "Mô phỏng di chuyển" (officers, while the "Ca demo" switch is on): the BE plays the field
+ * officer's phone and drives along the route, one point every 5 s, so the live tracking can be tried
+ * without going outside. The trip status is untouched: "Tới nơi" is still pressed by hand.
+ */
+function SimulateControl({ incidentId, simulation }) {
+  const toast = useToast();
+  const [busy, setBusy] = useState(false);
+  // value set by the last click, until the next poll brings the BE's own state
+  const [override, setOverride] = useState(null);
+  const [seen, setSeen] = useState(simulation);
+  if (seen !== simulation) {
+    setSeen(simulation);
+    setOverride(null);
+  }
+  const running = override ?? simulation.running;
+  if (!simulation.available && !running) return null;
+
+  const toggle = async () => {
+    setBusy(true);
+    try {
+      const plan = running ? await stopSimulation(incidentId) : await startSimulation(incidentId);
+      setOverride(!!plan?.simulation?.running);
+      if (!running) toast.show('Đang mô phỏng xe chạy tới hiện trường (5 giây / điểm)', { tone: 'info' });
+    } catch (err) {
+      toast.show(err.message, { tone: 'error' });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className={styles.simulate}>
+      <span className={styles.simulateText}>
+        <b>Ca demo:</b>{' '}
+        {running ? 'đang mô phỏng xe chạy theo tuyến…' : 'thử theo dõi xe không cần điện thoại'}
+      </span>
+      <button
+        type="button"
+        className={running ? styles.simulateStop : styles.simulateStart}
+        disabled={busy}
+        onClick={toggle}
+      >
+        {running ? '■ Dừng' : '▶ Mô phỏng di chuyển'}
+      </button>
     </div>
   );
 }

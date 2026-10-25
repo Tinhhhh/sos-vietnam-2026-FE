@@ -12,10 +12,11 @@ const POLL_MS = 5000;
  *
  * @param {{ incidentId?: string, citizenToken?: string, enabled: boolean, initial?: object|null }} options
  *   initial = plan.lastPosition already loaded with the plan
- * @returns {object|null} { lat, lng, speedKmh, heading, receivedAt } or null
+ * @returns {{ position: object|null, simulation: object|null }} position = { lat, lng, speedKmh, heading,
+ *   receivedAt }; simulation = latest polled plan.simulation (officers only), null until the first poll
  */
 export function useLivePosition({ incidentId, citizenToken, enabled, initial = null }) {
-  const [polled, setPolled] = useState(null);
+  const [polled, setPolled] = useState({ position: null, simulation: null });
   const active = enabled && !!incidentId;
 
   useEffect(() => {
@@ -24,7 +25,8 @@ export function useLivePosition({ incidentId, citizenToken, enabled, initial = n
     const tick = () =>
       getDispatchPlan(incidentId, { citizenToken })
         .then((plan) => {
-          if (alive && plan?.lastPosition) setPolled(plan.lastPosition);
+          if (!alive || !plan) return;
+          setPolled((p) => ({ position: plan.lastPosition || p.position, simulation: plan.simulation }));
         })
         .catch(() => {
           // offline / server busy: the view shows "Đang kết nối lại…" once the point gets old
@@ -37,8 +39,9 @@ export function useLivePosition({ incidentId, citizenToken, enabled, initial = n
     };
   }, [active, incidentId, citizenToken]);
 
-  if (!active) return null;
+  if (!active) return { position: null, simulation: null };
   // whichever is newer: the point loaded with the plan or the last polled one
-  if (polled && (!initial || polled.receivedAt >= initial.receivedAt)) return polled;
-  return initial || polled;
+  const p = polled.position;
+  const position = p && (!initial || p.receivedAt >= initial.receivedAt) ? p : initial || p;
+  return { position, simulation: polled.simulation };
 }

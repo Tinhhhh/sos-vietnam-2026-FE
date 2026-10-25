@@ -96,6 +96,10 @@ export function normalizePlan(raw) {
         }
       : null,
     lastPosition: livePosition(raw.last_position),
+    // officers only (null for the citizen): demo "Mô phỏng di chuyển" button
+    simulation: raw.simulation
+      ? { available: !!raw.simulation.available, running: !!raw.simulation.running }
+      : null,
     rejectReason: raw.reject_reason || null,
     officerConfirmedAt: toDate(raw.officer_confirmed_at),
     citizenConfirmedAt: toDate(raw.citizen_confirmed_at),
@@ -104,6 +108,25 @@ export function normalizePlan(raw) {
     departedAt: toDate(raw.departed_at),
     arrivedAt: toDate(raw.arrived_at),
   };
+}
+
+/*
+ * DEMO ONLY ("Ca demo" switch on, trip EN_ROUTE, field officer has a badge):
+ *   POST /dispatch-plan/simulate       -> the BE sends a fake GPS point every 5 s along the route (via Traccar on
+ *                                         the VPS), stopping 30 m before the scene; 403 / 409 otherwise
+ *   POST /dispatch-plan/simulate/stop
+ * Both return the plan (simulation.running).
+ */
+export async function startSimulation(incidentId) {
+  const body = await api.post(`/api/v1/incidents/${encodeURIComponent(incidentId)}/dispatch-plan/simulate`);
+  return normalizePlan(body.data);
+}
+
+export async function stopSimulation(incidentId) {
+  const body = await api.post(
+    `/api/v1/incidents/${encodeURIComponent(incidentId)}/dispatch-plan/simulate/stop`,
+  );
+  return normalizePlan(body.data);
 }
 
 /** @param {{ citizenToken?: string }} [opts] the citizen's tracking screen passes its access token */
