@@ -36,20 +36,30 @@ function sosEl() {
   return el;
 }
 
+/** Moving field officer: blue dot with a heading arrow (rotated by setRotation, not CSS). */
+function vehicleEl() {
+  const el = document.createElement('div');
+  el.className = styles.vehiclePin;
+  el.innerHTML = '<i></i><span></span>';
+  return el;
+}
+
 /**
  * Map of one dispatch: the station (its own emblem), the SOS point and the road route between
  * them (green line like a ride-hailing app). Fits both points whenever they change.
+ * `vehicle` (live GPS of the field officer) only moves its marker: the view is not re-fitted on every point.
  *
  * The map follows its box: when the box changes size (modal animation, phone rotation, bottom sheet)
  * it redraws and fits the route again, so tiles never stay stretched.
  *
  * @param {{ origin?: {lat,lng,agency}|null, destination?: {lat,lng}|null, coords?: number[][]|null,
+ *           vehicle?: {lat,lng,heading?,stale?}|null,
  *           className?: string, padding?: number | object }} props  className replaces the default fixed height
  */
-export function RouteMap({ origin, destination, coords, className, padding = 48 }) {
+export function RouteMap({ origin, destination, coords, vehicle = null, className, padding = 48 }) {
   const containerRef = useRef(null);
   const mapRef = useRef(null);
-  const markersRef = useRef({ origin: null, dest: null });
+  const markersRef = useRef({ origin: null, dest: null, vehicle: null });
   const boundsRef = useRef(null); // last fitted area, re-fitted after a resize
   const paddingRef = useRef(padding);
   useEffect(() => {
@@ -87,6 +97,7 @@ export function RouteMap({ origin, destination, coords, className, padding = 48 
     return () => {
       markers.origin = null;
       markers.dest = null;
+      markers.vehicle = null;
       map.remove();
       mapRef.current = null;
     };
@@ -135,6 +146,31 @@ export function RouteMap({ origin, destination, coords, className, padding = 48 
     else map.once('route-ready', draw);
     return () => map.off('route-ready', draw);
   }, [origin, destination, coords]);
+
+  const vLat = vehicle?.lat;
+  const vLng = vehicle?.lng;
+  const vHeading = vehicle?.heading;
+  const vStale = !!vehicle?.stale;
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    const markers = markersRef.current;
+    if (vLat == null || vLng == null) {
+      markers.vehicle?.remove();
+      markers.vehicle = null;
+      return;
+    }
+    if (!markers.vehicle) {
+      markers.vehicle = new Marker({ element: vehicleEl(), anchor: 'center', rotationAlignment: 'map' })
+        .setLngLat([vLng, vLat])
+        .addTo(map);
+    } else {
+      markers.vehicle.setLngLat([vLng, vLat]);
+    }
+    markers.vehicle.setRotation(vHeading ?? 0);
+    markers.vehicle.getElement().classList.toggle(styles.vehicleStale, vStale);
+    markers.vehicle.getElement().classList.toggle(styles.vehicleNoHeading, vHeading == null);
+  }, [vLat, vLng, vHeading, vStale]);
 
   useEffect(() => {
     const el = containerRef.current;

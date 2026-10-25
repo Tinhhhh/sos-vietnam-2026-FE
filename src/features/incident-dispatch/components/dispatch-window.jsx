@@ -328,7 +328,7 @@ function DispatchWindowBody({
       ) : (
         <>
           {step >= 3 ? (
-            <DispatchTrackingView plan={draft} />
+            <DispatchTrackingView plan={draft} incidentId={incident.id} />
           ) : (
             <div className={delegationStyles.panel}>
               <ChosenSummary

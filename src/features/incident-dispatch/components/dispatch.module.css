@@ -589,6 +589,50 @@
   object-fit: contain;
 }
 
+/* Live GPS of the field officer: blue dot, white ring, arrow pointing where it is heading */
+.vehiclePin {
+  position: relative;
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+}
+
+.vehiclePin span {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #2563eb;
+  border: 3px solid #fff;
+  box-shadow:
+    0 0 0 6px rgba(37, 99, 235, 0.25),
+    0 2px 6px rgba(0, 0, 0, 0.45);
+}
+
+.vehiclePin i {
+  position: absolute;
+  top: -9px;
+  left: 50%;
+  margin-left: -6px;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-bottom: 9px solid #2563eb;
+}
+
+.vehicleNoHeading i {
+  display: none;
+}
+
+/* no fresh point for a while: grey, so nobody trusts an old position */
+.vehicleStale span {
+  background: #64748b;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.45);
+}
+
+.vehicleStale i {
+  border-bottom-color: #64748b;
+}
+
 .sosPin {
   display: flex;
   flex-direction: column;

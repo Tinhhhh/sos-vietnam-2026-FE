@@ -35,6 +35,21 @@ const point = (p) =>
     : null;
 const toDate = (v) => (v ? new Date(v) : null);
 
+/*
+ * last_position (only while EN_ROUTE): latest Traccar GPS point of the field officer, kept in the BE's RAM
+ *   { latitude, longitude, speed_kmh, heading, accuracy_m, fix_time, received_at }
+ */
+function livePosition(p) {
+  if (!p || p.latitude == null || p.longitude == null) return null;
+  return {
+    lat: p.latitude,
+    lng: p.longitude,
+    speedKmh: p.speed_kmh ?? null,
+    heading: p.heading ?? null,
+    receivedAt: toDate(p.received_at),
+  };
+}
+
 export function normalizePlan(raw) {
   if (!raw) return null;
   const s = raw.station || {};
@@ -72,6 +87,15 @@ export function normalizePlan(raw) {
           phone: raw.assigned_to.phone || '',
         }
       : null,
+    // field officer (delegated officer, else the dispatching one): name, badge (= Traccar device id), phone
+    tracker: raw.tracker
+      ? {
+          fullName: raw.tracker.full_name,
+          phone: raw.tracker.phone || '',
+          badgeNumber: raw.tracker.badge_number || '',
+        }
+      : null,
+    lastPosition: livePosition(raw.last_position),
     rejectReason: raw.reject_reason || null,
     officerConfirmedAt: toDate(raw.officer_confirmed_at),
     citizenConfirmedAt: toDate(raw.citizen_confirmed_at),

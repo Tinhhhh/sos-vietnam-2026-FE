@@ -89,6 +89,8 @@ function TrackingSheet({ plan, incidentId, token, onClose }) {
         {plan ? (
           <DispatchTrackingView
             plan={plan}
+            incidentId={incidentId}
+            citizenToken={token}
             variant="sheet"
             footer={
               plan.status === 'ARRIVED' && (
