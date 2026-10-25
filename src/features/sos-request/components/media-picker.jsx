@@ -97,6 +97,13 @@ export function MediaPicker({ attachments, processing, onAddFiles, onRemove, dis
         onFallback={nativeCamera}
         photosLeft={photosLeft}
         videosLeft={videosLeft}
+        // each shot is reviewed first: only "Xác nhận" attaches it to the report, "Huỷ bỏ" drops it
+        confirm
+        confirmLabel="Xác nhận"
+        discardLabel="Huỷ bỏ"
+        reviewText={(kind) =>
+          kind === 'video' ? 'Đính kèm video này vào tin báo?' : 'Đính kèm ảnh này vào tin báo?'
+        }
       />
 
       {processing && <div className={styles.processing}>Đang xử lý ảnh/video…</div>}

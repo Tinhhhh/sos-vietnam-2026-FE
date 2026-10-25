@@ -143,9 +143,9 @@ export function DispatchTrackingView({ plan, incidentId, citizenToken, variant =
 }
 
 /**
- * DEMO ONLY: "Mô phỏng di chuyển" (officers, while the "Ca demo" switch is on): the BE plays the field
- * officer's phone and drives along the route, one point every 5 s, so the live tracking can be tried
- * without going outside. The trip status is untouched: "Tới nơi" is still pressed by hand.
+ * "Mô phỏng" (officers, any incident, step 3 of the dispatch window): the BE plays the field officer's
+ * phone and drives along the route, one point every 5 s, so the live tracking can be shown without going
+ * outside. The trip status is untouched: "Tới nơi" is still pressed by hand.
  */
 function SimulateControl({ incidentId, simulation }) {
   const toast = useToast();
@@ -176,8 +176,7 @@ function SimulateControl({ incidentId, simulation }) {
   return (
     <div className={styles.simulate}>
       <span className={styles.simulateText}>
-        <b>Ca demo:</b>{' '}
-        {running ? 'đang mô phỏng xe chạy theo tuyến…' : 'thử theo dõi xe không cần điện thoại'}
+        {running ? 'Đang mô phỏng xe chạy theo tuyến…' : 'Chạy thử xe theo tuyến, không cần điện thoại GPS'}
       </span>
       <button
         type="button"
@@ -185,7 +184,7 @@ function SimulateControl({ incidentId, simulation }) {
         disabled={busy}
         onClick={toggle}
       >
-        {running ? '■ Dừng' : '▶ Mô phỏng di chuyển'}
+        {running ? '■ Dừng' : '▶ Mô phỏng'}
       </button>
     </div>
   );
