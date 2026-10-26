@@ -160,9 +160,15 @@ function CitizenConfirm({ incidentId, token, confirmed }) {
       onClick={async () => {
         setBusy(true);
         try {
-          await confirmHandled(incidentId, { citizenToken: token });
+          const next = await confirmHandled(incidentId, { citizenToken: token });
           setDone(true);
-          toast.show('Đã xác nhận, chờ cán bộ hoàn tất.', { tone: 'success' });
+          // cán bộ đã xác nhận trước thì xác nhận của dân là đủ hai bên: ca kết thúc
+          toast.show(
+            next?.officerConfirmedAt
+              ? 'Đã xác nhận. Ca đã kết thúc, cảm ơn bạn đã báo tin.'
+              : 'Đã xác nhận, chờ cán bộ hoàn tất.',
+            { tone: 'success' },
+          );
         } catch (err) {
           toast.show(err.message, { tone: 'error' });
         } finally {
