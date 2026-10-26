@@ -270,8 +270,18 @@ function DispatchWindowBody({
 
       {step === 1 && rejected && (
         <div className={delegationStyles.rejectedBanner}>
-          <b>{draft.assignedTo?.fullName || draft.origin.name}</b> ({draft.origin.name}) đã từ chối
-          {draft.rejectReason ? `: "${draft.rejectReason}"` : ''}. Chọn đơn vị khác để điều động.
+          {draft.assignedTo ? (
+            <>
+              <b>{draft.assignedTo.fullName}</b> ({draft.origin.name}) đã từ chối
+              {draft.rejectReason ? `: "${draft.rejectReason}"` : ''}. Chọn đơn vị khác để điều động.
+            </>
+          ) : (
+            // nobody refused: the BE stopped the previous trip (the ward escalated the case after picking a route)
+            <>
+              Lượt điều động trước (<b>{draft.origin.name}</b>) đã dừng
+              {draft.rejectReason ? `: ${draft.rejectReason}` : ''}. Chọn tuyến để điều động lại.
+            </>
+          )}
         </div>
       )}
       {step === 1 ? (
