@@ -77,11 +77,9 @@ export async function releaseIncident(id, { toMemberId, note } = {}) {
   return normalizeIncident(body?.data);
 }
 
-/** @param fieldMemberId the field officer of my unit (GET dispatch-plan/field-candidates), required */
-export async function requestDispatch(id, fieldMemberId) {
-  const body = await api.post(`/api/v1/incidents/${encodeURIComponent(id)}/request-dispatch`, {
-    field_member_id: fieldMemberId,
-  });
+/** The field officer is picked later, in step 2 "Điều động" of the dispatch window. */
+export async function requestDispatch(id) {
+  const body = await api.post(`/api/v1/incidents/${encodeURIComponent(id)}/request-dispatch`);
   return normalizeIncident(body?.data);
 }
 

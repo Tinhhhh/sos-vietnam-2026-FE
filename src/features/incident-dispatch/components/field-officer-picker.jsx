@@ -49,7 +49,7 @@ export function FieldOfficerPicker({ incidentId, value, onChange, compact = fals
             aria-checked={value === o.memberId}
             disabled={!o.selectable}
             className={`${styles.item} ${value === o.memberId ? styles.selected : ''}`}
-            onClick={() => onChange(o.memberId)}
+            onClick={() => onChange(o.memberId, o)}
             title={o.unavailableReason || undefined}
           >
             <span className={styles.radio} aria-hidden="true" />

@@ -3,7 +3,13 @@ import { useEffect, useMemo, useState } from 'react';
 import { Modal } from '@/components/ui/modal/modal';
 import { useToast } from '@/components/ui/toast/toast-context';
 
-import { arriveDispatch, getDispatchPlan, getRoadSnap, saveDispatchPlan } from '../api/dispatch-api';
+import {
+  arriveDispatch,
+  departDelegation,
+  getDispatchPlan,
+  getRoadSnap,
+  saveDispatchPlan,
+} from '../api/dispatch-api';
 import { reverseGeocode, searchAddress } from '../api/geocode';
 import {
   formatDistance,
@@ -30,7 +36,8 @@ const LEVEL_LABEL = { province: 'Trụ sở tỉnh', ward: 'Cơ sở xã/phườ
 
 // Step keys stored in the draft (1..4). Ward police send their own station: no "Uỷ quyền" step.
 const STEP_KEYS = ['dispatch', 'delegate', 'track', 'finish'];
-const STEP_TITLES = { dispatch: 'Điều động', delegate: 'Uỷ quyền', track: 'Theo dõi', finish: 'Kết thúc' };
+// step 2 is "Điều động" (pick the field officer) when my own unit goes, "Uỷ quyền" when a ward unit does
+const STEP_TITLES = { dispatch: 'Chọn tuyến', delegate: 'Uỷ quyền', track: 'Theo dõi', finish: 'Kết thúc' };
 const SENT_AT = new Intl.DateTimeFormat('vi-VN', {
   hour: '2-digit',
   minute: '2-digit',
@@ -128,8 +135,6 @@ function DispatchWindowBody({
   const [selectedId, setSelectedId] = useState(draft?.origin?.stationId ?? null);
   const [pickerOpen, setPickerOpen] = useState(false);
   // own unit goes: who goes out with the GPS phone (a delegated unit picks it on its card)
-  // picked at "Yêu cầu điều động" (stored on the case); changeable here before setting off
-  const [fieldId, setFieldId] = useState(draft?.tracker?.memberId ?? incident.fieldMemberId ?? null);
 
   const { mode, stations: candidates } = useMemo(
     () => originCandidates(officer, incident, stations),
@@ -193,10 +198,6 @@ function DispatchWindowBody({
   const confirmOrigin = async () => {
     if (!selected || !destination) return;
     const delegate = needsDelegation(officer, selected);
-    if (!delegate && !fieldId) {
-      toast.show('Chọn người phụ trách hiện trường trước', { tone: 'error' });
-      return;
-    }
     setSaving(true);
     try {
       const next = await saveDispatchPlan(incident.id, {
@@ -207,14 +208,15 @@ function DispatchWindowBody({
           coords: null,
         },
         delegate,
-        fieldMemberId: fieldId,
       });
       setDraft(next);
       setEditing(false);
       toast.show(
         delegate
           ? `Đã chọn ${selected.name}: chuyển sang bước uỷ quyền`
-          : `Đã điều động ${selected.name}: người báo tin đã thấy lực lượng đang tới`,
+          : next?.status === 'EN_ROUTE'
+            ? `Đã cập nhật tuyến của ${selected.name}`
+            : `Đã chọn ${selected.name}: chỉ định người phụ trách hiện trường để điều động`,
         { tone: 'success' },
       );
     } catch (err) {
@@ -247,10 +249,11 @@ function DispatchWindowBody({
     }
   };
   const isWard = mode === 'ward';
-  const steps = STEP_KEYS.filter((k) => !(isWard && k === 'delegate')).map((key) => ({
+  // my own unit goes (ward police, province HQ): step 2 picks the field officer, no delegation
+  const ownUnit = !!draft && !needsDelegation(officer, draft.origin);
+  const steps = STEP_KEYS.map((key) => ({
     key,
-    title: STEP_TITLES[key],
-    skipped: key === 'delegate' && !!draft && !draft.assignedTo && step > 2,
+    title: key === 'delegate' && (ownUnit || (isWard && !draft)) ? 'Điều động' : STEP_TITLES[key],
   }));
 
   return (
@@ -298,14 +301,6 @@ function DispatchWindowBody({
                 hasDestination={!!destination}
               />
             )}
-            {selected && !needsDelegation(officer, selected) && (
-              <FieldOfficerPicker
-                incidentId={incident.id}
-                value={fieldId}
-                onChange={setFieldId}
-                collapsible
-              />
-            )}
           </div>
           <div className={styles.mapCol}>
             <RouteMap
@@ -334,15 +329,13 @@ function DispatchWindowBody({
             <button
               type="button"
               className={styles.btnPrimary}
-              disabled={
-                !selected || !destination || saving || (!needsDelegation(officer, selected) && !fieldId)
-              }
+              disabled={!selected || !destination || saving}
               onClick={confirmOrigin}
             >
               {saving
                 ? 'Đang lưu...'
                 : isWard
-                  ? 'Xác nhận điều động'
+                  ? 'Tiếp tục'
                   : selected
                     ? `Chọn ${selected.name}`
                     : 'Chọn điểm xuất phát'}
@@ -364,12 +357,16 @@ function DispatchWindowBody({
                 locked={waitingAnswer}
                 onEdit={() => setEditing(true)}
               />
-              <DelegationStep
-                incidentId={incident.id}
-                plan={draft}
-                onPlan={setDraft}
-                locked={waitingAnswer}
-              />
+              {ownUnit ? (
+                <OwnDispatchStep incidentId={incident.id} plan={draft} onPlan={setDraft} />
+              ) : (
+                <DelegationStep
+                  incidentId={incident.id}
+                  plan={draft}
+                  onPlan={setDraft}
+                  locked={waitingAnswer}
+                />
+              )}
             </div>
           )}
           {step === 4 ? (
@@ -445,6 +442,103 @@ function DispatchWindowBody({
         />
       )}
     </Modal>
+  );
+}
+
+/**
+ * Step 2 "Điều động" when my own unit goes: "Chỉ định người phụ trách" opens the list of my unit's officers
+ * (the one who goes out with the GPS phone); only then "Lập tức điều động" sets off (EN_ROUTE).
+ */
+function OwnDispatchStep({ incidentId, plan, onPlan }) {
+  const toast = useToast();
+  const [open, setOpen] = useState(false);
+  const [picked, setPicked] = useState(null); // { memberId, fullName, badgeNumber }
+  const [draftPick, setDraftPick] = useState(null);
+  const [busy, setBusy] = useState(false);
+
+  const go = async () => {
+    setBusy(true);
+    try {
+      const next = await departDelegation(incidentId, picked.memberId);
+      onPlan(next);
+      toast.show(`Đã điều động: ${picked.fullName} phụ trách hiện trường`, { tone: 'success' });
+    } catch (err) {
+      toast.show(err.message, { tone: 'error' });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className={delegationStyles.card}>
+      <div className={delegationStyles.cardHead}>
+        <div className={delegationStyles.cardTitle}>Người phụ trách hiện trường *</div>
+      </div>
+      <div className={delegationStyles.meta}>
+        Người ra hiện trường cầm điện thoại GPS; người báo tin thấy vị trí và gọi được cho người này.
+      </div>
+      {picked ? (
+        <div className={styles.pickedOfficer}>
+          <b>{picked.fullName}</b>
+          {picked.badgeNumber && <span> · Số hiệu {picked.badgeNumber}</span>}
+        </div>
+      ) : (
+        <div className={delegationStyles.meta}>Chưa chỉ định ai.</div>
+      )}
+      <div className={styles.ownActions}>
+        <button
+          type="button"
+          className={styles.btnGhost}
+          onClick={() => {
+            setDraftPick(picked?.memberId ?? null);
+            setOpen(true);
+          }}
+        >
+          {picked ? 'Đổi người phụ trách' : 'Chỉ định người phụ trách'}
+        </button>
+        <button type="button" className={styles.btnPrimary} disabled={!picked || busy} onClick={go}>
+          {busy ? 'Đang điều động...' : 'Lập tức điều động'}
+        </button>
+      </div>
+
+      {open && (
+        <Modal
+          open
+          onClose={() => setOpen(false)}
+          solid
+          containerStyle={{ maxWidth: 480, width: 'min(480px, calc(100vw - 16px))' }}
+          title={<span className={styles.confirmTitle}>Chỉ định người phụ trách hiện trường</span>}
+        >
+          <div className={styles.confirmBody}>
+            <p>
+              Ca <b>{plan ? incidentId : ''}</b> · {plan.origin.name}
+            </p>
+            <FieldOfficerPicker
+              incidentId={incidentId}
+              value={draftPick?.memberId ?? draftPick}
+              onChange={(memberId, officer) => setDraftPick(officer || { memberId })}
+              compact
+            />
+            <div className={styles.confirmActions}>
+              <button type="button" className={styles.btnGhost} onClick={() => setOpen(false)}>
+                Huỷ
+              </button>
+              <button
+                type="button"
+                className={styles.btnPrimary}
+                disabled={!draftPick?.memberId}
+                onClick={() => {
+                  setPicked(draftPick);
+                  setOpen(false);
+                }}
+              >
+                Chọn người này
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
+    </div>
   );
 }
 
