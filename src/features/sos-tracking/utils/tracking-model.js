@@ -66,15 +66,16 @@ export function receivingUnit(inc) {
  * - request     PENDING / VERIFYING past the deadline and forces not dispatched yet: the button is active
  *               (nobody took it / the officer took it and went silent)
  * - locked      RESOLVING: forces are on the way, the request button is greyed out
- * - elapsed     everything else (CSGT, PCCC, province level, already escalated): time waited
+ * - province    everything else (already escalated, province level, CSGT, PCCC): the button stays greyed out
+ *               with the reason, no "time waited" clock
  */
 export function timerMode(inc, now) {
   const wardDeadline = inc.level === 'WARD' && inc.escalateAt && !inc.escalatedAt;
-  if (!wardDeadline) return 'elapsed';
+  if (!wardDeadline) return 'province';
   if (inc.status === 'RESOLVING') return 'locked';
   const overdue = inc.escalateAt.getTime() <= now;
   if (inc.status === 'VERIFYING' || inc.status === 'PENDING') return overdue ? 'request' : 'countdown';
-  return 'elapsed';
+  return 'province';
 }
 
 /** mm:ss, or h:mm:ss after an hour. */

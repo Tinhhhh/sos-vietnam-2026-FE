@@ -3,7 +3,13 @@ import { useEffect, useMemo, useState } from 'react';
 import { Modal } from '@/components/ui/modal/modal';
 import { useToast } from '@/components/ui/toast/toast-context';
 
-import { arriveDispatch, getDispatchPlan, saveDispatchPlan } from '../api/dispatch-api';
+import {
+  arriveDispatch,
+  departDelegation,
+  getDispatchPlan,
+  getRoadSnap,
+  saveDispatchPlan,
+} from '../api/dispatch-api';
 import { reverseGeocode, searchAddress } from '../api/geocode';
 import {
   formatDistance,
@@ -19,6 +25,8 @@ import { DelegationStep } from './delegation-step';
 import delegationStyles from './delegation.module.css';
 import { DispatchStepper } from './dispatch-stepper';
 import { DispatchTrackingView } from './dispatch-tracking-view';
+import trackingStyles from './dispatch-tracking.module.css';
+import { FieldOfficerChange, FieldOfficerPicker } from './field-officer-picker';
 import { FinishPanel } from './finish-panel';
 import { RouteMap } from './route-map';
 
@@ -29,7 +37,8 @@ const LEVEL_LABEL = { province: 'Trụ sở tỉnh', ward: 'Cơ sở xã/phườ
 
 // Step keys stored in the draft (1..4). Ward police send their own station: no "Uỷ quyền" step.
 const STEP_KEYS = ['dispatch', 'delegate', 'track', 'finish'];
-const STEP_TITLES = { dispatch: 'Điều động', delegate: 'Uỷ quyền', track: 'Theo dõi', finish: 'Kết thúc' };
+// step 2 is "Điều động" (pick the field officer) when my own unit goes, "Uỷ quyền" when a ward unit does
+const STEP_TITLES = { dispatch: 'Chọn tuyến', delegate: 'Uỷ quyền', track: 'Theo dõi', finish: 'Kết thúc' };
 const SENT_AT = new Intl.DateTimeFormat('vi-VN', {
   hour: '2-digit',
   minute: '2-digit',
@@ -98,6 +107,7 @@ function DispatchWindowBody({
   const toast = useToast();
   const [draft, setDraft] = useState(initialPlan);
   const [editing, setEditing] = useState(!draft || draft.step === 1);
+  const [changingField, setChangingField] = useState(false);
   const [saving, setSaving] = useState(false);
 
   // The ward unit accepts / rejects / sets off on its own screen: every queue push of this incident
@@ -126,6 +136,7 @@ function DispatchWindowBody({
   );
   const [selectedId, setSelectedId] = useState(draft?.origin?.stationId ?? null);
   const [pickerOpen, setPickerOpen] = useState(false);
+  // own unit goes: who goes out with the GPS phone (a delegated unit picks it on its card)
 
   const { mode, stations: candidates } = useMemo(
     () => originCandidates(officer, incident, stations),
@@ -205,7 +216,9 @@ function DispatchWindowBody({
       toast.show(
         delegate
           ? `Đã chọn ${selected.name}: chuyển sang bước uỷ quyền`
-          : `Đã điều động ${selected.name}: người báo tin đã thấy lực lượng đang tới`,
+          : next?.status === 'EN_ROUTE'
+            ? `Đã cập nhật tuyến của ${selected.name}`
+            : `Đã chọn ${selected.name}: chỉ định người phụ trách hiện trường để điều động`,
         { tone: 'success' },
       );
     } catch (err) {
@@ -223,7 +236,7 @@ function DispatchWindowBody({
 
   // Handed to a ward officer who has not answered yet: the plan is locked (BE refuses changes too)
   const waitingAnswer = draft?.status === 'PENDING_ACCEPT' && !!draft?.assignedTo;
-  // "Khởi hành ngay": own unit on the way -> at the scene (step 4); a delegated unit presses it on its card
+  // "Đã đến": own unit on the way -> at the scene (step 4); a delegated unit presses it on its card
   const canArrive = step === 3 && draft?.status === 'EN_ROUTE' && !draft?.assignedTo;
   const [arriving, setArriving] = useState(false);
   const arrive = async () => {
@@ -238,10 +251,11 @@ function DispatchWindowBody({
     }
   };
   const isWard = mode === 'ward';
-  const steps = STEP_KEYS.filter((k) => !(isWard && k === 'delegate')).map((key) => ({
+  // my own unit goes (ward police, province HQ): step 2 picks the field officer, no delegation
+  const ownUnit = !!draft && !needsDelegation(officer, draft.origin);
+  const steps = STEP_KEYS.map((key) => ({
     key,
-    title: STEP_TITLES[key],
-    skipped: key === 'delegate' && !!draft && !draft.assignedTo && step > 2,
+    title: key === 'delegate' && (ownUnit || (isWard && !draft)) ? 'Điều động' : STEP_TITLES[key],
   }));
 
   return (
@@ -256,8 +270,18 @@ function DispatchWindowBody({
 
       {step === 1 && rejected && (
         <div className={delegationStyles.rejectedBanner}>
-          <b>{draft.assignedTo?.fullName || draft.origin.name}</b> ({draft.origin.name}) đã từ chối
-          {draft.rejectReason ? `: "${draft.rejectReason}"` : ''}. Chọn đơn vị khác để điều động.
+          {draft.assignedTo ? (
+            <>
+              <b>{draft.assignedTo.fullName}</b> ({draft.origin.name}) đã từ chối
+              {draft.rejectReason ? `: "${draft.rejectReason}"` : ''}. Chọn đơn vị khác để điều động.
+            </>
+          ) : (
+            // nobody refused: the BE stopped the previous trip (the ward escalated the case after picking a route)
+            <>
+              Lượt điều động trước (<b>{draft.origin.name}</b>) đã dừng
+              {draft.rejectReason ? `: ${draft.rejectReason}` : ''}. Chọn tuyến để điều động lại.
+            </>
+          )}
         </div>
       )}
       {step === 1 ? (
@@ -291,7 +315,12 @@ function DispatchWindowBody({
             )}
           </div>
           <div className={styles.mapCol}>
-            <RouteMap origin={selected} destination={destination} coords={currentRoute?.coords || null} />
+            <RouteMap
+              origin={selected}
+              destination={destination}
+              coords={currentRoute?.coords || null}
+              citizen={incident.lat != null ? { lat: incident.lat, lng: incident.lng } : null}
+            />
             <RouteSummary
               station={selected}
               route={currentRoute || (selected && est?.[selected.id]) || null}
@@ -318,7 +347,7 @@ function DispatchWindowBody({
               {saving
                 ? 'Đang lưu...'
                 : isWard
-                  ? 'Xác nhận điều động'
+                  ? 'Tiếp tục'
                   : selected
                     ? `Chọn ${selected.name}`
                     : 'Chọn điểm xuất phát'}
@@ -328,7 +357,45 @@ function DispatchWindowBody({
       ) : (
         <>
           {step >= 3 ? (
-            <DispatchTrackingView plan={draft} incidentId={incident.id} />
+            <>
+              <DispatchTrackingView
+                plan={draft}
+                incidentId={incident.id}
+                actions={
+                  (canArrive || (step === 3 && !waitingAnswer)) && (
+                    <>
+                      {canArrive && (
+                        <button
+                          type="button"
+                          className={trackingStyles.actionBtn}
+                          onClick={() => setChangingField(true)}
+                        >
+                          Đổi người
+                        </button>
+                      )}
+                      {step === 3 && !waitingAnswer && (
+                        <button
+                          type="button"
+                          className={trackingStyles.actionBtn}
+                          onClick={() => setEditing(true)}
+                        >
+                          {isWard ? 'Đổi điểm đến' : 'Đổi điểm xuất phát / điểm đến'}
+                        </button>
+                      )}
+                    </>
+                  )
+                }
+              />
+              {canArrive && changingField && (
+                <FieldOfficerChange
+                  incidentId={incident.id}
+                  plan={draft}
+                  onPlan={setDraft}
+                  open
+                  onClose={() => setChangingField(false)}
+                />
+              )}
+            </>
           ) : (
             <div className={delegationStyles.panel}>
               <ChosenSummary
@@ -337,12 +404,16 @@ function DispatchWindowBody({
                 locked={waitingAnswer}
                 onEdit={() => setEditing(true)}
               />
-              <DelegationStep
-                incidentId={incident.id}
-                plan={draft}
-                onPlan={setDraft}
-                locked={waitingAnswer}
-              />
+              {ownUnit ? (
+                <OwnDispatchStep incidentId={incident.id} plan={draft} onPlan={setDraft} />
+              ) : (
+                <DelegationStep
+                  incidentId={incident.id}
+                  plan={draft}
+                  onPlan={setDraft}
+                  locked={waitingAnswer}
+                />
+              )}
             </div>
           )}
           {step === 4 ? (
@@ -368,14 +439,9 @@ function DispatchWindowBody({
                   ← Quay lại bước trước
                 </button>
               )}
-              {step === 3 && !waitingAnswer && (
-                <button type="button" className={styles.linkBtn} onClick={() => setEditing(true)}>
-                  {isWard ? 'Đổi điểm đến' : 'Đổi điểm xuất phát / điểm đến'}
-                </button>
-              )}
               {canArrive && (
                 <button type="button" className={styles.btnPrimary} disabled={arriving} onClick={arrive}>
-                  {arriving ? 'Đang gửi...' : 'Khởi hành ngay'}
+                  {arriving ? 'Đang gửi...' : 'Đã đến'}
                 </button>
               )}
             </div>
@@ -421,7 +487,159 @@ function DispatchWindowBody({
   );
 }
 
+/**
+ * Step 2 "Điều động" when my own unit goes: "Chỉ định người phụ trách" opens the list of my unit's officers
+ * (the one who goes out with the GPS phone); only then "Lập tức điều động" sets off (EN_ROUTE).
+ */
+function OwnDispatchStep({ incidentId, plan, onPlan }) {
+  const toast = useToast();
+  const [open, setOpen] = useState(false);
+  const [picked, setPicked] = useState(null); // { memberId, fullName, badgeNumber }
+  const [draftPick, setDraftPick] = useState(null);
+  const [busy, setBusy] = useState(false);
+
+  const go = async () => {
+    setBusy(true);
+    try {
+      const next = await departDelegation(incidentId, picked.memberId);
+      onPlan(next);
+      toast.show(`Đã điều động: ${picked.fullName} phụ trách hiện trường`, { tone: 'success' });
+    } catch (err) {
+      toast.show(err.message, { tone: 'error' });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className={delegationStyles.card}>
+      <div className={delegationStyles.cardHead}>
+        <div className={delegationStyles.cardTitle}>Người phụ trách hiện trường *</div>
+      </div>
+      <div className={delegationStyles.meta}>
+        Người ra hiện trường cầm điện thoại GPS; người báo tin thấy vị trí và gọi được cho người này.
+      </div>
+      {picked ? (
+        <div className={styles.pickedOfficer}>
+          <b>{picked.fullName}</b>
+          {picked.badgeNumber && <span> · Số hiệu {picked.badgeNumber}</span>}
+        </div>
+      ) : (
+        <div className={delegationStyles.meta}>Chưa chỉ định ai.</div>
+      )}
+      <div className={styles.ownActions}>
+        <button
+          type="button"
+          className={styles.btnGhost}
+          onClick={() => {
+            setDraftPick(picked?.memberId ?? null);
+            setOpen(true);
+          }}
+        >
+          {picked ? 'Đổi người phụ trách' : 'Chỉ định người phụ trách'}
+        </button>
+        <button type="button" className={styles.btnPrimary} disabled={!picked || busy} onClick={go}>
+          {busy ? 'Đang điều động...' : 'Lập tức điều động'}
+        </button>
+      </div>
+
+      {open && (
+        <Modal
+          open
+          onClose={() => setOpen(false)}
+          solid
+          containerStyle={{ maxWidth: 480, width: 'min(480px, calc(100vw - 16px))' }}
+          title={<span className={styles.confirmTitle}>Chỉ định người phụ trách hiện trường</span>}
+        >
+          <div className={styles.confirmBody}>
+            <p>
+              Ca <b>{plan ? incidentId : ''}</b> · {plan.origin.name}
+            </p>
+            <FieldOfficerPicker
+              incidentId={incidentId}
+              value={draftPick?.memberId ?? draftPick}
+              onChange={(memberId, officer) => setDraftPick(officer || { memberId })}
+              compact
+            />
+            <div className={styles.confirmActions}>
+              <button type="button" className={styles.btnGhost} onClick={() => setOpen(false)}>
+                Huỷ
+              </button>
+              <button
+                type="button"
+                className={styles.btnPrimary}
+                disabled={!draftPick?.memberId}
+                onClick={() => {
+                  setPicked(draftPick);
+                  setOpen(false);
+                }}
+              >
+                Chọn người này
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
+    </div>
+  );
+}
+
 /** Where the force goes: the citizen's GPS, or a point the officer corrected (address / map). */
+const SOURCE_LABEL = {
+  CITIZEN_GPS: 'GPS người dân',
+  OFFICER_EDIT: 'Cán bộ chỉnh',
+  ROAD_SNAP: 'Xe dừng ở đường lớn',
+};
+
+/**
+ * Citizen in an alley / small lane: suggest stopping the vehicle on the nearest main road (BE /geo/road-snap:
+ * named road that is not a hẻm / kiệt / ngõ, OpenStreetMap; like Grab's pickup points). Only shown when that
+ * point is more than 15 m from the citizen.
+ * The officer can still pin any point with "Chọn trên bản đồ".
+ */
+function RoadSnapHint({ gps, destination, onChange }) {
+  const [snap, setSnap] = useState({ key: null, value: null });
+  const key = `${gps.lat.toFixed(5)},${gps.lng.toFixed(5)}`;
+  useEffect(() => {
+    let alive = true;
+    getRoadSnap(gps)
+      .then((v) => alive && setSnap({ key, value: v }))
+      .catch(() => alive && setSnap({ key, value: null }));
+    return () => {
+      alive = false;
+    };
+  }, [key]); // eslint-disable-line react-hooks/exhaustive-deps -- gps changes with its key
+  const s = snap.key === key ? snap.value : null;
+  if (!s || s.distanceM < 15) return null;
+  const used = destination?.source === 'ROAD_SNAP';
+  const road = s.roadName || (s.big ? 'đường lớn' : 'đường xe vào được');
+  return (
+    <div className={used ? styles.snapUsed : styles.snapHint}>
+      <span>
+        {used ? 'Xe dừng ở ' : 'Xe khó vào? Dừng ở '}
+        <b>{road}</b> · cách người báo {s.distanceM} m
+        {!s.big && ' (không có đường lớn gần, đây là đường xe vào được gần nhất)'}
+      </span>
+      {!used && (
+        <button
+          type="button"
+          className={styles.btnSmall}
+          onClick={() =>
+            onChange({
+              lat: s.lat,
+              lng: s.lng,
+              address: s.roadName || 'Điểm dừng xe gần nhất',
+              source: 'ROAD_SNAP',
+            })
+          }
+        >
+          Dùng điểm này
+        </button>
+      )}
+    </div>
+  );
+}
+
 function DestinationBox({ destination, original, typeLabel, onChange, onOpenPicker }) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState({ status: 'idle', items: [], error: null });
@@ -461,8 +679,8 @@ function DestinationBox({ destination, original, typeLabel, onChange, onOpenPick
     <section className={styles.box}>
       <div className={styles.boxHead}>
         <span className={styles.boxTitle}>Điểm đến (hiện trường)</span>
-        <span className={destination?.source === 'OFFICER_EDIT' ? styles.chipEdit : styles.chipGps}>
-          {destination?.source === 'OFFICER_EDIT' ? 'Cán bộ chỉnh' : 'GPS người dân'}
+        <span className={destination?.source === 'CITIZEN_GPS' ? styles.chipGps : styles.chipEdit}>
+          {SOURCE_LABEL[destination?.source] || 'GPS người dân'}
         </span>
       </div>
       <button
@@ -485,6 +703,7 @@ function DestinationBox({ destination, original, typeLabel, onChange, onOpenPick
       ) : (
         <div className={styles.warn}>Ca không có toạ độ: tìm địa chỉ hoặc chọn trên bản đồ.</div>
       )}
+      {gps && <RoadSnapHint gps={gps} destination={destination} onChange={onChange} />}
 
       <form className={styles.searchRow} onSubmit={search}>
         <input
@@ -502,7 +721,7 @@ function DestinationBox({ destination, original, typeLabel, onChange, onOpenPick
         <button type="button" className={styles.linkBtn} onClick={onOpenPicker}>
           Chọn trên bản đồ
         </button>
-        {gps && destination?.source === 'OFFICER_EDIT' && (
+        {gps && destination && destination.source !== 'CITIZEN_GPS' && (
           <button
             type="button"
             className={styles.linkBtn}

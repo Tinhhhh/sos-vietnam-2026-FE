@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { useToast } from '@/components/ui/toast/toast-context';
 import { useNow } from '@/hooks/use-now';
 
-import { startSimulation, stopSimulation } from '../api/dispatch-api';
+import { detourSimulation, startSimulation, stopSimulation } from '../api/dispatch-api';
 import { formatDistance, formatDuration } from '../api/routing';
 import { useLivePosition } from '../hooks/use-live-position';
 import { STATION_ICON } from '../utils/origin-candidates';
@@ -25,16 +25,19 @@ const telOf = (phone) => (phone || '').replace(/[^0-9+]/g, '');
  * ETA and distance. Used by the citizen's tracking sheet, the ward card and step 3 of the dispatch window.
  *
  * @param {{ plan: object, incidentId?: string, citizenToken?: string, variant?: 'inline' | 'sheet',
- *           footer?: React.ReactNode }} props  plan from normalizePlan(); incidentId enables the live GPS;
- *   sheet = fills its (full-screen) parent: map takes the free height, the card sits at the bottom
+ *           footer?: React.ReactNode, actions?: React.ReactNode }} props  plan from normalizePlan(); incidentId
+ *   enables the live GPS; sheet = fills its (full-screen) parent: map takes the free height, the card sits at
+ *   the bottom; actions = extra buttons next to "Gọi" ("Đổi người", "Đổi điểm đến" of the dispatch window)
  */
-export function DispatchTrackingView({ plan, incidentId, citizenToken, variant = 'inline', footer = null }) {
+export function DispatchTrackingView({
+  plan,
+  incidentId,
+  citizenToken,
+  variant = 'inline',
+  footer = null,
+  actions = null,
+}) {
   const o = plan.origin;
-  const route = plan.route;
-  const eta =
-    plan.departedAt && route?.durationS != null
-      ? new Date(plan.departedAt.getTime() + route.durationS * 1000)
-      : null;
   const arrived = plan.status === 'ARRIVED' || plan.status === 'DONE';
   const enRoute = plan.status === 'EN_ROUTE';
   const phone = telOf(o.phone);
@@ -46,16 +49,27 @@ export function DispatchTrackingView({ plan, incidentId, citizenToken, variant =
     enabled: enRoute,
     initial: plan.lastPosition,
   });
-  const position = live.position;
+  // the BE recalculates the route when the vehicle leaves it: the polled plan may carry a newer one
+  const route = newer(live.route, plan.route);
+  // a recalculated route starts at the vehicle: count its duration from when it was computed
+  const etaFrom = route?.rerouted ? route.computedAt : plan.departedAt;
+  const eta =
+    etaFrom && route?.durationS != null ? new Date(etaFrom.getTime() + route.durationS * 1000) : null;
+  // on the way: the polled point; arrived / done: the last point the BE kept, so the dot stays at the scene
+  const position = enRoute ? live.position : arrived ? plan.lastPosition : null;
   const now = useNow(enRoute, 2000);
-  const stale = !position?.receivedAt || now - position.receivedAt.getTime() > STALE_MS;
-  const gpsChip = !enRoute
-    ? null
-    : !position
-      ? 'Đang chờ tín hiệu GPS…'
-      : stale
-        ? 'Đang kết nối lại…'
-        : `GPS trực tiếp${position.speedKmh != null ? ` · ${Math.round(position.speedKmh)} km/h` : ''}`;
+  const stale = enRoute && (!position?.receivedAt || now - position.receivedAt.getTime() > STALE_MS);
+  const gpsChip = arrived
+    ? position
+      ? `Đã đến · vị trí cuối ${position.receivedAt ? CLOCK.format(position.receivedAt) : ''}`.trim()
+      : null
+    : !enRoute
+      ? null
+      : !position
+        ? 'Đang chờ tín hiệu GPS…'
+        : stale
+          ? 'Đang kết nối lại…'
+          : `GPS trực tiếp${position.speedKmh != null ? ` · ${Math.round(position.speedKmh)} km/h` : ''}`;
   const tracker = plan.tracker;
   const trackerTel = telOf(tracker?.phone) || phone;
 
@@ -67,10 +81,14 @@ export function DispatchTrackingView({ plan, incidentId, citizenToken, variant =
           destination={plan.destination}
           coords={route?.coords || null}
           vehicle={position ? { ...position, stale } : null}
+          citizen={plan.sosPoint}
           className={sheet ? styles.mapFill : styles.mapInline}
           padding={MAP_PADDING}
         />
-        <span className={styles.statusChip}>{plan.statusLabel}</span>
+        <span className={styles.statusChip}>
+          {plan.statusLabel}
+          {enRoute && route?.rerouted ? ' · đã tính lại đường' : ''}
+        </span>
         {gpsChip && (
           <span className={`${styles.gpsChip} ${position && !stale ? styles.gpsLive : styles.gpsWait}`}>
             {gpsChip}
@@ -109,6 +127,7 @@ export function DispatchTrackingView({ plan, incidentId, citizenToken, variant =
               <div className={styles.unitName}>{tracker.fullName}</div>
               {tracker.badgeNumber && <div className={styles.unitSub}>Số hiệu {tracker.badgeNumber}</div>}
             </div>
+            {actions && <div className={styles.actions}>{actions}</div>}
             {trackerTel && (
               <a className={styles.callBtn} href={`tel:${trackerTel}`} title={`Gọi ${tracker.fullName}`}>
                 Gọi
@@ -123,6 +142,7 @@ export function DispatchTrackingView({ plan, incidentId, citizenToken, variant =
             <div className={styles.unitName}>{o.name}</div>
             <div className={styles.unitSub}>Xuất phát từ: {o.address || 'Trụ sở đơn vị'}</div>
           </div>
+          {actions && !tracker && <div className={styles.actions}>{actions}</div>}
           {phone && !tracker && (
             <a className={styles.callBtn} href={`tel:${phone}`} title={`Gọi ${o.phone}`}>
               Gọi
@@ -143,10 +163,17 @@ export function DispatchTrackingView({ plan, incidentId, citizenToken, variant =
 }
 
 /**
- * DEMO ONLY: "Mô phỏng di chuyển" (officers, while the "Ca demo" switch is on): the BE plays the field
- * officer's phone and drives along the route, one point every 5 s, so the live tracking can be tried
- * without going outside. The trip status is untouched: "Tới nơi" is still pressed by hand.
+ * "Mô phỏng" (officers, any incident, step 3 of the dispatch window): the BE plays the field officer's
+ * phone and drives along the route, one point every 5 s, so the live tracking can be shown without going
+ * outside. The trip status is untouched: "Đã đến" is still pressed by hand (officer or citizen).
  */
+/** The route computed last (null-safe). */
+function newer(a, b) {
+  if (!a) return b;
+  if (!b) return a;
+  return (a.computedAt?.getTime() ?? 0) >= (b.computedAt?.getTime() ?? 0) ? a : b;
+}
+
 function SimulateControl({ incidentId, simulation }) {
   const toast = useToast();
   const [busy, setBusy] = useState(false);
@@ -159,6 +186,19 @@ function SimulateControl({ incidentId, simulation }) {
   }
   const running = override ?? simulation.running;
   if (!simulation.available && !running) return null;
+
+  const detour = async () => {
+    setBusy(true);
+    try {
+      const plan = await detourSimulation(incidentId);
+      setOverride(!!plan?.simulation?.running);
+      toast.show('Xe giả rẽ sang đường khác: chờ hệ thống tự tính lại tuyến', { tone: 'info' });
+    } catch (err) {
+      toast.show(err.message, { tone: 'error' });
+    } finally {
+      setBusy(false);
+    }
+  };
 
   const toggle = async () => {
     setBusy(true);
@@ -176,17 +216,28 @@ function SimulateControl({ incidentId, simulation }) {
   return (
     <div className={styles.simulate}>
       <span className={styles.simulateText}>
-        <b>Ca demo:</b>{' '}
-        {running ? 'đang mô phỏng xe chạy theo tuyến…' : 'thử theo dõi xe không cần điện thoại'}
+        {running ? 'Đang mô phỏng xe chạy theo tuyến…' : 'Chạy thử xe theo tuyến, không cần điện thoại GPS'}
       </span>
-      <button
-        type="button"
-        className={running ? styles.simulateStop : styles.simulateStart}
-        disabled={busy}
-        onClick={toggle}
-      >
-        {running ? '■ Dừng' : '▶ Mô phỏng di chuyển'}
-      </button>
+      <div className={styles.simulateButtons}>
+        {/* test the automatic re-routing: leave the route on purpose */}
+        <button
+          type="button"
+          className={styles.simulateDetour}
+          disabled={busy}
+          onClick={detour}
+          title="Xe giả rẽ phải khỏi tuyến rồi mới về hiện trường, để thử tự tính lại đường đi"
+        >
+          ↪ Rẽ đường khác
+        </button>
+        <button
+          type="button"
+          className={running ? styles.simulateStop : styles.simulateStart}
+          disabled={busy}
+          onClick={toggle}
+        >
+          {running ? '■ Dừng' : '▶ Mô phỏng'}
+        </button>
+      </div>
     </div>
   );
 }

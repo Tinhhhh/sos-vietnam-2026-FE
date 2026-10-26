@@ -6,17 +6,25 @@
  *   GET  .../dispatch-plan/candidates          officers of the chosen ward station's unit (step 2)
  *   POST .../dispatch-plan/delegate { member_id }   "Lập tức liên hệ": hand it to that officer
  *   POST .../dispatch-plan/withdraw   delegating officer takes back an unanswered delegation
- *   POST .../dispatch-plan/accept | reject { reason } | depart   the assigned (ward) officer
- *   POST .../dispatch-plan/confirm   step 4 "đã xử lý xong" (unit on site JWT, or the citizen token)
+ *   POST .../dispatch-plan/accept | reject { reason } | depart { member_id }   the assigned (ward) officer
+ *   GET  .../dispatch-plan/field-candidates   my unit's officers, to pick the field officer (GPS phone)
+ *   PUT  .../dispatch-plan/field-member { member_id }   change the field officer while EN_ROUTE
+ *   POST .../dispatch-plan/confirm   step 4 "Đã xử lý xong": the citizen token (or the unit on site) only
+ *                                    records its confirmation, the case stays open
  *   POST .../dispatch-plan/finish { result, summary, forces, note, force }   closing report -> RESOLVED
- *   POST .../dispatch-plan/arrive   "Khởi hành ngay": at the scene, step 4 (assigned officer, or holder of own unit)
+ *                                    (needs the citizen's confirmation first, 409 otherwise; force skips it)
+ *   POST .../dispatch-plan/arrive   "Đã đến": at the scene, step 4. One side is enough: the unit on site, the field
+ *                                    officer, or the citizen (token)
+ *   GET  /api/v1/geo/road-snap?lat&lng   where the vehicle should stop (big road outside an alley)
+ *        -> { latitude, longitude, road_name, distance_m, source: MAIN_ROAD | NEAREST_ROAD | NONE }
  *   PUT /api/v1/incidents/{id}/dispatch-plan   officer holding the case (RESOLVING)
  *       body { station_id, destination { latitude, longitude, address, source }, route { distance_m,
  *              duration_s, polyline, provider }, delegate }
  *
  * <plan> = { dispatch_id, status, status_label, step (1..4), needs_delegation,
  *            station { id, name, agency_type, level, address, phone, latitude, longitude },
- *            destination { latitude, longitude, address, source },
+ *            destination { latitude, longitude, address, source: CITIZEN_GPS | OFFICER_EDIT | ROAD_SNAP },
+ *            sos_point { latitude, longitude }   where the citizen is (differs from destination on ROAD_SNAP),
  *            route { origin { latitude, longitude }, distance_m, duration_s, duration_traffic_s, polyline, provider },
  *            dispatched_at, departed_at, arrived_at }
  *
@@ -70,6 +78,7 @@ export function normalizePlan(raw) {
       lng: s.longitude,
     },
     destination: point(raw.destination),
+    sosPoint: point(raw.sos_point),
     route: raw.route
       ? {
           distanceM: raw.route.distance_m,
@@ -78,6 +87,9 @@ export function normalizePlan(raw) {
           coords: raw.route.polyline ? decodePolyline(raw.route.polyline) : null,
           provider: raw.route.provider,
           estimated: raw.route.provider === 'ESTIMATE',
+          // recalculated from the vehicle's position after it left the route
+          rerouted: raw.route.origin_source === 'VEHICLE',
+          computedAt: toDate(raw.route.computed_at),
         }
       : null,
     assignedTo: raw.assigned_to
@@ -90,6 +102,7 @@ export function normalizePlan(raw) {
     // field officer (delegated officer, else the dispatching one): name, badge (= Traccar device id), phone
     tracker: raw.tracker
       ? {
+          memberId: raw.tracker.member_id,
           fullName: raw.tracker.full_name,
           phone: raw.tracker.phone || '',
           badgeNumber: raw.tracker.badge_number || '',
@@ -122,6 +135,14 @@ export async function startSimulation(incidentId) {
   return normalizePlan(body.data);
 }
 
+/** DEMO: the simulated vehicle turns off the route, to test the automatic route recalculation. */
+export async function detourSimulation(incidentId) {
+  const body = await api.post(
+    `/api/v1/incidents/${encodeURIComponent(incidentId)}/dispatch-plan/simulate/detour`,
+  );
+  return normalizePlan(body.data);
+}
+
 export async function stopSimulation(incidentId) {
   const body = await api.post(
     `/api/v1/incidents/${encodeURIComponent(incidentId)}/dispatch-plan/simulate/stop`,
@@ -141,7 +162,10 @@ export async function getDispatchPlan(incidentId, { citizenToken } = {}) {
  * @param {{ stationId: string, destination: {lat,lng,address,source}, route?: {distanceM,durationS,coords,provider,estimated},
  *           delegate: boolean }} plan
  */
-export async function saveDispatchPlan(incidentId, { stationId, destination, route, delegate }) {
+export async function saveDispatchPlan(
+  incidentId,
+  { stationId, destination, route, delegate, fieldMemberId },
+) {
   const body = await api.put(`/api/v1/incidents/${encodeURIComponent(incidentId)}/dispatch-plan`, {
     station_id: Number(stationId),
     destination: {
@@ -159,6 +183,8 @@ export async function saveDispatchPlan(incidentId, { stationId, destination, rou
         }
       : null,
     delegate,
+    // own unit goes: the field officer (carries the GPS phone); a delegated unit picks it when setting off
+    field_member_id: delegate ? null : fieldMemberId || null,
   });
   return normalizePlan(body.data);
 }
@@ -198,14 +224,58 @@ export async function rejectDelegation(incidentId, reason) {
   return normalizePlan(body.data);
 }
 
-export async function departDelegation(incidentId) {
-  const body = await api.post(planPath(incidentId, '/depart'));
+/** The delegated unit sets off with its field officer (người phụ trách hiện trường). */
+export async function departDelegation(incidentId, fieldMemberId) {
+  const body = await api.post(planPath(incidentId, '/depart'), { member_id: fieldMemberId });
   return normalizePlan(body.data);
 }
 
-export async function arriveDispatch(incidentId) {
-  const body = await api.post(planPath(incidentId, '/arrive'));
+/**
+ * Officers of MY unit to pick the field officer from (holder of the case, or the delegated officer).
+ * Online is only informative: they may be out working. selectable=false: no badge / on another trip.
+ */
+export async function getFieldCandidates(incidentId) {
+  const body = await api.get(planPath(incidentId, '/field-candidates'));
+  return (body.data || []).map((o) => ({
+    memberId: o.member_id,
+    fullName: o.full_name,
+    badgeNumber: o.badge_number || '',
+    position: o.position || '',
+    commander: o.unit_role === 'COMMANDER',
+    phone: o.phone || '',
+    online: !!o.online,
+    me: !!o.is_me,
+    selectable: !!o.selectable,
+    unavailableReason: o.unavailable_reason || '',
+  }));
+}
+
+/** Change the field officer while the force is on the way (stops a running simulation). */
+export async function changeFieldMember(incidentId, fieldMemberId) {
+  const body = await api.put(planPath(incidentId, '/field-member'), { member_id: fieldMemberId });
   return normalizePlan(body.data);
+}
+
+/** "Đã đến": the unit on site / field officer (JWT) or the citizen (citizenToken). */
+export async function arriveDispatch(incidentId, { citizenToken } = {}) {
+  const body = await api.post(planPath(incidentId, '/arrive'), null, {
+    headers: citizenToken ? { [CITIZEN_TOKEN_HEADER]: citizenToken } : undefined,
+  });
+  return normalizePlan(body.data);
+}
+
+/** Where the vehicle should stop for this SOS point: nearest big road (null when nothing better was found). */
+export async function getRoadSnap({ lat, lng }) {
+  const body = await api.get('/api/v1/geo/road-snap', { params: { lat, lng } });
+  const d = body?.data;
+  if (!d || d.source === 'NONE' || d.latitude == null) return null;
+  return {
+    lat: d.latitude,
+    lng: d.longitude,
+    roadName: d.road_name || '',
+    distanceM: d.distance_m ?? 0,
+    big: d.source === 'MAIN_ROAD',
+  };
 }
 
 /** Step 4: the unit on site (officer JWT) or the citizen (citizenToken) confirms the incident is handled. */
@@ -217,17 +287,13 @@ export async function confirmHandled(incidentId, { citizenToken } = {}) {
 }
 
 /** Closing report: { result: RESOLVED|FALSE_ALARM, summary, forces, note, force } */
-export async function finishIncident(
-  incidentId,
-  { result, summary, forces, note, force = false, skipConfirm = false },
-) {
+export async function finishIncident(incidentId, { result, summary, forces, note, force = false }) {
   await api.post(planPath(incidentId, '/finish'), {
     result: force ? null : result,
     summary: summary?.trim() || null,
     forces: forces?.trim() || null,
     note: note?.trim() || null,
     force,
-    skip_confirm: skipConfirm, // CHỈ ĐỂ TEST: "Kết thúc ngay (test)"
   });
 }
 

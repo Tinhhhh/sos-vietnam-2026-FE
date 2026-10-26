@@ -77,6 +77,7 @@ export async function releaseIncident(id, { toMemberId, note } = {}) {
   return normalizeIncident(body?.data);
 }
 
+/** The field officer is picked later, in step 2 "Điều động" of the dispatch window. */
 export async function requestDispatch(id) {
   const body = await api.post(`/api/v1/incidents/${encodeURIComponent(id)}/request-dispatch`);
   return normalizeIncident(body?.data);

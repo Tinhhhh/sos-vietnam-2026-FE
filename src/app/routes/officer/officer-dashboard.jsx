@@ -137,7 +137,7 @@ export function OfficerDashboardRoute() {
     return () => body.classList.remove(officer.theme, 'officer-authenticated');
   }, [officer.theme]);
 
-  // "Yêu cầu điều động" -> confirm -> VERIFYING to RESOLVING -> dispatch window
+  // "Yêu cầu điều động" -> confirm -> VERIFYING to RESOLVING -> dispatch window (field officer: its step 2)
   const askDispatch = (inc) => {
     setDetailId(null);
     setDispatchConfirm(inc);

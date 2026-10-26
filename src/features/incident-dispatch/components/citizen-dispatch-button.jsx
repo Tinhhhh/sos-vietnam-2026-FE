@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 
 import { useToast } from '@/components/ui/toast/toast-context';
 
-import { confirmHandled } from '../api/dispatch-api';
+import { arriveDispatch, confirmHandled } from '../api/dispatch-api';
 import { useDispatchPlan } from '../hooks/use-dispatch-plan';
 import styles from './dispatch-tracking.module.css';
 import { DispatchTrackingView } from './dispatch-tracking-view';
@@ -93,8 +93,16 @@ function TrackingSheet({ plan, incidentId, token, onClose }) {
             citizenToken={token}
             variant="sheet"
             footer={
-              plan.status === 'ARRIVED' && (
-                <CitizenConfirm incidentId={incidentId} token={token} confirmed={!!plan.citizenConfirmedAt} />
+              plan.status === 'EN_ROUTE' ? (
+                <CitizenArrive incidentId={incidentId} token={token} />
+              ) : (
+                plan.status === 'ARRIVED' && (
+                  <CitizenConfirm
+                    incidentId={incidentId}
+                    token={token}
+                    confirmed={!!plan.citizenConfirmedAt}
+                  />
+                )
               )
             }
           />
@@ -110,15 +118,39 @@ function TrackingSheet({ plan, incidentId, token, onClose }) {
   );
 }
 
-/** Step 4 for the citizen: "the problem is handled" (the officer then writes the closing report). */
+/** Step 3 for the citizen: "the force is here" (one side is enough: the officer may press it too). */
+function CitizenArrive({ incidentId, token }) {
+  const toast = useToast();
+  const [busy, setBusy] = useState(false);
+  return (
+    <button
+      type="button"
+      className={styles.confirmBtn}
+      disabled={busy}
+      onClick={async () => {
+        setBusy(true);
+        try {
+          await arriveDispatch(incidentId, { citizenToken: token });
+          toast.show('Đã báo lực lượng tới nơi.', { tone: 'success' });
+        } catch (err) {
+          toast.show(err.message, { tone: 'error' });
+        } finally {
+          setBusy(false);
+        }
+      }}
+    >
+      {busy ? 'Đang gửi...' : 'Đã đến'}
+    </button>
+  );
+}
+
+/** Step 4 for the citizen: "Đã xử lý xong" only records the confirmation; the officer then closes the case. */
 function CitizenConfirm({ incidentId, token, confirmed }) {
   const toast = useToast();
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
   if (confirmed || done) {
-    return (
-      <div className={styles.confirmed}>Bạn đã xác nhận sự việc được xử lý xong. Cảm ơn bạn đã báo tin.</div>
-    );
+    return <div className={styles.confirmed}>Đã xác nhận, chờ cán bộ hoàn tất. Cảm ơn bạn đã báo tin.</div>;
   }
   return (
     <button
@@ -128,9 +160,15 @@ function CitizenConfirm({ incidentId, token, confirmed }) {
       onClick={async () => {
         setBusy(true);
         try {
-          await confirmHandled(incidentId, { citizenToken: token });
+          const next = await confirmHandled(incidentId, { citizenToken: token });
           setDone(true);
-          toast.show('Đã xác nhận. Lực lượng chức năng sẽ hoàn tất hồ sơ vụ việc.', { tone: 'success' });
+          // cán bộ đã xác nhận trước thì xác nhận của dân là đủ hai bên: ca kết thúc
+          toast.show(
+            next?.officerConfirmedAt
+              ? 'Đã xác nhận. Ca đã kết thúc, cảm ơn bạn đã báo tin.'
+              : 'Đã xác nhận, chờ cán bộ hoàn tất.',
+            { tone: 'success' },
+          );
         } catch (err) {
           toast.show(err.message, { tone: 'error' });
         } finally {
@@ -138,7 +176,7 @@ function CitizenConfirm({ incidentId, token, confirmed }) {
         }
       }}
     >
-      {busy ? 'Đang gửi...' : 'Xác nhận sự việc đã được xử lý xong'}
+      {busy ? 'Đang gửi...' : 'Đã xử lý xong'}
     </button>
   );
 }

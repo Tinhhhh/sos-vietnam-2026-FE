@@ -31,3 +31,18 @@
 .legal-banner-body strong {
   color: #fef08a;
 }
+
+/* "XÁC NHẬN PHÁT TÍN HIỆU CỨU HỘ" -> "XÁC NHẬN" on phones */
+.shortLabel {
+  display: none;
+}
+
+@media (max-width: 600px) {
+  .longLabel {
+    display: none;
+  }
+
+  .shortLabel {
+    display: inline;
+  }
+}

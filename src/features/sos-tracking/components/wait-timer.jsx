@@ -6,7 +6,7 @@ import styles from './sos-tracking.module.css';
  * - before the 15-minute deadline: "Yêu cầu chuyển lên cấp tỉnh" greyed out, with the time left
  * - past the deadline and forces not dispatched yet: the same button, active
  * - forces dispatched (RESOLVING): the same button, greyed out
- * - otherwise: time waited since the report
+ * - otherwise (already at the province, CSGT / PCCC): the same button, greyed out, with the reason
  *
  * @param {{ incident: object, now: number, busy?: boolean, onRequestProvince: () => void }} props
  */
@@ -55,10 +55,20 @@ export function WaitTimer({ incident, now, busy = false, onRequestProvince }) {
     );
   }
 
+  const label = incident.escalatedAt
+    ? 'Đã chuyển lên cấp tỉnh'
+    : incident.level === 'PROVINCE' || incident.level === 'NATIONAL'
+      ? 'Tin báo đã ở cấp tỉnh'
+      : 'Đang tải...'; // before GET /tracking answers (the create response has no routing yet)
   return (
-    <div className={styles.timerBox} title="Thời gian từ lúc bạn gửi tín hiệu SOS">
-      <span className={styles.timerLabel}>Đã chờ</span>
-      <span className={styles.timerValue}>{formatDuration((now - incident.createdAt.getTime()) / 1000)}</span>
-    </div>
+    <button
+      type="button"
+      className={`${styles.timerBox} ${styles.provinceBtn}`}
+      disabled
+      title="Tin báo đang do cấp tỉnh/thành phố xử lý"
+    >
+      <span className={styles.timerLabel}>{label}</span>
+      <span className={styles.provinceBtnText}>⚡ Yêu cầu chuyển lên cấp tỉnh</span>
+    </button>
   );
 }

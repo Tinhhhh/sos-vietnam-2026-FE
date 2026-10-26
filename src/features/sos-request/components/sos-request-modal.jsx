@@ -320,7 +320,9 @@ export function SosRequestModal({ open, onClose, location, onPickLocation, notif
                 <line x1="12" y1="9" x2="12" y2="13" />
                 <line x1="12" y1="17" x2="12.01" y2="17" />
               </svg>
-              XÁC NHẬN PHÁT TÍN HIỆU CỨU HỘ
+              {/* phones: the short label fits on one line */}
+              <span className={styles.longLabel}>XÁC NHẬN PHÁT TÍN HIỆU CỨU HỘ</span>
+              <span className={styles.shortLabel}>XÁC NHẬN</span>
             </>
           )}
         </button>

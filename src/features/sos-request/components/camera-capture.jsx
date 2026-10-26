@@ -19,12 +19,14 @@ const stamp = () => new Date().toISOString().replace(/[-:T]/g, '').slice(0, 14);
  * default, so the phone camera app's auto flash no longer fires) and front/back switch.
  * Each shot goes to `onCapture(file)` and the camera stays open for more; "Xong" closes it.
  * `confirm` (used where a shot is sent at once, e.g. "Bổ sung ảnh / video"): each shot is shown first with
- * "Chụp lại / Quay lại" and `confirmLabel` (default "Gửi"); only that button hands it to `onCapture`.
+ * `discardLabel` (default "Chụp lại / Quay lại") and `confirmLabel` (default "Gửi"); only the confirm button
+ * hands it to `onCapture`. `reviewText` overrides the question above them.
  * If the camera can't be opened (denied, no device) a button runs `onFallback()` to open the phone
  * camera app (it must come from a tap: browsers block opening the file picker on their own).
  *
  * @param {{ open: boolean, onClose: () => void, onCapture: (file: File) => void, onFallback: () => void,
- *   photosLeft: number, videosLeft: number, confirm?: boolean, confirmLabel?: string }} props
+ *   photosLeft: number, videosLeft: number, confirm?: boolean, confirmLabel?: string, discardLabel?: string,
+ *   reviewText?: (kind: 'image' | 'video') => string }} props
  */
 export function CameraCapture({
   open,
@@ -35,6 +37,8 @@ export function CameraCapture({
   videosLeft,
   confirm = false,
   confirmLabel = 'Gửi',
+  discardLabel,
+  reviewText,
 }) {
   const videoRef = useRef(null);
   const streamRef = useRef(null);
@@ -357,13 +361,15 @@ export function CameraCapture({
           )}
           <div className={styles.reviewBar}>
             <p>
-              {pending.kind === 'video'
-                ? 'Gửi video này cho lực lượng chức năng?'
-                : 'Gửi ảnh này cho lực lượng chức năng?'}
+              {reviewText
+                ? reviewText(pending.kind)
+                : pending.kind === 'video'
+                  ? 'Gửi video này cho lực lượng chức năng?'
+                  : 'Gửi ảnh này cho lực lượng chức năng?'}
             </p>
             <div className={styles.reviewActions}>
               <button type="button" className={styles.retakeBtn} onClick={discardPending}>
-                {pending.kind === 'video' ? 'Quay lại' : 'Chụp lại'}
+                {discardLabel || (pending.kind === 'video' ? 'Quay lại' : 'Chụp lại')}
               </button>
               <button type="button" className={styles.sendBtn} onClick={sendPending}>
                 {confirmLabel}

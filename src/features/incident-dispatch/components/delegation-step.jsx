@@ -67,6 +67,8 @@ export function DelegationStep({ incidentId, plan, onPlan, locked = false }) {
 
 function Candidates({ incidentId, plan, onDone }) {
   const toast = useToast();
+  // PCCC / CSGT: the appointed officer is also the field officer (GPS) and sets off at once, no "Chấp nhận"
+  const appoints = plan.origin.agency === 'fire' || plan.origin.agency === 'csgt';
   const [list, setList] = useState({ status: 'loading', items: [], error: null });
   const [busyId, setBusyId] = useState(null);
   const [reload, setReload] = useState(0); // "Làm mới": online / busy change while the officer decides
@@ -87,7 +89,12 @@ function Candidates({ incidentId, plan, onDone }) {
     setBusyId(o.memberId);
     try {
       const next = await delegateDispatch(incidentId, o.memberId);
-      toast.show(`Đã chuyển thông tin ca cho ${o.fullName}`, { tone: 'success' });
+      toast.show(
+        appoints
+          ? `Đã điều động: ${o.fullName} phụ trách hiện trường`
+          : `Đã chuyển thông tin ca cho ${o.fullName}`,
+        { tone: 'success' },
+      );
       onDone(next);
     } catch (err) {
       toast.show(err.message, { tone: 'error' });
@@ -159,7 +166,13 @@ function Candidates({ incidentId, plan, onDone }) {
               }
               onClick={() => contact(o)}
             >
-              {busyId === o.memberId ? 'Đang gửi...' : o.busy ? 'Đang trong ca' : 'Lập tức liên hệ'}
+              {busyId === o.memberId
+                ? 'Đang gửi...'
+                : o.busy
+                  ? 'Đang trong ca'
+                  : appoints
+                    ? 'Chỉ định & điều động'
+                    : 'Lập tức liên hệ'}
             </button>
           </li>
         ))}
