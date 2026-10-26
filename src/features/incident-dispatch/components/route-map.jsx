@@ -95,6 +95,10 @@ export function RouteMap({
   const markersRef = useRef({ origin: null, dest: null, vehicle: null, citizen: null });
   const progressRef = useRef(null); // { key, at }: furthest point reached on the current route
   const boundsRef = useRef(null); // last fitted area, re-fitted after a resize
+  // The plan is polled every 5 s with fresh objects: only re-fit when the points really change, and once the
+  // user zoomed / panned keep their view unless the start or end point changes (another station / stop).
+  const fitRef = useRef({ key: '', ends: '' });
+  const userMovedRef = useRef(false);
   const paddingRef = useRef(padding);
   useEffect(() => {
     paddingRef.current = padding;
@@ -109,6 +113,10 @@ export function RouteMap({
       attributionControl: { compact: true },
     });
     mapRef.current = map;
+    // originalEvent = a gesture (drag, wheel, pinch, double click), not our own fitBounds / jumpTo
+    map.on('movestart', (e) => {
+      if (e.originalEvent) userMovedRef.current = true;
+    });
     map.on('load', () => {
       map.addSource('walk', { type: 'geojson', data: EMPTY });
       map.addLayer({
@@ -206,6 +214,18 @@ export function RouteMap({
         destination && [destination.lng, destination.lat],
         away && [cLng, cLat],
       ].filter(Boolean);
+      const keyOf = (list) => list.map((p) => `${p[0].toFixed(5)},${p[1].toFixed(5)}`).join(';');
+      const key = keyOf(pts);
+      const ends = keyOf(
+        [origin && [origin.lng, origin.lat], destination && [destination.lng, destination.lat]].filter(
+          Boolean,
+        ),
+      );
+      const fit = fitRef.current;
+      if (key === fit.key) return;
+      if (ends !== fit.ends) userMovedRef.current = false;
+      fitRef.current = { key, ends };
+      if (userMovedRef.current) return;
       if (pts.length === 1) {
         boundsRef.current = null;
         map.jumpTo({ center: pts[0], zoom: 15 });
@@ -266,7 +286,7 @@ export function RouteMap({
         const map = mapRef.current;
         if (!map) return;
         map.resize();
-        if (boundsRef.current) {
+        if (boundsRef.current && !userMovedRef.current) {
           map.fitBounds(boundsRef.current, { padding: paddingRef.current, maxZoom: 16, duration: 0 });
         }
       });
