@@ -25,6 +25,7 @@ import { DelegationStep } from './delegation-step';
 import delegationStyles from './delegation.module.css';
 import { DispatchStepper } from './dispatch-stepper';
 import { DispatchTrackingView } from './dispatch-tracking-view';
+import trackingStyles from './dispatch-tracking.module.css';
 import { FieldOfficerChange, FieldOfficerPicker } from './field-officer-picker';
 import { FinishPanel } from './finish-panel';
 import { RouteMap } from './route-map';
@@ -106,6 +107,7 @@ function DispatchWindowBody({
   const toast = useToast();
   const [draft, setDraft] = useState(initialPlan);
   const [editing, setEditing] = useState(!draft || draft.step === 1);
+  const [changingField, setChangingField] = useState(false);
   const [saving, setSaving] = useState(false);
 
   // The ward unit accepts / rejects / sets off on its own screen: every queue push of this incident
@@ -346,8 +348,43 @@ function DispatchWindowBody({
         <>
           {step >= 3 ? (
             <>
-              <DispatchTrackingView plan={draft} incidentId={incident.id} />
-              {canArrive && <FieldOfficerChange incidentId={incident.id} plan={draft} onPlan={setDraft} />}
+              <DispatchTrackingView
+                plan={draft}
+                incidentId={incident.id}
+                actions={
+                  (canArrive || (step === 3 && !waitingAnswer)) && (
+                    <>
+                      {canArrive && (
+                        <button
+                          type="button"
+                          className={trackingStyles.actionBtn}
+                          onClick={() => setChangingField(true)}
+                        >
+                          Đổi người
+                        </button>
+                      )}
+                      {step === 3 && !waitingAnswer && (
+                        <button
+                          type="button"
+                          className={trackingStyles.actionBtn}
+                          onClick={() => setEditing(true)}
+                        >
+                          {isWard ? 'Đổi điểm đến' : 'Đổi điểm xuất phát / điểm đến'}
+                        </button>
+                      )}
+                    </>
+                  )
+                }
+              />
+              {canArrive && changingField && (
+                <FieldOfficerChange
+                  incidentId={incident.id}
+                  plan={draft}
+                  onPlan={setDraft}
+                  open
+                  onClose={() => setChangingField(false)}
+                />
+              )}
             </>
           ) : (
             <div className={delegationStyles.panel}>
@@ -390,11 +427,6 @@ function DispatchWindowBody({
               ) : (
                 <button type="button" className={styles.btnBack} onClick={goBack}>
                   ← Quay lại bước trước
-                </button>
-              )}
-              {step === 3 && !waitingAnswer && (
-                <button type="button" className={styles.linkBtn} onClick={() => setEditing(true)}>
-                  {isWard ? 'Đổi điểm đến' : 'Đổi điểm xuất phát / điểm đến'}
                 </button>
               )}
               {canArrive && (

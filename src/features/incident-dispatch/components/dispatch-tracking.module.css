@@ -307,6 +307,7 @@
 /* "Lực lượng phụ trách": the officer going to the scene (name, badge, call) */
 .tracker {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 10px;
   padding-top: 10px;
@@ -354,6 +355,28 @@
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+}
+
+/* "Đổi người" / "Đổi điểm đến" next to "Gọi" (dispatch window) */
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.actionBtn {
+  padding: 8px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(96, 165, 250, 0.45);
+  background: transparent;
+  color: #93c5fd;
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.actionBtn:hover {
+  background: rgba(96, 165, 250, 0.12);
 }
 
 .callBtn {

@@ -9,10 +9,10 @@
  *   POST .../dispatch-plan/accept | reject { reason } | depart { member_id }   the assigned (ward) officer
  *   GET  .../dispatch-plan/field-candidates   my unit's officers, to pick the field officer (GPS phone)
  *   PUT  .../dispatch-plan/field-member { member_id }   change the field officer while EN_ROUTE
- *   POST .../dispatch-plan/confirm   step 4 "Đã xử lý xong": the citizen token closes the case at once;
- *                                    the unit on site (JWT) only records it and closes with /finish
+ *   POST .../dispatch-plan/confirm   step 4 "Đã xử lý xong": the citizen token (or the unit on site) only
+ *                                    records its confirmation, the case stays open
  *   POST .../dispatch-plan/finish { result, summary, forces, note, force }   closing report -> RESOLVED
- *                                    (no citizen confirmation needed)
+ *                                    (needs the citizen's confirmation first, 409 otherwise; force skips it)
  *   POST .../dispatch-plan/arrive   "Đã đến": at the scene, step 4. One side is enough: the unit on site, the field
  *                                    officer, or the citizen (token)
  *   GET  /api/v1/geo/road-snap?lat&lng   where the vehicle should stop (big road outside an alley)

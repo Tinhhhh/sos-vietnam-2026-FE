@@ -144,15 +144,13 @@ function CitizenArrive({ incidentId, token }) {
   );
 }
 
-/** Step 4 for the citizen: "Đã xử lý xong" closes the case (one side is enough). */
+/** Step 4 for the citizen: "Đã xử lý xong" only records the confirmation; the officer then closes the case. */
 function CitizenConfirm({ incidentId, token, confirmed }) {
   const toast = useToast();
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
   if (confirmed || done) {
-    return (
-      <div className={styles.confirmed}>Bạn đã xác nhận sự việc được xử lý xong. Cảm ơn bạn đã báo tin.</div>
-    );
+    return <div className={styles.confirmed}>Đã xác nhận, chờ cán bộ hoàn tất. Cảm ơn bạn đã báo tin.</div>;
   }
   return (
     <button
@@ -164,7 +162,7 @@ function CitizenConfirm({ incidentId, token, confirmed }) {
         try {
           await confirmHandled(incidentId, { citizenToken: token });
           setDone(true);
-          toast.show('Đã xác nhận sự việc được xử lý xong. Cảm ơn bạn đã báo tin.', { tone: 'success' });
+          toast.show('Đã xác nhận, chờ cán bộ hoàn tất.', { tone: 'success' });
         } catch (err) {
           toast.show(err.message, { tone: 'error' });
         } finally {

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { useToast } from '@/components/ui/toast/toast-context';
 
@@ -91,13 +91,24 @@ function shown(list, value, collapsed) {
 /**
  * Step 3 (on the way): shows the field officer and lets the receiving officer swap them
  * (wrong person picked, phone handed over). The live GPS follows the new badge right away.
+ * With `open` given the caller owns the trigger (the dispatch window puts "Đổi người" next to "Gọi"):
+ * only the list shows, and only while open (mount it when opening: the current officer is preselected).
  */
-export function FieldOfficerChange({ incidentId, plan, onPlan }) {
+export function FieldOfficerChange({ incidentId, plan, onPlan, open: openProp, onClose }) {
   const toast = useToast();
-  const [open, setOpen] = useState(false);
-  const [picked, setPicked] = useState(null);
-  const [busy, setBusy] = useState(false);
+  const controlled = openProp !== undefined;
+  const [openState, setOpenState] = useState(false);
+  const open = controlled ? openProp : openState;
+  const setOpen = (v) => (controlled ? !v && onClose?.() : setOpenState(v));
   const current = plan.tracker;
+  const [picked, setPicked] = useState(controlled ? current?.memberId || null : null);
+  const [busy, setBusy] = useState(false);
+  const boxRef = useRef(null);
+
+  // opened from a button higher up (next to "Gọi"): bring the list into view
+  useEffect(() => {
+    if (controlled) boxRef.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }, [controlled]);
 
   const save = async () => {
     setBusy(true);
@@ -113,8 +124,10 @@ export function FieldOfficerChange({ incidentId, plan, onPlan }) {
     }
   };
 
+  if (controlled && !open) return null;
+
   return (
-    <div className={styles.change} onClick={(e) => e.stopPropagation()}>
+    <div ref={boxRef} className={styles.change} onClick={(e) => e.stopPropagation()}>
       {!open ? (
         <div className={styles.changeRow}>
           <span className={styles.sub}>

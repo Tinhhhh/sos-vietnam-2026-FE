@@ -25,10 +25,18 @@ const telOf = (phone) => (phone || '').replace(/[^0-9+]/g, '');
  * ETA and distance. Used by the citizen's tracking sheet, the ward card and step 3 of the dispatch window.
  *
  * @param {{ plan: object, incidentId?: string, citizenToken?: string, variant?: 'inline' | 'sheet',
- *           footer?: React.ReactNode }} props  plan from normalizePlan(); incidentId enables the live GPS;
- *   sheet = fills its (full-screen) parent: map takes the free height, the card sits at the bottom
+ *           footer?: React.ReactNode, actions?: React.ReactNode }} props  plan from normalizePlan(); incidentId
+ *   enables the live GPS; sheet = fills its (full-screen) parent: map takes the free height, the card sits at
+ *   the bottom; actions = extra buttons next to "Gọi" ("Đổi người", "Đổi điểm đến" of the dispatch window)
  */
-export function DispatchTrackingView({ plan, incidentId, citizenToken, variant = 'inline', footer = null }) {
+export function DispatchTrackingView({
+  plan,
+  incidentId,
+  citizenToken,
+  variant = 'inline',
+  footer = null,
+  actions = null,
+}) {
   const o = plan.origin;
   const arrived = plan.status === 'ARRIVED' || plan.status === 'DONE';
   const enRoute = plan.status === 'EN_ROUTE';
@@ -119,6 +127,7 @@ export function DispatchTrackingView({ plan, incidentId, citizenToken, variant =
               <div className={styles.unitName}>{tracker.fullName}</div>
               {tracker.badgeNumber && <div className={styles.unitSub}>Số hiệu {tracker.badgeNumber}</div>}
             </div>
+            {actions && <div className={styles.actions}>{actions}</div>}
             {trackerTel && (
               <a className={styles.callBtn} href={`tel:${trackerTel}`} title={`Gọi ${tracker.fullName}`}>
                 Gọi
@@ -133,6 +142,7 @@ export function DispatchTrackingView({ plan, incidentId, citizenToken, variant =
             <div className={styles.unitName}>{o.name}</div>
             <div className={styles.unitSub}>Xuất phát từ: {o.address || 'Trụ sở đơn vị'}</div>
           </div>
+          {actions && !tracker && <div className={styles.actions}>{actions}</div>}
           {phone && !tracker && (
             <a className={styles.callBtn} href={`tel:${phone}`} title={`Gọi ${o.phone}`}>
               Gọi
