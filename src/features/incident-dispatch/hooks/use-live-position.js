@@ -12,12 +12,19 @@ const POLL_MS = 5000;
  *
  * @param {{ incidentId?: string, citizenToken?: string, enabled: boolean, initial?: object|null }} options
  *   initial = plan.lastPosition already loaded with the plan
- * @returns {{ position: object|null, simulation: object|null, route: object|null }} position = { lat, lng,
- *   speedKmh, heading, receivedAt }; simulation = latest polled plan.simulation (officers only); route = latest
- *   polled plan.route (the BE recalculates it when the vehicle leaves it); null until the first poll
+ * @returns {{ position: object|null, simulation: object|null, route: object|null, arrivalCheck: object|null,
+ *   polled: boolean }} position = { lat, lng, speedKmh, heading, receivedAt }; simulation = latest polled
+ *   plan.simulation (officers only); route = latest polled plan.route (the BE recalculates it when the vehicle
+ *   leaves it); arrivalCheck = latest polled distance to the destination; null until the first poll
  */
 export function useLivePosition({ incidentId, citizenToken, enabled, initial = null, fetchPlan = null }) {
-  const [polled, setPolled] = useState({ position: null, simulation: null, route: null });
+  const [polled, setPolled] = useState({
+    position: null,
+    simulation: null,
+    route: null,
+    arrivalCheck: null,
+    done: false,
+  });
   // fetchPlan: the field officer's link page reads its plan with the link code instead
   const fetchRef = useRef(fetchPlan);
   useEffect(() => {
@@ -36,6 +43,8 @@ export function useLivePosition({ incidentId, citizenToken, enabled, initial = n
             position: plan.lastPosition || p.position,
             simulation: plan.simulation,
             route: plan.route,
+            arrivalCheck: plan.arrivalCheck,
+            done: true,
           }));
         })
         .catch(() => {
@@ -49,9 +58,15 @@ export function useLivePosition({ incidentId, citizenToken, enabled, initial = n
     };
   }, [active, incidentId, citizenToken]);
 
-  if (!active) return { position: null, simulation: null, route: null };
+  if (!active) return { position: null, simulation: null, route: null, arrivalCheck: null, polled: false };
   // whichever is newer: the point loaded with the plan or the last polled one
   const p = polled.position;
   const position = p && (!initial || p.receivedAt >= initial.receivedAt) ? p : initial || p;
-  return { position, simulation: polled.simulation, route: polled.route };
+  return {
+    position,
+    simulation: polled.simulation,
+    route: polled.route,
+    arrivalCheck: polled.arrivalCheck,
+    polled: polled.done,
+  };
 }

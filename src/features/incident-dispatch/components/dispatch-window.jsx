@@ -5,6 +5,7 @@ import { useToast } from '@/components/ui/toast/toast-context';
 
 import {
   arriveDispatch,
+  changeFieldMember,
   departDelegation,
   getDispatchPlan,
   getRoadSnap,
@@ -20,6 +21,7 @@ import {
   straightEstimate,
 } from '../api/routing';
 import { STATION_ICON, needsDelegation, originCandidates } from '../utils/origin-candidates';
+import { ArriveControl, DepartButton } from './arrive-control';
 import styles from './dispatch.module.css';
 import { DelegationStep } from './delegation-step';
 import delegationStyles from './delegation.module.css';
@@ -238,20 +240,11 @@ function DispatchWindowBody({
 
   // Handed to a ward officer who has not answered yet: the plan is locked (BE refuses changes too)
   const waitingAnswer = draft?.status === 'PENDING_ACCEPT' && !!draft?.assignedTo;
-  // "Đã đến": own unit on the way -> at the scene (step 4); a delegated unit presses it on its card
+  // own unit on the way: "Đổi người" (the field officer) next to the tracking card
   const canArrive = step === 3 && draft?.status === 'EN_ROUTE' && !draft?.assignedTo;
-  const [arriving, setArriving] = useState(false);
-  const arrive = async () => {
-    setArriving(true);
-    try {
-      setDraft(await arriveDispatch(incident.id));
-      toast.show('Lực lượng đã tới hiện trường: chuyển sang bước Kết thúc', { tone: 'success' });
-    } catch (err) {
-      toast.show(err.message, { tone: 'error' });
-    } finally {
-      setArriving(false);
-    }
-  };
+  // the holder issues the field link when their unit goes or for a PCCC / CSGT team they appointed
+  const holderLink =
+    !!draft?.tracker && (!draft.assignedTo || draft.assignedTo.memberId === draft.tracker.memberId);
   const isWard = mode === 'ward';
   // my own unit goes (ward police, province HQ): step 2 picks the field officer, no delegation
   const ownUnit = !!draft && !needsDelegation(officer, draft.origin);
@@ -364,6 +357,15 @@ function DispatchWindowBody({
                 plan={draft}
                 incidentId={incident.id}
                 onCallTracker={onCallTracker ? (tracker) => onCallTracker(incident, tracker) : null}
+                // "Đã đến" when the GPS is within the radius; the holder (this window) may confirm without GPS
+                renderArrive={(check) => (
+                  <ArriveControl
+                    check={check}
+                    canOverride
+                    onArrive={(reason) => arriveDispatch(incident.id, { reason })}
+                    onPlan={setDraft}
+                  />
+                )}
                 actions={
                   (canArrive || (step === 3 && !waitingAnswer)) && (
                     <>
@@ -389,7 +391,7 @@ function DispatchWindowBody({
                   )
                 }
               />
-              {!draft.assignedTo && draft.tracker && ['EN_ROUTE', 'ARRIVED'].includes(draft.status) && (
+              {holderLink && ['EN_ROUTE', 'ARRIVED'].includes(draft.status) && (
                 <FieldLinkBox incidentId={incident.id} plan={draft} />
               )}
               {canArrive && changingField && (
@@ -420,6 +422,17 @@ function DispatchWindowBody({
                   locked={waitingAnswer}
                 />
               )}
+              {/* PCCC / CSGT team appointed (it is also the field officer): the holder sends the link and sets off */}
+              {!ownUnit && holderLink && draft.status === 'ACCEPTED' && (
+                <>
+                  <FieldLinkBox incidentId={incident.id} plan={draft} />
+                  <DepartButton
+                    who={draft.tracker.fullName}
+                    onDepart={() => departDelegation(incident.id)}
+                    onPlan={setDraft}
+                  />
+                </>
+              )}
             </div>
           )}
           {step === 4 ? (
@@ -443,11 +456,6 @@ function DispatchWindowBody({
               ) : (
                 <button type="button" className={styles.btnBack} onClick={goBack}>
                   ← Quay lại bước trước
-                </button>
-              )}
-              {canArrive && (
-                <button type="button" className={styles.btnPrimary} disabled={arriving} onClick={arrive}>
-                  {arriving ? 'Đang gửi...' : 'Đã đến'}
                 </button>
               )}
             </div>
@@ -495,21 +503,28 @@ function DispatchWindowBody({
 
 /**
  * Step 2 "Điều động" when my own unit goes: "Chỉ định người phụ trách" opens the list of my unit's officers
- * (the one who goes out with the GPS phone); only then "Lập tức điều động" sets off (EN_ROUTE).
+ * (the one who goes out with the GPS phone) and saves the choice; then the link (SMS) for that person and
+ * "Khởi hành" (EN_ROUTE: GPS taken from then on). The field officer can also press "Khởi hành" on the link.
  */
 function OwnDispatchStep({ incidentId, plan, onPlan }) {
   const toast = useToast();
   const [open, setOpen] = useState(false);
-  const [picked, setPicked] = useState(null); // { memberId, fullName, badgeNumber }
+  const picked = plan.tracker; // saved on the trip (status ACCEPTED, waiting to set off)
   const [draftPick, setDraftPick] = useState(null);
   const [busy, setBusy] = useState(false);
 
-  const go = async () => {
+  const choose = async () => {
     setBusy(true);
     try {
-      const next = await departDelegation(incidentId, picked.memberId);
+      const next = await changeFieldMember(incidentId, draftPick.memberId);
       onPlan(next);
-      toast.show(`Đã điều động: ${picked.fullName} phụ trách hiện trường`, { tone: 'success' });
+      setOpen(false);
+      toast.show(
+        `${next?.tracker?.fullName || 'Đã chọn'} phụ trách hiện trường: bấm "Khởi hành" khi xuất phát`,
+        {
+          tone: 'success',
+        },
+      );
     } catch (err) {
       toast.show(err.message, { tone: 'error' });
     } finally {
@@ -544,10 +559,13 @@ function OwnDispatchStep({ incidentId, plan, onPlan }) {
         >
           {picked ? 'Đổi người phụ trách' : 'Chỉ định người phụ trách'}
         </button>
-        <button type="button" className={styles.btnPrimary} disabled={!picked || busy} onClick={go}>
-          {busy ? 'Đang điều động...' : 'Lập tức điều động'}
-        </button>
       </div>
+      {picked && (
+        <>
+          <FieldLinkBox incidentId={incidentId} plan={plan} />
+          <DepartButton who={picked.fullName} onDepart={() => departDelegation(incidentId)} onPlan={onPlan} />
+        </>
+      )}
 
       {open && (
         <Modal
@@ -574,13 +592,10 @@ function OwnDispatchStep({ incidentId, plan, onPlan }) {
               <button
                 type="button"
                 className={styles.btnPrimary}
-                disabled={!draftPick?.memberId}
-                onClick={() => {
-                  setPicked(draftPick);
-                  setOpen(false);
-                }}
+                disabled={!draftPick?.memberId || busy || draftPick.memberId === picked?.memberId}
+                onClick={choose}
               >
-                Chọn người này
+                {busy ? 'Đang lưu...' : 'Chọn người này'}
               </button>
             </div>
           </div>

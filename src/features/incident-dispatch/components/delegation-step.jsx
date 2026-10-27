@@ -25,9 +25,18 @@ export function DelegationStep({ incidentId, plan, onPlan, locked = false }) {
           {!accepted && <span className={styles.spinner} aria-hidden="true" />}
           <div>
             <div>
-              {accepted ? (
+              {accepted && plan.tracker && plan.tracker.memberId === who.memberId ? (
                 <>
-                  <b>{who.fullName}</b> ({plan.origin.name}) đã nhận ca, đang chuẩn bị xuất phát.
+                  Đã chỉ định <b>{who.fullName}</b> ({plan.origin.name}) phụ trách hiện trường: chờ khởi hành.
+                </>
+              ) : accepted && plan.tracker ? (
+                <>
+                  <b>{who.fullName}</b> ({plan.origin.name}) đã nhận ca, chọn <b>{plan.tracker.fullName}</b>{' '}
+                  đi hiện trường: chờ khởi hành.
+                </>
+              ) : accepted ? (
+                <>
+                  <b>{who.fullName}</b> ({plan.origin.name}) đã nhận ca, đang chọn người đi hiện trường.
                 </>
               ) : (
                 <>
@@ -67,7 +76,7 @@ export function DelegationStep({ incidentId, plan, onPlan, locked = false }) {
 
 function Candidates({ incidentId, plan, onDone }) {
   const toast = useToast();
-  // PCCC / CSGT: the appointed officer is also the field officer (GPS) and sets off at once, no "Chấp nhận"
+  // PCCC / CSGT: the appointed officer is also the field officer (GPS), no "Chấp nhận"; then "Khởi hành"
   const appoints = plan.origin.agency === 'fire' || plan.origin.agency === 'csgt';
   const [list, setList] = useState({ status: 'loading', items: [], error: null });
   const [busyId, setBusyId] = useState(null);
@@ -91,7 +100,7 @@ function Candidates({ incidentId, plan, onDone }) {
       const next = await delegateDispatch(incidentId, o.memberId);
       toast.show(
         appoints
-          ? `Đã điều động: ${o.fullName} phụ trách hiện trường`
+          ? `Đã chỉ định ${o.fullName} phụ trách hiện trường: gửi link rồi bấm "Khởi hành"`
           : `Đã chuyển thông tin ca cho ${o.fullName}`,
         { tone: 'success' },
       );
@@ -171,7 +180,7 @@ function Candidates({ incidentId, plan, onDone }) {
                 : o.busy
                   ? 'Đang trong ca'
                   : appoints
-                    ? 'Chỉ định & điều động'
+                    ? 'Chỉ định'
                     : 'Lập tức liên hệ'}
             </button>
           </li>

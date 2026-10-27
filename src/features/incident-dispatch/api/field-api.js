@@ -51,6 +51,12 @@ export async function sendFieldPosition(token, p) {
   return !!body.data;
 }
 
+/** "Khởi hành" from the link page (the chosen field officer sets off). */
+export async function fieldDepart(token) {
+  const body = await api.post('/api/v1/field/depart', null, headers(token));
+  return normalizePlan(body.data);
+}
+
 export async function fieldArrive(token) {
   const body = await api.post('/api/v1/field/arrive', null, headers(token));
   return normalizePlan(body.data);

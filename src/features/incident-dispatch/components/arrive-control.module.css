@@ -1,0 +1,111 @@
+.depart,
+.arrive {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: rgba(15, 23, 42, 0.6);
+}
+
+.primary {
+  width: 100%;
+  padding: 11px 14px;
+  border: 0;
+  border-radius: 10px;
+  background: #16a34a;
+  color: #fff;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.primary:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.note {
+  font-size: 12.5px;
+  color: #cbd5e1;
+}
+
+.ok {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #86efac;
+}
+
+.link {
+  align-self: flex-start;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #93c5fd;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 700;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.title {
+  font-weight: 900;
+  color: #f8fafc;
+}
+
+.dialog {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  color: #e2e8f0;
+  font-size: 13.5px;
+}
+
+.dialog p {
+  margin: 0;
+}
+
+.label {
+  font-weight: 800;
+  font-size: 12.5px;
+}
+
+.reason {
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  background: #0b1220;
+  color: #f1f5f9;
+  font: inherit;
+  resize: vertical;
+}
+
+.error {
+  color: #fca5a5;
+  font-size: 12px;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.actions .primary {
+  width: auto;
+}
+
+.ghost {
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  background: transparent;
+  color: #e2e8f0;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}

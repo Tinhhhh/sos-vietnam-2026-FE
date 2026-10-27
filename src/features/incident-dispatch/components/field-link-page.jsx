@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import { useToast } from '@/components/ui/toast/toast-context';
-
-import { fieldArrive, getFieldPlan, sendFieldPosition } from '../api/field-api';
+import { fieldArrive, fieldDepart, getFieldPlan, sendFieldPosition } from '../api/field-api';
+import { ArriveControl, DepartButton } from './arrive-control';
 import { DispatchTrackingView } from './dispatch-tracking-view';
 import styles from './field-link-page.module.css';
 
@@ -18,9 +17,7 @@ const SEND_EVERY_MS = 5_000; // same pace as the Traccar app
  *           onIncident?: (incidentId: string) => void }} props  onIncident: the route needs the id for calls
  */
 export function FieldLinkPanel({ token, onCall, callBusy = false, onIncident }) {
-  const toast = useToast();
   const [state, setState] = useState({ status: 'loading', data: null, error: null, code: null });
-  const [arriving, setArriving] = useState(false);
 
   const load = useCallback(
     () =>
@@ -83,19 +80,6 @@ export function FieldLinkPanel({ token, onCall, callBusy = false, onIncident }) 
     ? `https://www.google.com/maps/dir/?api=1&destination=${dest.lat},${dest.lng}&travelmode=driving`
     : null;
 
-  const arrive = async () => {
-    setArriving(true);
-    try {
-      await fieldArrive(token);
-      toast.show('Đã báo tới hiện trường', { tone: 'success' });
-      load();
-    } catch (err) {
-      toast.show(err.message, { tone: 'error' });
-    } finally {
-      setArriving(false);
-    }
-  };
-
   return (
     <div className={styles.page}>
       <header className={styles.head}>
@@ -126,6 +110,9 @@ export function FieldLinkPanel({ token, onCall, callBusy = false, onIncident }) 
         fetchPlan={fetchPlan}
         trackerCall={false}
         onCallReceiver={onCall ? (r) => onCall('officer', r.fullName || data.handlerName || null) : null}
+        renderArrive={(check) => (
+          <ArriveControl check={check} onArrive={() => fieldArrive(token)} onPlan={load} />
+        )}
         footer={
           <div className={styles.actions}>
             {mapsUrl && (
@@ -153,6 +140,13 @@ export function FieldLinkPanel({ token, onCall, callBusy = false, onIncident }) 
                 </button>
               </>
             )}
+            {plan.status === 'ACCEPTED' && (
+              <DepartButton
+                who={plan.tracker?.fullName || null}
+                onDepart={() => fieldDepart(token)}
+                onPlan={load}
+              />
+            )}
             {enRoute && (
               <>
                 <button
@@ -163,9 +157,6 @@ export function FieldLinkPanel({ token, onCall, callBusy = false, onIncident }) 
                   {gps.on ? 'Tắt gửi vị trí' : 'Bật gửi vị trí'}
                 </button>
                 <div className={styles.gpsNote}>{gps.note}</div>
-                <button type="button" className={styles.arrive} disabled={arriving} onClick={arrive}>
-                  {arriving ? 'Đang gửi...' : 'Đã đến'}
-                </button>
               </>
             )}
           </div>

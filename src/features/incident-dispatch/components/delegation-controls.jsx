@@ -3,8 +3,15 @@ import { useState } from 'react';
 import { Modal } from '@/components/ui/modal/modal';
 import { useToast } from '@/components/ui/toast/toast-context';
 
-import { acceptDelegation, arriveDispatch, departDelegation, rejectDelegation } from '../api/dispatch-api';
+import {
+  acceptDelegation,
+  arriveDispatch,
+  changeFieldMember,
+  departDelegation,
+  rejectDelegation,
+} from '../api/dispatch-api';
 import { useDispatchPlan } from '../hooks/use-dispatch-plan';
+import { ArriveControl, DepartButton } from './arrive-control';
 import styles from './delegation.module.css';
 import { DispatchTrackingView } from './dispatch-tracking-view';
 import { FieldLinkBox } from './field-link-box';
@@ -153,7 +160,7 @@ export function DelegationControls({ incident, onFinished, onCall = null }) {
               Gọi người giao uỷ quyền
             </button>
           )}
-          {onCall && d.status !== 'ACCEPTED' && <FieldCallButton incident={incident} onCall={onCall} />}
+          {onCall && <FieldCallButton incident={incident} onCall={onCall} />}
         </div>
       )}
 
@@ -250,7 +257,8 @@ function DelegationDetailModal({ incident, mine, onClose, onCallField, onCallRec
         {status === 'error' ? 'Không tải được kế hoạch điều động.' : 'Đang tải...'}
       </div>
     );
-  } else if (st === 'ACCEPTED' && mine) {
+  } else if (st === 'ACCEPTED' && mine && !current.tracker) {
+    // accepted: choose who goes out with the GPS phone (saved; "Khởi hành" comes next)
     body = (
       <div className={styles.detailBody}>
         <FieldOfficerPicker incidentId={incident.id} value={fieldId} onChange={setFieldId} />
@@ -260,13 +268,22 @@ function DelegationDetailModal({ incident, mine, onClose, onCallField, onCallRec
           disabled={busy || !fieldId}
           onClick={() =>
             run(
-              () => departDelegation(incident.id, fieldId),
-              'Đã điều động: người báo tin đang theo dõi lực lượng',
+              () => changeFieldMember(incident.id, fieldId),
+              'Đã chọn người phụ trách hiện trường: gửi link rồi bấm "Khởi hành"',
             )
           }
         >
-          {busy ? 'Đang gửi...' : fieldId ? 'Lập tức điều động' : 'Chọn người phụ trách để điều động'}
+          {busy ? 'Đang lưu...' : fieldId ? 'Chọn người này' : 'Chọn người phụ trách hiện trường'}
         </button>
+      </div>
+    );
+  } else if (st === 'ACCEPTED' && mine) {
+    // person chosen, not set off yet: link (SMS) for them, change the person, "Khởi hành"
+    body = (
+      <div className={styles.detailBody}>
+        <FieldOfficerChange incidentId={incident.id} plan={current} />
+        <FieldLinkBox incidentId={incident.id} plan={current} />
+        <DepartButton who={current.tracker.fullName} onDepart={() => departDelegation(incident.id)} />
       </div>
     );
   } else {
@@ -277,21 +294,17 @@ function DelegationDetailModal({ incident, mine, onClose, onCallField, onCallRec
           incidentId={incident.id}
           onCallTracker={onCallField}
           onCallReceiver={onCallReceiver}
+          // "Đã đến" only within the GPS radius (no override here: only the officer holding the case has one)
+          renderArrive={
+            mine
+              ? (check) => <ArriveControl check={check} onArrive={() => arriveDispatch(incident.id)} />
+              : null
+          }
         />
         {mine && st === 'EN_ROUTE' && (
           <>
             <FieldOfficerChange incidentId={incident.id} plan={current} />
             {current.tracker && <FieldLinkBox incidentId={incident.id} plan={current} />}
-            <button
-              type="button"
-              className={styles.depart}
-              disabled={busy}
-              onClick={() =>
-                run(() => arriveDispatch(incident.id), 'Đã tới hiện trường: chuyển sang bước Kết thúc')
-              }
-            >
-              {busy ? 'Đang gửi...' : 'Đã đến'}
-            </button>
           </>
         )}
         {mine && st === 'ARRIVED' && (

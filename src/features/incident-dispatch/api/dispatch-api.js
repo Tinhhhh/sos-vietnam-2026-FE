@@ -100,6 +100,18 @@ export function normalizePlan(raw) {
           phone: raw.assigned_to.phone || '',
         }
       : null,
+    // on the way: GPS distance to the destination; "Đã đến" allowed when within (30 m + accuracy, max 50 m)
+    arrivalCheck: raw.arrival_check
+      ? {
+          distanceM: raw.arrival_check.distance_m,
+          thresholdM: raw.arrival_check.threshold_m,
+          within: !!raw.arrival_check.within,
+        }
+      : null,
+    // how "Đã đến" was confirmed: GPS / HOLDER_OVERRIDE (+ note) / CITIZEN
+    arrivalSource: raw.arrival_source || null,
+    arrivalSourceLabel: raw.arrival_source_label || null,
+    arrivalNote: raw.arrival_note || null,
     // "Người nhận ca": the officer holding the case (phone only in the officers' copy)
     receiver: raw.receiver
       ? {
@@ -236,8 +248,15 @@ export async function rejectDelegation(incidentId, reason) {
 }
 
 /** The delegated unit sets off with its field officer (người phụ trách hiện trường). */
-export async function departDelegation(incidentId, fieldMemberId) {
-  const body = await api.post(planPath(incidentId, '/depart'), { member_id: fieldMemberId });
+/**
+ * "Khởi hành" (ACCEPTED -> EN_ROUTE): the field officer chosen before (PUT /field-member), or fieldMemberId to
+ * choose and set off in one call.
+ */
+export async function departDelegation(incidentId, fieldMemberId = null) {
+  const body = await api.post(
+    planPath(incidentId, '/depart'),
+    fieldMemberId ? { member_id: fieldMemberId } : {}, // JSON body: the BE reads an optional body
+  );
   return normalizePlan(body.data);
 }
 
@@ -289,9 +308,12 @@ export async function changeFieldMember(incidentId, fieldMemberId) {
   return normalizePlan(body.data);
 }
 
-/** "Đã đến": the unit on site / field officer (JWT) or the citizen (citizenToken). */
-export async function arriveDispatch(incidentId, { citizenToken } = {}) {
-  const body = await api.post(planPath(incidentId, '/arrive'), null, {
+/**
+ * "Đã đến": officers / field officer only when the GPS is within the destination radius (BE checks); the officer
+ * holding the case may confirm without GPS with a reason; the citizen (citizenToken) always.
+ */
+export async function arriveDispatch(incidentId, { citizenToken, reason } = {}) {
+  const body = await api.post(planPath(incidentId, '/arrive'), reason ? { reason } : {}, {
     headers: citizenToken ? { [CITIZEN_TOKEN_HEADER]: citizenToken } : undefined,
   });
   return normalizePlan(body.data);

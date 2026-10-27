@@ -30,7 +30,8 @@ const telOf = (phone) => (phone || '').replace(/[^0-9+]/g, '');
  *   enables the live GPS; sheet = fills its (full-screen) parent: map takes the free height, the card sits at
  *   the bottom; actions = extra buttons next to "Gọi" ("Đổi người", "Đổi điểm đến" of the dispatch window);
  *   onCallTracker(tracker) = "Gọi" starts a video call to the field officer (else a tel: link);
- *   onCallReceiver(receiver) = "Gọi" on the "Người nhận ca" row (none for the holder: it is them)
+ *   onCallReceiver(receiver) = "Gọi" on the "Người nhận ca" row (none for the holder: it is them);
+ *   renderArrive(arrivalCheck) = the "Đã đến" control, fed with the distance polled every 5 s
  */
 export function DispatchTrackingView({
   plan,
@@ -41,6 +42,7 @@ export function DispatchTrackingView({
   actions = null,
   onCallTracker = null,
   onCallReceiver = null,
+  renderArrive = null,
   fetchPlan = null,
   trackerCall = true, // false on the field officer's own page (the tracker is them)
 }) {
@@ -203,6 +205,7 @@ export function DispatchTrackingView({
             <span>Tới: {plan.destination.address || 'Vị trí bạn đã gửi'}</span>
           </div>
         )}
+        {renderArrive && enRoute && renderArrive(live.polled ? live.arrivalCheck : plan.arrivalCheck)}
         {footer}
       </div>
     </div>
