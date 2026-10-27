@@ -83,6 +83,12 @@ export function FieldOfficerPicker({ incidentId, value, onChange, compact = fals
   );
 }
 
+/** Who can be sent first (online before offline), the ones that cannot be picked last; order kept otherwise. */
+function sortCandidates(items) {
+  const rank = (o) => (o.selectable ? 0 : 2) + (o.online ? 0 : 1);
+  return [...items].sort((a, b) => rank(a) - rank(b));
+}
+
 /**
  * Officers of my unit as a list like the "Uỷ quyền" step (avatar, online, phone): "Chọn đi hiện trường" saves
  * that person as the field officer right away (the delegated ward officer's window, before "Khởi hành").
@@ -144,7 +150,7 @@ export function FieldOfficerList({ incidentId, unitName, onPlan }) {
       {state.status === 'loading' && <div className={list.meta}>Đang tải...</div>}
       {state.status === 'error' && <div className={list.error}>Không tải được danh sách: {state.error}</div>}
       <ul className={list.officers}>
-        {state.items.map((o) => (
+        {sortCandidates(state.items).map((o) => (
           <li key={o.memberId} className={`${list.officer} ${o.selectable ? '' : list.offline}`}>
             <span className={list.avatar} aria-hidden="true">
               {initials(o.fullName)}

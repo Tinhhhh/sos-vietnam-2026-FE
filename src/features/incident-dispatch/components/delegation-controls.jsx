@@ -260,11 +260,6 @@ function DelegationDetailModal({ incident, mine, onClose, onCallField, onCallRec
           incidentId={incident.id}
           onCallTracker={onCallField}
           onCallReceiver={onCallReceiver}
-          between={
-            choosing ? (
-              <FieldOfficerList incidentId={incident.id} unitName={current.origin.name} onPlan={setLocal} />
-            ) : null
-          }
           // chosen, not gone: "Khởi hành" where "Đã đến" goes
           renderDepart={
             mine && current.tracker
@@ -290,6 +285,10 @@ function DelegationDetailModal({ incident, mine, onClose, onCallField, onCallRec
               : null
           }
         />
+        {/* below the ETA / receiver / delegate card, so the officer reads who is involved first */}
+        {choosing && (
+          <FieldOfficerList incidentId={incident.id} unitName={current.origin.name} onPlan={setLocal} />
+        )}
         {mine && current.tracker && (st === 'ACCEPTED' || st === 'EN_ROUTE') && (
           <>
             <FieldOfficerChange incidentId={incident.id} plan={current} onPlan={setLocal} />
