@@ -133,6 +133,7 @@ function DetailBody({ data, onPreview }) {
     ['Nội dung', data.tags.length ? data.tags.join(', ') : 'Chưa chọn loại'],
     ['Mô tả', data.description || null],
     ['Người báo', data.citizenName || 'Không để tên'],
+    ['Hình thức báo', data.reportTypeLabel],
     ['Số điện thoại', data.phone || null, data.phone ? `tel:${data.phone}` : null],
     ['Địa điểm', place || null],
     [

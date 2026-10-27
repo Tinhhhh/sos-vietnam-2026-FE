@@ -284,3 +284,42 @@
     transform: rotate(360deg);
   }
 }
+
+/* "Người báo tin": Tự báo / Báo hộ (báo hộ chưa làm, nút mờ) */
+.reportType {
+  margin-top: 12px;
+}
+
+.reportTypeRow {
+  display: flex;
+  gap: 8px;
+}
+
+.reportTypeOn,
+.reportTypeOff {
+  flex: 1;
+  padding: 9px 10px;
+  border-radius: 10px;
+  font-size: 13.5px;
+  font-weight: 700;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  background: transparent;
+  color: var(--text-muted);
+}
+
+.reportTypeOn {
+  border-color: #38bdf8;
+  background: rgba(56, 189, 248, 0.12);
+  color: #e0f2fe;
+}
+
+.reportTypeOff {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.reportTypeOff small {
+  margin-left: 4px;
+  font-size: 11px;
+  font-weight: 600;
+}

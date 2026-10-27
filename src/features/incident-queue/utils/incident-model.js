@@ -61,6 +61,9 @@ export function normalizeIncident(raw) {
     escalateAt: toDate(raw.escalate_at),
     escalatedAt: toDate(raw.escalated_at),
     escalationReasonLabel: raw.escalation_reason_label || null,
+    // report_type: SELF (tự báo) / PROXY (báo hộ, chưa mở); ca cũ BE điền SELF
+    reportType: raw.report_type || 'SELF',
+    reportTypeLabel: raw.report_type_label || 'Tự báo',
     transferredFromLabel: raw.transferred_from_label || null,
     transferReason: raw.transfer_reason || null,
     escalationNote: raw.escalation_note || null,

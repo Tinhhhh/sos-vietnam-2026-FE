@@ -425,6 +425,7 @@ function QueueCard({
           ) : (
             <ElapsedBadge incident={inc} now={now} />
           )}
+          <ReportTypeBadge incident={inc} />
         </div>
         {onOpenDetail && (
           <button
@@ -710,6 +711,23 @@ function CallButton({ ringing = false, disabled, title, onClick }) {
     >
       <CallIcon name="phone" />
     </button>
+  );
+}
+
+/** "Tự báo" / "Báo hộ": who sent the SOS (báo hộ not open yet, old cases are tự báo). */
+function ReportTypeBadge({ incident }) {
+  const proxy = incident.reportType === 'PROXY';
+  return (
+    <span
+      style={
+        proxy
+          ? badgeStyle('rgba(251, 191, 36, 0.15)', '#fde68a', 'rgba(251, 191, 36, 0.4)')
+          : badgeStyle('rgba(148, 163, 184, 0.15)', '#e2e8f0', 'rgba(148, 163, 184, 0.4)')
+      }
+      title={proxy ? 'Người khác báo hộ người gặp sự cố' : 'Người gặp sự cố tự gửi tin báo'}
+    >
+      {incident.reportTypeLabel}
+    </span>
   );
 }
 

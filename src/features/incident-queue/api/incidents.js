@@ -155,6 +155,9 @@ export async function getIncidentDetail(id) {
     escalateAt: toDate(d.escalate_at),
     escalatedAt: toDate(d.escalated_at),
     escalationReasonLabel: d.escalation_reason_label || null,
+    // report_type: SELF (tự báo) / PROXY (báo hộ, chưa mở); ca cũ BE điền SELF
+    reportType: d.report_type || 'SELF',
+    reportTypeLabel: d.report_type_label || 'Tự báo',
     transferredFromLabel: d.transferred_from_label || null,
     transferReason: d.transfer_reason || null,
     escalationNote: d.escalation_note || null,

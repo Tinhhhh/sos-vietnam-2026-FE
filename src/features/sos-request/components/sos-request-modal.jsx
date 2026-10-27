@@ -88,6 +88,7 @@ export function SosRequestModal({ open, onClose, location, onPickLocation, notif
     try {
       const body = await createIncident({
         emergency_type: agency.emergencyType,
+        report_type: 'SELF', // báo hộ (PROXY) chưa mở
         incident_tags: tags.map(cleanIncidentLabel), // emoji chỉ để hiển thị trên ô chọn
         description: notes.trim() || null,
         citizen_name: reporterName.trim() || DEFAULT_REPORTER_NAME,
@@ -185,6 +186,26 @@ export function SosRequestModal({ open, onClose, location, onPickLocation, notif
             onRemove={media.remove}
             disabled={submitting}
           />
+
+          {/* who reports: only "Tự báo" for now; "Báo hộ" (reporting for someone else) comes later */}
+          <div className={formStyles.reportType} role="radiogroup" aria-label="Người báo tin">
+            <span className={formStyles.fieldLabel}>Người báo tin</span>
+            <div className={formStyles.reportTypeRow}>
+              <button type="button" role="radio" aria-checked="true" className={formStyles.reportTypeOn}>
+                Tự báo
+              </button>
+              <button
+                type="button"
+                role="radio"
+                aria-checked="false"
+                disabled
+                className={formStyles.reportTypeOff}
+                title="Báo hộ cho người khác: tính năng sắp có"
+              >
+                Báo hộ <small>Sắp có</small>
+              </button>
+            </div>
+          </div>
 
           <div className={formStyles.contactRow}>
             <div>
