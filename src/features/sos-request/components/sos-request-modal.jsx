@@ -376,7 +376,8 @@ export function SosRequestModal({
             setOpenCases(null);
             onOpenLookup?.();
           }}
-          onNewCase={() => handleSubmit({ newCase: true })}
+          // Ca thứ 2 cho cùng số tạm khoá ở FE (BE đã nhận new_case): chỉ báo đang phát triển
+          onNewCase={() => notify('Tính năng đang được phát triển', { tone: 'info' })}
           onMenu={() => {
             setOpenCases(null);
             close();
