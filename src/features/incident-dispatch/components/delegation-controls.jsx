@@ -7,6 +7,7 @@ import { acceptDelegation, arriveDispatch, departDelegation, rejectDelegation } 
 import { useDispatchPlan } from '../hooks/use-dispatch-plan';
 import styles from './delegation.module.css';
 import { DispatchTrackingView } from './dispatch-tracking-view';
+import { FieldLinkBox } from './field-link-box';
 import { FieldOfficerChange, FieldOfficerPicker } from './field-officer-picker';
 import { FinishPanel } from './finish-panel';
 
@@ -196,7 +197,13 @@ export function DelegationControls({ incident, onFinished }) {
 /** Who carries the GPS phone, with "Đổi người" (the plan is re-read on every queue push). */
 function EnRouteFieldOfficer({ incident }) {
   const { plan } = useDispatchPlan({ incidentId: incident.id, refreshKey: incident });
-  return plan ? <FieldOfficerChange incidentId={incident.id} plan={plan} /> : null;
+  if (!plan) return null;
+  return (
+    <>
+      <FieldOfficerChange incidentId={incident.id} plan={plan} />
+      {plan.tracker && <FieldLinkBox incidentId={incident.id} plan={plan} />}
+    </>
+  );
 }
 
 function TrackingModal({ incident, onClose }) {

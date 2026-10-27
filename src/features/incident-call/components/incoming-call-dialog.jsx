@@ -3,7 +3,7 @@ import { CallIcon } from '@/components/ui/call-icons/call-icons';
 import styles from './incident-call.module.css';
 
 /**
- * The citizen calls back (only to the officer holding the incident): small ringing card at the
+ * The citizen or the field officer calls the officer holding the incident: small ringing card at the
  * bottom right of the console.
  *
  * @param {{ call: object, onAccept: () => void, onReject: () => void }} props
@@ -15,7 +15,10 @@ export function IncomingCallDialog({ call, onAccept, onReject }) {
         <span className={styles.incomingIcon}>
           <CallIcon name="phone" />
         </span>
-        {call.peer?.name || 'Người báo'} đang gọi video
+        {call.peer?.role === 'field'
+          ? `Người phụ trách hiện trường ${call.peer?.name || ''}`.trim()
+          : call.peer?.name || 'Người báo'}{' '}
+        đang gọi video
       </div>
       <p className={styles.incomingSub}>Ca {call.incidentId}</p>
       <div style={{ display: 'flex', gap: 10 }}>

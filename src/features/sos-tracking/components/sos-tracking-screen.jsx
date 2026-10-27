@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
 import { CallIcon } from '@/components/ui/call-icons/call-icons';
+import { CallSwitchDialog } from '@/components/ui/call-switch-dialog/call-switch-dialog';
 import { useCall } from '@/hooks/use-call';
 import { useNow } from '@/hooks/use-now';
 import { END_REASON_TEXT, VIDEO_PROFILES } from '@/lib/webrtc/call-session';
@@ -131,19 +132,38 @@ function TrackingContent({
   };
 
   const callBack = () =>
-    phone.startCall({ incidentId: incident.id, peer: { name: incident.handler?.fullName || null } });
+    phone.startCall({
+      incidentId: incident.id,
+      to: 'officer',
+      peer: { name: incident.handler?.fullName || null, role: 'officer' },
+    });
+  // "Gọi" on the tracking card: video call to the field officer (người phụ trách hiện trường)
+  const callTracker = (tracker) =>
+    phone.startCall({
+      incidentId: incident.id,
+      to: 'field',
+      peer: { name: tracker?.fullName || null, role: 'field' },
+    });
+  const switchDialog = (
+    <CallSwitchDialog waiting={phone.waiting} onYes={phone.switchToWaiting} onNo={phone.declineWaiting} />
+  );
+  const peerLabel = (c) =>
+    c?.peer?.role === 'field' ? `Người phụ trách hiện trường ${c.peer.name || ''}`.trim() : c?.peer?.name;
 
   if (call && IN_CALL.includes(call.state)) {
     return (
-      <CitizenCallScreen
-        call={call}
-        officerName={call.peer?.name || incident.handler?.fullName}
-        onHangUp={phone.hangUp}
-        onToggleMic={phone.setMic}
-        onToggleCamera={phone.setCamera}
-        onSwitchCamera={phone.switchCamera}
-        extraControl={!closed && dispatchSlot?.({ incident, token, variant: 'call' })}
-      />
+      <>
+        <CitizenCallScreen
+          call={call}
+          officerName={peerLabel(call) || incident.handler?.fullName}
+          onHangUp={phone.hangUp}
+          onToggleMic={phone.setMic}
+          onToggleCamera={phone.setCamera}
+          onSwitchCamera={phone.switchCamera}
+          extraControl={!closed && dispatchSlot?.({ incident, token, variant: 'call', callTracker })}
+        />
+        {switchDialog}
+      </>
     );
   }
 
@@ -164,7 +184,7 @@ function TrackingContent({
           />
           {conn.text}
         </span>
-        {!closed && dispatchSlot?.({ incident, token, variant: 'screen' })}
+        {!closed && dispatchSlot?.({ incident, token, variant: 'screen', callTracker })}
       </div>
 
       <div className={styles.center} onClickCapture={() => closed && setStayedFor(incident.documentStatus)}>
@@ -188,7 +208,7 @@ function TrackingContent({
             unit={unit}
             incoming={incoming}
             call={call}
-            peerName={call?.peer?.name}
+            peerName={peerLabel(call)}
           />
           {incident.lookupCode ? (
             <>

@@ -66,6 +66,14 @@ const router = createBrowserRouter([
     ],
   },
 
+  // ── Field officer's link (public, the code is the key) ────────────
+  {
+    path: paths.field.link.path,
+    lazy: async () => ({ Component: (await import('./routes/field/field-link')).FieldLinkRoute }),
+    ErrorBoundary: RouteErrorBoundary,
+    HydrateFallback: RouteLoading,
+  },
+
   // ── Legacy dispatcher placeholder ────────────────────────────────
   {
     path: paths.dispatcher.root.path,

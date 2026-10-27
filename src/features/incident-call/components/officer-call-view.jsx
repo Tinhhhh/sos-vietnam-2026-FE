@@ -45,7 +45,11 @@ export function OfficerCallView({
   const live = call.state === 'live';
   const ended = call.state === 'ended';
   const status = STATUS_TEXT[call.state];
-  const citizen = call.peer?.name || incident?.citizenName || 'Người báo';
+  // the other side: the citizen, or the field officer (người phụ trách hiện trường) opening their link
+  const citizen =
+    call.peer?.role === 'field' || call.to === 'field'
+      ? `Người phụ trách hiện trường ${call.peer?.name || ''}`.trim()
+      : call.peer?.name || incident?.citizenName || 'Người báo';
 
   return (
     <section className={styles.pane} aria-label="Cuộc gọi video với người báo">

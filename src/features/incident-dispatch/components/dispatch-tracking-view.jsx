@@ -27,7 +27,8 @@ const telOf = (phone) => (phone || '').replace(/[^0-9+]/g, '');
  * @param {{ plan: object, incidentId?: string, citizenToken?: string, variant?: 'inline' | 'sheet',
  *           footer?: React.ReactNode, actions?: React.ReactNode }} props  plan from normalizePlan(); incidentId
  *   enables the live GPS; sheet = fills its (full-screen) parent: map takes the free height, the card sits at
- *   the bottom; actions = extra buttons next to "Gọi" ("Đổi người", "Đổi điểm đến" of the dispatch window)
+ *   the bottom; actions = extra buttons next to "Gọi" ("Đổi người", "Đổi điểm đến" of the dispatch window);
+ *   onCallTracker(tracker) = "Gọi" starts a video call to the field officer (else a tel: link)
  */
 export function DispatchTrackingView({
   plan,
@@ -36,6 +37,9 @@ export function DispatchTrackingView({
   variant = 'inline',
   footer = null,
   actions = null,
+  onCallTracker = null,
+  fetchPlan = null,
+  trackerCall = true, // false on the field officer's own page (the tracker is them)
 }) {
   const o = plan.origin;
   const arrived = plan.status === 'ARRIVED' || plan.status === 'DONE';
@@ -48,6 +52,7 @@ export function DispatchTrackingView({
     citizenToken,
     enabled: enRoute,
     initial: plan.lastPosition,
+    fetchPlan,
   });
   // the BE recalculates the route when the vehicle leaves it: the polled plan may carry a newer one
   const route = newer(live.route, plan.route);
@@ -128,10 +133,21 @@ export function DispatchTrackingView({
               {tracker.badgeNumber && <div className={styles.unitSub}>Số hiệu {tracker.badgeNumber}</div>}
             </div>
             {actions && <div className={styles.actions}>{actions}</div>}
-            {trackerTel && (
-              <a className={styles.callBtn} href={`tel:${trackerTel}`} title={`Gọi ${tracker.fullName}`}>
+            {!trackerCall ? null : onCallTracker ? (
+              <button
+                type="button"
+                className={styles.callBtn}
+                title={`Gọi video cho ${tracker.fullName}`}
+                onClick={() => onCallTracker(tracker)}
+              >
                 Gọi
-              </a>
+              </button>
+            ) : (
+              trackerTel && (
+                <a className={styles.callBtn} href={`tel:${trackerTel}`} title={`Gọi ${tracker.fullName}`}>
+                  Gọi
+                </a>
+              )
             )}
           </div>
         )}

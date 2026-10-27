@@ -21,6 +21,7 @@ import { useToast } from '@/components/ui/toast/toast-context';
 import { paths } from '@/config/paths';
 import { ChangePasswordDialog, ChangePinDialog, buildOfficerProfile, useAuth } from '@/features/auth';
 import { CommandMap, ServiceDirectoryPanel, StationDirectory, useStations } from '@/features/command-map';
+import { CallSwitchDialog } from '@/components/ui/call-switch-dialog/call-switch-dialog';
 import { CallMapCard, IncomingCallDialog, OfficerCallView, useOfficerCall } from '@/features/incident-call';
 import { DelegationControls, DispatchConfirmDialog, DispatchWindow } from '@/features/incident-dispatch';
 import { ReportDocumentModal, ReportPromptDialog } from '@/features/incident-report';
@@ -394,7 +395,8 @@ export function OfficerDashboardRoute() {
               onRecall={() => {
                 const target = callIncident || { id: call.incidentId, citizenName: call.peer?.name };
                 phone.dismiss();
-                phone.callCitizen(target);
+                if (call.to === 'field') phone.callField(target, { fullName: call.peer?.name });
+                else phone.callCitizen(target);
               }}
               onClose={phone.dismiss}
               onToggleMic={phone.setMic}
@@ -460,6 +462,7 @@ export function OfficerDashboardRoute() {
           LocationPicker={LocationPicker}
           onClose={() => setDispatchId(null)}
           onFinished={setReportPromptId}
+          onCallTracker={phone.callField}
         />
       )}
       <ReportPromptDialog
@@ -477,6 +480,7 @@ export function OfficerDashboardRoute() {
           setHistoryKey((k) => k + 1);
         }}
       />
+      <CallSwitchDialog waiting={phone.waiting} onYes={phone.switchToWaiting} onNo={phone.declineWaiting} />
       {call?.state === 'incoming' && (
         <IncomingCallDialog
           call={call}

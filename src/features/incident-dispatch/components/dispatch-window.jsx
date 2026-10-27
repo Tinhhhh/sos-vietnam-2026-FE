@@ -26,6 +26,7 @@ import delegationStyles from './delegation.module.css';
 import { DispatchStepper } from './dispatch-stepper';
 import { DispatchTrackingView } from './dispatch-tracking-view';
 import trackingStyles from './dispatch-tracking.module.css';
+import { FieldLinkBox } from './field-link-box';
 import { FieldOfficerChange, FieldOfficerPicker } from './field-officer-picker';
 import { FinishPanel } from './finish-panel';
 import { RouteMap } from './route-map';
@@ -103,6 +104,7 @@ function DispatchWindowBody({
   onFinished,
   LocationPicker,
   initialPlan,
+  onCallTracker,
 }) {
   const toast = useToast();
   const [draft, setDraft] = useState(initialPlan);
@@ -361,6 +363,7 @@ function DispatchWindowBody({
               <DispatchTrackingView
                 plan={draft}
                 incidentId={incident.id}
+                onCallTracker={onCallTracker ? (tracker) => onCallTracker(incident, tracker) : null}
                 actions={
                   (canArrive || (step === 3 && !waitingAnswer)) && (
                     <>
@@ -386,6 +389,9 @@ function DispatchWindowBody({
                   )
                 }
               />
+              {!draft.assignedTo && draft.tracker && ['EN_ROUTE', 'ARRIVED'].includes(draft.status) && (
+                <FieldLinkBox incidentId={incident.id} plan={draft} />
+              )}
               {canArrive && changingField && (
                 <FieldOfficerChange
                   incidentId={incident.id}

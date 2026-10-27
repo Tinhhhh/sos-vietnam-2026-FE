@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { getDispatchPlan } from '../api/dispatch-api';
 
@@ -16,15 +16,20 @@ const POLL_MS = 5000;
  *   speedKmh, heading, receivedAt }; simulation = latest polled plan.simulation (officers only); route = latest
  *   polled plan.route (the BE recalculates it when the vehicle leaves it); null until the first poll
  */
-export function useLivePosition({ incidentId, citizenToken, enabled, initial = null }) {
+export function useLivePosition({ incidentId, citizenToken, enabled, initial = null, fetchPlan = null }) {
   const [polled, setPolled] = useState({ position: null, simulation: null, route: null });
-  const active = enabled && !!incidentId;
+  // fetchPlan: the field officer's link page reads its plan with the link code instead
+  const fetchRef = useRef(fetchPlan);
+  useEffect(() => {
+    fetchRef.current = fetchPlan;
+  });
+  const active = enabled && (!!incidentId || !!fetchPlan);
 
   useEffect(() => {
     if (!active) return undefined;
     let alive = true;
     const tick = () =>
-      getDispatchPlan(incidentId, { citizenToken })
+      (fetchRef.current ? fetchRef.current() : getDispatchPlan(incidentId, { citizenToken }))
         .then((plan) => {
           if (!alive || !plan) return;
           setPolled((p) => ({

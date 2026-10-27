@@ -55,6 +55,7 @@ function livePosition(p) {
     speedKmh: p.speed_kmh ?? null,
     heading: p.heading ?? null,
     receivedAt: toDate(p.received_at),
+    source: p.source || null, // TRACCAR (app) | BROWSER (field link page)
   };
 }
 
@@ -115,6 +116,8 @@ export function normalizePlan(raw) {
       : null,
     rejectReason: raw.reject_reason || null,
     officerConfirmedAt: toDate(raw.officer_confirmed_at),
+    // officers only: when the field officer's link was last issued (null = none / voided)
+    fieldLinkIssuedAt: toDate(raw.field_link_issued_at),
     citizenConfirmedAt: toDate(raw.citizen_confirmed_at),
     respondedAt: toDate(raw.responded_at),
     dispatchedAt: toDate(raw.dispatched_at),
@@ -248,6 +251,24 @@ export async function getFieldCandidates(incidentId) {
     selectable: !!o.selectable,
     unavailableReason: o.unavailable_reason || '',
   }));
+}
+
+/**
+ * Field officer's link /f/{token} (no login): POST .../dispatch-plan/field-link makes a new code (the old link stops
+ * working). The code comes back only here, once.
+ * @returns {Promise<{ token: string, path: string, issuedAt: Date|null, fieldMember: object|null }>}
+ */
+export async function issueFieldLink(incidentId) {
+  const body = await api.post(planPath(incidentId, '/field-link'));
+  const d = body.data || {};
+  return {
+    token: d.token,
+    path: d.path,
+    issuedAt: toDate(d.issued_at),
+    fieldMember: d.field_member
+      ? { fullName: d.field_member.full_name, badgeNumber: d.field_member.badge_number }
+      : null,
+  };
 }
 
 /** Change the field officer while the force is on the way (stops a running simulation). */
