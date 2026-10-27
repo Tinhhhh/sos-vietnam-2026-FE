@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 
 import { CallIcon } from '@/components/ui/call-icons/call-icons';
 import { CallSwitchDialog } from '@/components/ui/call-switch-dialog/call-switch-dialog';
-import { useCall } from '@/hooks/use-call';
+import { callPeerLabel, callPeerRole, useCall } from '@/hooks/use-call';
 import { useNow } from '@/hooks/use-now';
 import { END_REASON_TEXT, VIDEO_PROFILES } from '@/lib/webrtc/call-session';
 import { getIceServers } from '@/lib/webrtc/ice-servers';
@@ -147,8 +147,8 @@ function TrackingContent({
   const switchDialog = (
     <CallSwitchDialog waiting={phone.waiting} onYes={phone.switchToWaiting} onNo={phone.declineWaiting} />
   );
-  const peerLabel = (c) =>
-    c?.peer?.role === 'field' ? `Người phụ trách hiện trường ${c.peer.name || ''}`.trim() : c?.peer?.name;
+  // the officer holding the case: just their name; anyone else (field officer, delegated officer): role + name
+  const peerLabel = (c) => (callPeerRole(c) === 'officer' ? c?.peer?.name : callPeerLabel(c));
 
   if (call && IN_CALL.includes(call.state)) {
     return (

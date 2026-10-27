@@ -16,6 +16,7 @@ import { CALLS_DESTINATION, CALL_SEND_DESTINATION } from '../api/calls';
  *   connection: 'connecting' | 'live' | 'reconnecting',
  *   callCitizen: (incident: { id: string, citizenName?: string }) => Promise<void>,
  *   callField: (incident: { id: string }, tracker: { fullName?: string }) => Promise<void>,
+ *   callTo: (incident: { id: string }, to: 'officer'|'citizen'|'field'|'delegate', name?: string|null) => Promise<void>,
  * }}
  */
 export function useOfficerCall({ getToken }) {
@@ -86,5 +87,11 @@ export function useOfficerCall({ getToken }) {
     [startCall],
   );
 
-  return { ...phone, connection, callCitizen, callField };
+  // any side of the case by role (the delegated ward officer calls the citizen / the officer holding the case)
+  const callTo = useCallback(
+    (incident, to, name) => startCall({ incidentId: incident.id, to, peer: { name: name || null, role: to } }),
+    [startCall],
+  );
+
+  return { ...phone, connection, callCitizen, callField, callTo };
 }

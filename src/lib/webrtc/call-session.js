@@ -179,7 +179,8 @@ export class CallSession {
         this._emit();
         break;
       case 'reject':
-        this._finish('rejected');
+        // the server refuses at once when the other side is not connected (offline) / not part of the case
+        this._finish(REFUSAL_REASONS.includes(signal.reason) ? signal.reason : 'rejected');
         break;
       case 'end':
         this._finish(signal.reason === 'network' ? 'network' : 'remote-hangup');
@@ -357,11 +358,20 @@ export class CallSession {
 export const END_REASON_TEXT = {
   hangup: 'Bạn đã kết thúc cuộc gọi',
   'remote-hangup': 'Bên kia đã kết thúc cuộc gọi',
-  rejected: 'Cuộc gọi bị từ chối hoặc máy bận',
+  rejected: 'Cuộc gọi bị từ chối',
+  busy: 'Máy bận (đang trong cuộc gọi khác)',
+  offline: 'Người nhận đang không trực tuyến (chưa mở trang / link)',
+  not_handler: 'Bạn không còn là một bên của ca này',
+  no_handler: 'Ca chưa có cán bộ nhận',
+  no_field: 'Chưa có người phụ trách hiện trường',
+  no_delegate: 'Ca không còn cán bộ được uỷ quyền',
+  closed: 'Ca đã kết thúc',
   'no-answer': 'Không có người nghe máy',
   network: 'Mất kết nối mạng',
   media: 'Không mở được camera / micro',
 };
+
+const REFUSAL_REASONS = ['busy', 'offline', 'not_handler', 'no_handler', 'no_field', 'no_delegate', 'closed'];
 
 export function newCallId() {
   return crypto.randomUUID?.() || `${Date.now()}-${Math.random().toString(16).slice(2)}`;

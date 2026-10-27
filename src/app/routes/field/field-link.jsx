@@ -4,9 +4,9 @@ import { useParams } from 'react-router';
 import { CallSwitchDialog } from '@/components/ui/call-switch-dialog/call-switch-dialog';
 import { FieldLinkPanel } from '@/features/incident-dispatch';
 import { CitizenCallScreen } from '@/features/sos-tracking';
-import { CALL_ROLE_LABEL, useCall } from '@/hooks/use-call';
+import { callPeerLabel, useCall } from '@/hooks/use-call';
 import { connectStomp } from '@/lib/stomp-client';
-import { VIDEO_PROFILES } from '@/lib/webrtc/call-session';
+import { END_REASON_TEXT, VIDEO_PROFILES } from '@/lib/webrtc/call-session';
 import { getIceServers } from '@/lib/webrtc/ice-servers';
 
 import styles from './field-link.module.css';
@@ -72,10 +72,6 @@ export function FieldLinkRoute() {
     return () => clearTimeout(t);
   }, [ended, dismiss]);
   const callTo = (to, name) => incidentId && phone.startCall({ incidentId, to, peer: { name, role: to } });
-  const peerLabel = (c) => {
-    const role = CALL_ROLE_LABEL[c?.peer?.role || c?.to] || '';
-    return [role, c?.peer?.name].filter(Boolean).join(' ');
-  };
   const switchDialog = (
     <CallSwitchDialog waiting={phone.waiting} onYes={phone.switchToWaiting} onNo={phone.declineWaiting} />
   );
@@ -85,7 +81,8 @@ export function FieldLinkRoute() {
       <>
         <CitizenCallScreen
           call={call}
-          officerName={peerLabel(call)}
+          officerName={callPeerLabel(call)}
+          citizenSide={false}
           onHangUp={phone.hangUp}
           onToggleMic={phone.setMic}
           onToggleCamera={phone.setCamera}
@@ -99,10 +96,15 @@ export function FieldLinkRoute() {
   return (
     <>
       <FieldLinkPanel token={token} onIncident={setIncidentId} onCall={callTo} callBusy={!incidentId} />
-      {ended && <div className={styles.ended}>Cuộc gọi đã kết thúc</div>}
+      {ended && (
+        <div className={styles.ended}>
+          Cuộc gọi đã kết thúc
+          {END_REASON_TEXT[call.endedReason] ? `: ${END_REASON_TEXT[call.endedReason].toLowerCase()}` : ''}
+        </div>
+      )}
       {call?.state === 'incoming' && (
         <div className={styles.incoming} role="alertdialog" aria-label="Cuộc gọi đến">
-          <div className={styles.incomingTitle}>{peerLabel(call) || 'Cuộc gọi'} đang gọi video</div>
+          <div className={styles.incomingTitle}>{callPeerLabel(call) || 'Cuộc gọi'} đang gọi video</div>
           <div className={styles.incomingRow}>
             <button type="button" className={styles.reject} onClick={phone.reject}>
               Từ chối

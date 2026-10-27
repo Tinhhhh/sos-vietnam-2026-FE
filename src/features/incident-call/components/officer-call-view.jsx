@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { CallIcon } from '@/components/ui/call-icons/call-icons';
 import { VideoTile } from '@/components/ui/video-tile/video-tile';
 import { useNow } from '@/hooks/use-now';
+import { CALLING_TEXT, callPeerLabel, callPeerRole } from '@/hooks/use-call';
 import { END_REASON_TEXT } from '@/lib/webrtc/call-session';
 
 import styles from './incident-call.module.css';
@@ -44,12 +45,14 @@ export function OfficerCallView({
   const [volume, setVolume] = useState(1);
   const live = call.state === 'live';
   const ended = call.state === 'ended';
-  const status = STATUS_TEXT[call.state];
-  // the other side: the citizen, or the field officer (người phụ trách hiện trường) opening their link
+  const role = callPeerRole(call) || 'citizen';
+  const status =
+    call.state === 'ringing' && role !== 'citizen'
+      ? [CALLING_TEXT[role], 'Chờ bên kia bấm Nghe.']
+      : STATUS_TEXT[call.state];
+  // the other side: the citizen (by name), or the field officer / officer holding the case / delegated officer
   const citizen =
-    call.peer?.role === 'field' || call.to === 'field'
-      ? `Người phụ trách hiện trường ${call.peer?.name || ''}`.trim()
-      : call.peer?.name || incident?.citizenName || 'Người báo';
+    role === 'citizen' ? call.peer?.name || incident?.citizenName || 'Người báo' : callPeerLabel(call);
 
   return (
     <section className={styles.pane} aria-label="Cuộc gọi video với người báo">

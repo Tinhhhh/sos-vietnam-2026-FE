@@ -14,8 +14,8 @@ import { startRingtone } from '@/lib/webrtc/ringtone';
  *   videoProfile: object,                     // VIDEO_PROFILES.scene | VIDEO_PROFILES.officer
  *   facingMode?: 'user' | 'environment',
  * }} options
- * Three parties can call each other on one incident: the officer holding it ('officer'), the citizen ('citizen')
- * and the field officer opening their link ('field'). `meta.to` says who we call; an incoming call is answered back
+ * Four parties can call each other on one incident: the officer holding it ('officer'), the citizen ('citizen'),
+ * the field officer opening their link ('field') and the ward officer the case was delegated to ('delegate'). `meta.to` says who we call; an incoming call is answered back
  * to its `from`. A call arriving while we are already talking does not get a busy tone right away: it waits in
  * `waiting` so the UI can ask "X muốn nối máy với bạn. Huỷ cuộc gọi hiện tại để nối máy?" (switchToWaiting /
  * declineWaiting).
@@ -24,7 +24,7 @@ import { startRingtone } from '@/lib/webrtc/ringtone';
  *   call: null | { id, role, state, endedReason, peer, incidentId, to, localStream, remoteStream,
  *                  micOn, cameraOn, hasCamera, facingMode, quality, connectedAt },
  *   waiting: null | { callId, incidentId, from, peer },
- *   startCall: (meta: { incidentId: string, to?: 'officer'|'citizen'|'field', peer?: object }) => Promise<void>,
+ *   startCall: (meta: { incidentId: string, to?: 'officer'|'citizen'|'field'|'delegate', peer?: object }) => Promise<void>,
  *   handleSignal: (signal: object) => void, accept, reject, hangUp, dismiss, switchToWaiting, declineWaiting,
  *   setMic, setCamera, switchCamera, requestQuality,
  * }}
@@ -36,7 +36,23 @@ export const CALL_ROLE_LABEL = {
   officer: 'Cán bộ nhận ca',
   citizen: 'Người báo tin',
   field: 'Người phụ trách hiện trường',
+  delegate: 'Cán bộ được uỷ quyền',
 };
+
+/** "Đang gọi ..." while our call rings on the other side, by who we call. */
+export const CALLING_TEXT = {
+  officer: 'Đang gọi cán bộ nhận ca...',
+  citizen: 'Đang gọi người báo tin...',
+  field: 'Đang gọi người phụ trách hiện trường...',
+  delegate: 'Đang gọi cán bộ được uỷ quyền...',
+};
+
+/** Role of the other side of a call (who called us, or who we called). */
+export const callPeerRole = (call) => call?.peer?.role || call?.to || null;
+
+/** "Người phụ trách hiện trường Lâm Thành Cường", "Người báo tin Võ Tịnh"... (role alone if no name). */
+export const callPeerLabel = (call) =>
+  [CALL_ROLE_LABEL[callPeerRole(call)], call?.peer?.name].filter(Boolean).join(' ');
 
 const peerOf = (signal) => ({
   name: signal.peer_name || null,
@@ -156,6 +172,19 @@ export function useCall({ send, getIceServers, videoProfile, facingMode = 'user'
           to: signal.from,
           peer: peerOf(signal),
         });
+        return;
+      }
+      // we answered / declined on another device (same person, laptop + phone): stop ringing here
+      if (signal.action === 'dismiss') {
+        if (waitingRef.current?.callId === signal.call_id) {
+          waitingRef.current = null;
+          setWaiting(null);
+        }
+        if (current?.callId === signal.call_id && current.state === 'incoming') {
+          sessionRef.current = null;
+          metaRef.current = null;
+          setCall(null);
+        }
         return;
       }
       // the waiting caller gave up

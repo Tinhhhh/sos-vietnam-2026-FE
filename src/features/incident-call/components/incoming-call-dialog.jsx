@@ -1,4 +1,5 @@
 import { CallIcon } from '@/components/ui/call-icons/call-icons';
+import { callPeerLabel, callPeerRole } from '@/hooks/use-call';
 
 import styles from './incident-call.module.css';
 
@@ -15,9 +16,7 @@ export function IncomingCallDialog({ call, onAccept, onReject }) {
         <span className={styles.incomingIcon}>
           <CallIcon name="phone" />
         </span>
-        {call.peer?.role === 'field'
-          ? `Người phụ trách hiện trường ${call.peer?.name || ''}`.trim()
-          : call.peer?.name || 'Người báo'}{' '}
+        {callPeerRole(call) === 'citizen' ? call.peer?.name || 'Người báo' : callPeerLabel(call)}{' '}
         đang gọi video
       </div>
       <p className={styles.incomingSub}>Ca {call.incidentId}</p>

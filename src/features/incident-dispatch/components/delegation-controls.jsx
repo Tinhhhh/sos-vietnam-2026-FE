@@ -23,7 +23,13 @@ const MIN_REASON = 5;
  *
  * @param {{ incident: object }} props  live queue incident with its `delegation` block
  */
-export function DelegationControls({ incident, onFinished }) {
+const CALLABLE = ['PENDING_ACCEPT', 'ACCEPTED', 'EN_ROUTE', 'ARRIVED'];
+
+/**
+ * onCall(incident, to, name): video call from the delegated officer to the citizen ('citizen'), the officer holding
+ * the case ('officer') or the field officer ('field'), through the dashboard's phone line.
+ */
+export function DelegationControls({ incident, onFinished, onCall = null }) {
   const toast = useToast();
   const d = incident.delegation;
   const [busy, setBusy] = useState(false);
@@ -179,7 +185,41 @@ export function DelegationControls({ incident, onFinished }) {
         </button>
       )}
 
-      {tracking && <TrackingModal incident={incident} onClose={() => setTracking(false)} />}
+      {mine && onCall && CALLABLE.includes(d.status) && (
+        <div className={styles.row}>
+          <button
+            type="button"
+            className={styles.track}
+            onClick={stop(() => onCall(incident, 'citizen', incident.citizenName))}
+          >
+            Gọi người báo tin
+          </button>
+          {incident.handler && (
+            <button
+              type="button"
+              className={styles.track}
+              onClick={stop(() => onCall(incident, 'officer', incident.handler.fullName))}
+            >
+              Gọi cán bộ nhận ca
+            </button>
+          )}
+        </div>
+      )}
+
+      {tracking && (
+        <TrackingModal
+          incident={incident}
+          onClose={() => setTracking(false)}
+          onCallTracker={
+            mine && onCall
+              ? (tracker) => {
+                  setTracking(false); // the call pane takes over
+                  onCall(incident, 'field', tracker.fullName);
+                }
+              : null
+          }
+        />
+      )}
       {finishing && (
         <FinishModal
           incident={incident}
@@ -206,7 +246,7 @@ function EnRouteFieldOfficer({ incident }) {
   );
 }
 
-function TrackingModal({ incident, onClose }) {
+function TrackingModal({ incident, onClose, onCallTracker }) {
   const { plan, status } = useDispatchPlan({ incidentId: incident.id, refreshKey: incident });
   return (
     <Modal
@@ -217,7 +257,7 @@ function TrackingModal({ incident, onClose }) {
       title={<span className={styles.title}>Theo dõi lực lượng · Ca {incident.id}</span>}
     >
       {plan ? (
-        <DispatchTrackingView plan={plan} incidentId={incident.id} />
+        <DispatchTrackingView plan={plan} incidentId={incident.id} onCallTracker={onCallTracker} />
       ) : (
         <div className={styles.meta}>
           {status === 'error' ? 'Không tải được kế hoạch điều động.' : 'Đang tải...'}

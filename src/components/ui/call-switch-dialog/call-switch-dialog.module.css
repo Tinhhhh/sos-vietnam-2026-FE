@@ -1,7 +1,7 @@
 .backdrop {
   position: fixed;
   inset: 0;
-  z-index: 3000;
+  z-index: 20000; /* above every call screen (citizen call screen 10600) */
   display: flex;
   align-items: center;
   justify-content: center;

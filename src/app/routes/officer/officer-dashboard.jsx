@@ -197,7 +197,16 @@ export function OfficerDashboardRoute() {
           onOpenDetail={setDetailId}
           onRequestDispatch={askDispatch}
           onOpenDispatch={openDispatch}
-          renderDelegation={(inc) => <DelegationControls incident={inc} onFinished={setReportPromptId} />}
+          renderDelegation={(inc) => (
+            <DelegationControls
+              incident={inc}
+              onFinished={setReportPromptId}
+              onCall={(i, to, name) => {
+                phone.callTo(i, to, name);
+                setOpenWindow(null); // the call takes the main panel
+              }}
+            />
+          )}
         />
       ),
     },
@@ -395,7 +404,7 @@ export function OfficerDashboardRoute() {
               onRecall={() => {
                 const target = callIncident || { id: call.incidentId, citizenName: call.peer?.name };
                 phone.dismiss();
-                if (call.to === 'field') phone.callField(target, { fullName: call.peer?.name });
+                if (call.to && call.to !== 'citizen') phone.callTo(target, call.to, call.peer?.name);
                 else phone.callCitizen(target);
               }}
               onClose={phone.dismiss}
@@ -462,7 +471,10 @@ export function OfficerDashboardRoute() {
           LocationPicker={LocationPicker}
           onClose={() => setDispatchId(null)}
           onFinished={setReportPromptId}
-          onCallTracker={phone.callField}
+          onCallTracker={(inc, tracker) => {
+            setDispatchId(null); // the dispatch window covers the call pane
+            phone.callField(inc, tracker);
+          }}
         />
       )}
       <ReportPromptDialog
