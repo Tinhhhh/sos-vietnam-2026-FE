@@ -314,6 +314,7 @@
   font-weight: 800;
 }
 .incomingIcon {
+  flex: 0 0 40px; /* stays a circle when the caller's name wraps */
   width: 40px;
   height: 40px;
   border-radius: 50%;

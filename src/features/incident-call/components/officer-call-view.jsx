@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { CallIcon } from '@/components/ui/call-icons/call-icons';
 import { VideoTile } from '@/components/ui/video-tile/video-tile';
 import { useNow } from '@/hooks/use-now';
-import { CALLING_TEXT, callPeerLabel, callPeerRole } from '@/hooks/use-call';
+import { CALL_ROLE_LABEL, CALLING_TEXT, callPeerLabel, callPeerRole } from '@/hooks/use-call';
 import { END_REASON_TEXT } from '@/lib/webrtc/call-session';
 
 import styles from './incident-call.module.css';
@@ -46,10 +46,14 @@ export function OfficerCallView({
   const live = call.state === 'live';
   const ended = call.state === 'ended';
   const role = callPeerRole(call) || 'citizen';
+  // who is on the other side, in a sentence: "Người báo", "Cán bộ nhận ca", "Cán bộ được uỷ quyền"...
+  const who = role === 'citizen' ? 'Người báo' : CALL_ROLE_LABEL[role] || 'Bên kia';
   const status =
     call.state === 'ringing' && role !== 'citizen'
       ? [CALLING_TEXT[role], 'Chờ bên kia bấm Nghe.']
-      : STATUS_TEXT[call.state];
+      : call.state === 'reconnecting' && role !== 'citizen'
+        ? [`Mạng của ${who.toLowerCase()} chập chờn`, 'Đang tự kết nối lại, giữ máy...']
+        : STATUS_TEXT[call.state];
   // the other side: the citizen (by name), or the field officer / officer holding the case / delegated officer
   const citizen =
     role === 'citizen' ? call.peer?.name || incident?.citizenName || 'Người báo' : callPeerLabel(call);
@@ -79,7 +83,7 @@ export function OfficerCallView({
                 <div className={styles.avatar} style={{ margin: '0 auto 10px' }}>
                   🎙️
                 </div>
-                Người báo đang tắt camera hoặc chỉ gọi thoại
+                {who} đang tắt camera hoặc chỉ gọi thoại
               </div>
             ) : null
           }
@@ -105,7 +109,7 @@ export function OfficerCallView({
           mirrored
           fallback={<div className={styles.avatar}>👮</div>}
         >
-          <span className={styles.pipLabel}>LỰC LƯỢNG TIẾP NHẬN</span>
+          <span className={styles.pipLabel}>CAMERA CỦA BẠN</span>
         </VideoTile>
 
         {status && (
@@ -177,7 +181,7 @@ export function OfficerCallView({
         >
           <CallIcon name="hd" />
         </button>
-        <label className={styles.volume} title="Âm lượng người báo">
+        <label className={styles.volume} title={`Âm lượng ${who.toLowerCase()}`}>
           <CallIcon name="volume" />
           <input
             type="range"

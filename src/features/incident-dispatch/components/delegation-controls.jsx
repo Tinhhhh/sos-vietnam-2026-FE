@@ -16,18 +16,18 @@ const MIN_REASON = 5;
 /**
  * Controls of a queue card that a higher unit delegated to my ward unit (step 2 "Uỷ quyền"):
  * - assigned to me, waiting: "Chấp nhận" / "Từ chối" (reason required, like a handover)
- * - accepted: pick the field officer (người phụ trách hiện trường, GPS phone), then "Lập tức điều động"
- *   (we set off: step 3, the citizen starts tracking)
- * - on the way: "Theo dõi" opens the tracking map
- * Colleagues of the unit see who it was given to.
+ * - accepted: buttons like a held card: "Chi tiết điều động" (pick the field officer / GPS phone and set off,
+ *   then tracking, "Đã đến", "Kết thúc xử lý"), "Gọi người giao uỷ quyền", and once someone set off
+ *   "Gọi người phụ trách hiện trường"
+ * Colleagues of the unit see who it was given to and can watch the tracking map.
  *
  * @param {{ incident: object }} props  live queue incident with its `delegation` block
  */
-const CALLABLE = ['PENDING_ACCEPT', 'ACCEPTED', 'EN_ROUTE', 'ARRIVED'];
+const OPENED = ['ACCEPTED', 'EN_ROUTE', 'ARRIVED'];
 
 /**
- * onCall(incident, to, name): video call from the delegated officer to the citizen ('citizen'), the officer holding
- * the case ('officer') or the field officer ('field'), through the dashboard's phone line.
+ * onCall(incident, to, name): video call from the delegated officer to the officer holding the case ('officer') or the
+ * field officer ('field'), through the dashboard's phone line.
  */
 export function DelegationControls({ incident, onFinished, onCall = null }) {
   const toast = useToast();
@@ -35,9 +35,7 @@ export function DelegationControls({ incident, onFinished, onCall = null }) {
   const [busy, setBusy] = useState(false);
   const [rejecting, setRejecting] = useState(false);
   const [reason, setReason] = useState('');
-  const [tracking, setTracking] = useState(false);
-  const [finishing, setFinishing] = useState(false);
-  const [fieldId, setFieldId] = useState(null);
+  const [detail, setDetail] = useState(false);
 
   const run = async (fn, success) => {
     setBusy(true);
@@ -139,93 +137,48 @@ export function DelegationControls({ incident, onFinished, onCall = null }) {
         </div>
       )}
 
-      {mine && d.status === 'ACCEPTED' && (
-        <>
-          <FieldOfficerPicker incidentId={incident.id} value={fieldId} onChange={setFieldId} compact />
-          <button
-            type="button"
-            className={styles.depart}
-            disabled={busy || !fieldId}
-            onClick={stop(() =>
-              run(
-                () => departDelegation(incident.id, fieldId),
-                'Đã điều động: người báo tin đang theo dõi lực lượng',
-              ),
-            )}
-          >
-            {busy ? 'Đang gửi...' : fieldId ? 'Lập tức điều động' : 'Chọn người phụ trách để điều động'}
+      {/* accepted: buttons like a held card; picking the field officer, tracking and finishing are in the window */}
+      {mine && OPENED.includes(d.status) && (
+        <div className={styles.grid}>
+          <button type="button" className={styles.detail} onClick={stop(() => setDetail(true))}>
+            Chi tiết điều động
           </button>
-        </>
-      )}
-
-      {mine && d.status === 'EN_ROUTE' && <EnRouteFieldOfficer incident={incident} />}
-
-      {mine && d.status === 'EN_ROUTE' && (
-        <button
-          type="button"
-          className={styles.depart}
-          disabled={busy}
-          onClick={stop(() =>
-            run(() => arriveDispatch(incident.id), 'Đã tới hiện trường: chuyển sang bước Kết thúc'),
+          {onCall && incident.handler && (
+            <button
+              type="button"
+              className={styles.callHolder}
+              title={`Gọi video cho ${incident.handler.fullName}`}
+              onClick={stop(() => onCall(incident, 'officer', incident.handler.fullName))}
+            >
+              Gọi người giao uỷ quyền
+            </button>
           )}
-        >
-          {busy ? 'Đang gửi...' : 'Đã đến'}
-        </button>
+          {onCall && d.status !== 'ACCEPTED' && <FieldCallButton incident={incident} onCall={onCall} />}
+        </div>
       )}
 
-      {mine && d.status === 'ARRIVED' && (
-        <button type="button" className={styles.depart} onClick={stop(() => setFinishing(true))}>
-          Đã xử lý xong
-        </button>
-      )}
-
-      {(d.status === 'EN_ROUTE' || d.status === 'ARRIVED') && (
-        <button type="button" className={styles.track} onClick={stop(() => setTracking(true))}>
+      {/* colleagues of the unit: watch only */}
+      {!mine && (d.status === 'EN_ROUTE' || d.status === 'ARRIVED') && (
+        <button type="button" className={styles.track} onClick={stop(() => setDetail(true))}>
           Theo dõi
         </button>
       )}
 
-      {mine && onCall && CALLABLE.includes(d.status) && (
-        <div className={styles.row}>
-          <button
-            type="button"
-            className={styles.track}
-            onClick={stop(() => onCall(incident, 'citizen', incident.citizenName))}
-          >
-            Gọi người báo tin
-          </button>
-          {incident.handler && (
-            <button
-              type="button"
-              className={styles.track}
-              onClick={stop(() => onCall(incident, 'officer', incident.handler.fullName))}
-            >
-              Gọi cán bộ nhận ca
-            </button>
-          )}
-        </div>
-      )}
-
-      {tracking && (
-        <TrackingModal
+      {detail && (
+        <DelegationDetailModal
           incident={incident}
-          onClose={() => setTracking(false)}
-          onCallTracker={
+          mine={mine}
+          onClose={() => setDetail(false)}
+          onCallField={
             mine && onCall
               ? (tracker) => {
-                  setTracking(false); // the call pane takes over
+                  setDetail(false); // the call pane takes over
                   onCall(incident, 'field', tracker.fullName);
                 }
               : null
           }
-        />
-      )}
-      {finishing && (
-        <FinishModal
-          incident={incident}
-          onClose={() => setFinishing(false)}
           onFinished={() => {
-            setFinishing(false);
+            setDetail(false);
             onFinished?.(incident.id);
           }}
         />
@@ -234,62 +187,122 @@ export function DelegationControls({ incident, onFinished, onCall = null }) {
   );
 }
 
-/** Who carries the GPS phone, with "Đổi người" (the plan is re-read on every queue push). */
-function EnRouteFieldOfficer({ incident }) {
+/** "Gọi người phụ trách hiện trường" once someone set off (name read from the plan). */
+function FieldCallButton({ incident, onCall }) {
   const { plan } = useDispatchPlan({ incidentId: incident.id, refreshKey: incident });
-  if (!plan) return null;
+  const tracker = plan?.tracker;
+  if (!tracker) return null;
   return (
-    <>
-      <FieldOfficerChange incidentId={incident.id} plan={plan} />
-      {plan.tracker && <FieldLinkBox incidentId={incident.id} plan={plan} />}
-    </>
+    <button
+      type="button"
+      className={styles.callField}
+      title={`Gọi video cho ${tracker.fullName}`}
+      onClick={(e) => {
+        e.stopPropagation();
+        onCall(incident, 'field', tracker.fullName);
+      }}
+    >
+      Gọi người phụ trách hiện trường
+    </button>
   );
 }
 
-function TrackingModal({ incident, onClose, onCallTracker }) {
+/**
+ * "Chi tiết điều động" of the delegated ward officer:
+ * - accepted: pick the field officer (GPS phone) then "Lập tức điều động"
+ * - on the way: tracking map (call / simulate), change the field officer, field link, "Đã đến"
+ * - arrived: tracking + "Kết thúc xử lý"
+ * Colleagues (not assigned) only see the tracking map.
+ */
+function DelegationDetailModal({ incident, mine, onClose, onCallField, onFinished }) {
+  const toast = useToast();
   const { plan, status } = useDispatchPlan({ incidentId: incident.id, refreshKey: incident });
+  const [local, setLocal] = useState(null);
+  const [fieldId, setFieldId] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const current = local && plan && local.citizenConfirmedAt === plan.citizenConfirmedAt ? local : plan;
+  const st = current?.status;
+
+  const run = async (fn, success) => {
+    setBusy(true);
+    try {
+      await fn();
+      toast.show(success, { tone: 'success' });
+    } catch (err) {
+      toast.show(err.message, { tone: 'error' });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  let body;
+  if (!current) {
+    body = (
+      <div className={styles.meta}>
+        {status === 'error' ? 'Không tải được kế hoạch điều động.' : 'Đang tải...'}
+      </div>
+    );
+  } else if (st === 'ACCEPTED' && mine) {
+    body = (
+      <div className={styles.detailBody}>
+        <FieldOfficerPicker incidentId={incident.id} value={fieldId} onChange={setFieldId} />
+        <button
+          type="button"
+          className={styles.depart}
+          disabled={busy || !fieldId}
+          onClick={() =>
+            run(
+              () => departDelegation(incident.id, fieldId),
+              'Đã điều động: người báo tin đang theo dõi lực lượng',
+            )
+          }
+        >
+          {busy ? 'Đang gửi...' : fieldId ? 'Lập tức điều động' : 'Chọn người phụ trách để điều động'}
+        </button>
+      </div>
+    );
+  } else {
+    body = (
+      <div className={styles.detailBody}>
+        <DispatchTrackingView plan={current} incidentId={incident.id} onCallTracker={onCallField} />
+        {mine && st === 'EN_ROUTE' && (
+          <>
+            <FieldOfficerChange incidentId={incident.id} plan={current} />
+            {current.tracker && <FieldLinkBox incidentId={incident.id} plan={current} />}
+            <button
+              type="button"
+              className={styles.depart}
+              disabled={busy}
+              onClick={() =>
+                run(() => arriveDispatch(incident.id), 'Đã tới hiện trường: chuyển sang bước Kết thúc')
+              }
+            >
+              {busy ? 'Đang gửi...' : 'Đã đến'}
+            </button>
+          </>
+        )}
+        {mine && st === 'ARRIVED' && (
+          <FinishPanel
+            incidentId={incident.id}
+            plan={current}
+            canConfirm
+            onPlan={setLocal}
+            onFinished={onFinished}
+          />
+        )}
+      </div>
+    );
+  }
+
   return (
     <Modal
       open
       onClose={onClose}
       solid
       containerStyle={{ maxWidth: 720, width: 'min(720px, calc(100vw - 16px))' }}
-      title={<span className={styles.title}>Theo dõi lực lượng · Ca {incident.id}</span>}
+      title={<span className={styles.title}>Chi tiết điều động · Ca {incident.id}</span>}
     >
-      {plan ? (
-        <DispatchTrackingView plan={plan} incidentId={incident.id} onCallTracker={onCallTracker} />
-      ) : (
-        <div className={styles.meta}>
-          {status === 'error' ? 'Không tải được kế hoạch điều động.' : 'Đang tải...'}
-        </div>
-      )}
-    </Modal>
-  );
-}
-
-function FinishModal({ incident, onClose, onFinished }) {
-  const { plan } = useDispatchPlan({ incidentId: incident.id, refreshKey: incident });
-  const [local, setLocal] = useState(null);
-  const current = local && plan && local.citizenConfirmedAt === plan.citizenConfirmedAt ? local : plan;
-  return (
-    <Modal
-      open
-      onClose={onClose}
-      solid
-      containerStyle={{ maxWidth: 560, width: 'min(560px, calc(100vw - 16px))' }}
-      title={<span className={styles.title}>Kết thúc xử lý · Ca {incident.id}</span>}
-    >
-      {current ? (
-        <FinishPanel
-          incidentId={incident.id}
-          plan={current}
-          canConfirm
-          onPlan={setLocal}
-          onFinished={onFinished}
-        />
-      ) : (
-        <div className={styles.meta}>Đang tải...</div>
-      )}
+      {body}
     </Modal>
   );
 }
