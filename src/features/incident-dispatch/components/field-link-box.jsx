@@ -8,15 +8,15 @@ import styles from './field-link.module.css';
 const TIME = new Intl.DateTimeFormat('vi-VN', { hour: '2-digit', minute: '2-digit' });
 
 /**
- * "Link cho người phụ trách hiện trường": the field officer has no login, so the officer sends them a link
- * (Zalo... until SMS exists). The BE returns the code only once: "Tạo link" / "Cấp lại mã" makes a new one and the
- * old link stops working (also when the field officer changes).
+ * "Link cho người phụ trách hiện trường": the field officer has no login, so they get a link. "Tạo link" / "Cấp lại
+ * mã" makes a new code (the old link stops working, also when the field officer changes), the BE texts it to the
+ * phone in their profile and returns it once so it can also be copied (Zalo...) when the SMS did not go.
  *
  * @param {{ incidentId: string, plan: object }} props  plan.fieldLinkIssuedAt = last issue time (null = none)
  */
 export function FieldLinkBox({ incidentId, plan }) {
   const toast = useToast();
-  const [link, setLink] = useState(null); // { url, issuedAt, name } of the code made in this window
+  const [link, setLink] = useState(null); // { url, issuedAt, name, sms } of the code made in this window
   const [busy, setBusy] = useState(false);
   const issuedAt = link?.issuedAt || plan.fieldLinkIssuedAt;
   const who = plan.tracker?.fullName;
@@ -26,8 +26,8 @@ export function FieldLinkBox({ incidentId, plan }) {
     try {
       const res = await issueFieldLink(incidentId);
       const url = `${window.location.origin}${res.path}`;
-      setLink({ url, issuedAt: res.issuedAt, name: res.fieldMember?.fullName });
-      await copy(url, false);
+      setLink({ url, issuedAt: res.issuedAt, name: res.fieldMember?.fullName, sms: res.sms });
+      await copy(url, false, res.sms);
     } catch (err) {
       toast.show(err.message, { tone: 'error' });
     } finally {
@@ -35,14 +35,26 @@ export function FieldLinkBox({ incidentId, plan }) {
     }
   };
 
-  const copy = async (url, say = true) => {
+  const copy = async (url, say = true, sms = null) => {
+    let copied = true;
     try {
       await navigator.clipboard.writeText(url);
-      toast.show(say ? 'Đã sao chép link' : 'Đã tạo và sao chép link: gửi cho người phụ trách hiện trường', {
-        tone: 'success',
-      });
     } catch {
-      if (say) toast.show('Không sao chép được, hãy bôi đen link để chép', { tone: 'error' });
+      copied = false;
+    }
+    if (say) {
+      toast.show(copied ? 'Đã sao chép link' : 'Không sao chép được, hãy bôi đen link để chép', {
+        tone: copied ? 'success' : 'error',
+      });
+    } else if (sms?.sent) {
+      toast.show(`Đã gửi SMS link tới ${sms.phoneMasked}`, { tone: 'success' });
+    } else {
+      toast.show(
+        copied
+          ? 'Đã tạo và sao chép link: gửi cho người phụ trách hiện trường'
+          : 'Đã tạo link: bôi đen link để chép rồi gửi cho người phụ trách',
+        { tone: 'success' },
+      );
     }
   };
 
@@ -54,8 +66,15 @@ export function FieldLinkBox({ incidentId, plan }) {
       </div>
       <p className={styles.hint}>
         Người phụ trách mở link trên điện thoại để xem ca, đường đi, gọi video và báo "Đã đến" (không cần đăng
-        nhập). Chưa có SMS: sao chép rồi gửi qua Zalo / tin nhắn.
+        nhập). Link được gửi SMS tới số trong hồ sơ; không nhận được thì sao chép gửi qua Zalo.
       </p>
+      {link?.sms && (
+        <div className={link.sms.sent ? styles.smsOk : styles.smsErr} role="status">
+          {link.sms.sent
+            ? `✓ Đã gửi SMS tới ${link.sms.phoneMasked} (tin tới sau vài giây)`
+            : `SMS chưa gửi: ${link.sms.error || 'lỗi không rõ'}. Sao chép link để gửi.`}
+        </div>
+      )}
       {link ? (
         <div className={styles.linkRow}>
           <input className={styles.link} readOnly value={link.url} onFocus={(e) => e.target.select()} />
@@ -72,7 +91,7 @@ export function FieldLinkBox({ incidentId, plan }) {
         )
       )}
       <button type="button" className={styles.issue} disabled={busy} onClick={issue}>
-        {busy ? 'Đang tạo...' : link || issuedAt ? 'Cấp lại mã' : 'Tạo link'}
+        {busy ? 'Đang tạo...' : link || issuedAt ? 'Cấp lại mã & gửi lại SMS' : 'Tạo link & gửi SMS'}
       </button>
     </div>
   );
