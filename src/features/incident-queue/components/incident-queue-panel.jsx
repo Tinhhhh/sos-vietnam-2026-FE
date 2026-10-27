@@ -116,7 +116,7 @@ export function IncidentQueuePanel({
   const holding = incidents.find((i) => i.heldByMe) || null;
   const [busyId, setBusyId] = useState(null);
   const [handoverOf, setHandoverOf] = useState(null);
-  const [confirmOf, setConfirmOf] = useState(null); // { kind: 'finish' | 'cancel' | 'escalate' | 'transfer', inc }
+  const [confirmOf, setConfirmOf] = useState(null); // { kind: 'finish' | 'cancel' | 'false-alarm' | 'escalate' | 'transfer', inc }
   const [transferTo, setTransferTo] = useState(''); // force picked in the "Chuyển lực lượng" dialog
   // The queue only holds open incidents (they are dealt with now), so no 1 / 7 / 30 day filter here
   const [page, setPage] = useState(0);
@@ -162,6 +162,7 @@ export function IncidentQueuePanel({
     // Both ask first (dialog with a required reason): end once forces are dispatched / cancel at any step
     forceFinish: (inc) => setConfirmOf({ kind: 'finish', inc }),
     cancel: (inc) => setConfirmOf({ kind: 'cancel', inc }),
+    falseAlarm: (inc) => setConfirmOf({ kind: 'false-alarm', inc }),
     canOpenDispatch: !!onOpenDispatch,
     // Cannot handle it at ward level: hand it to the province right now
     // wrong force picked by the citizen: hand the case to another force's queue (reason required)
@@ -330,14 +331,22 @@ export function IncidentQueuePanel({
                     confirmLabel: 'Kết thúc ca',
                     placeholder: 'Ví dụ: đã xử lý xong, người báo không trả lời để xác nhận',
                   }
-                : {
-                    title: `Huỷ ca ${confirmOf.inc.id}?`,
-                    message:
-                      'Ca sẽ bị huỷ và rời hàng đợi, không thể khôi phục. Người báo tin sẽ thấy tin báo đã bị huỷ.',
-                    confirmLabel: 'Huỷ ca',
-                    placeholder: 'Ví dụ: xác minh là báo nhầm / trùng với ca khác',
-                    tags: cancelTags(samePhone(incidents, confirmOf.inc)),
-                  })}
+                : confirmOf.kind === 'false-alarm'
+                  ? {
+                      title: `Báo khống ca ${confirmOf.inc.id}?`,
+                      message:
+                        'Ca bị huỷ với kết luận báo tin giả. Số điện thoại báo khống 3 lần trong 24 giờ sẽ bị khoá gửi SOS 24 giờ; lần khoá thứ 3 trong 30 ngày là khoá vĩnh viễn.',
+                      confirmLabel: 'Báo khống',
+                      placeholder: 'Ví dụ: gọi xác minh, người báo thừa nhận trêu đùa / không có sự việc',
+                    }
+                  : {
+                      title: `Huỷ ca ${confirmOf.inc.id}?`,
+                      message:
+                        'Ca sẽ bị huỷ và rời hàng đợi, không thể khôi phục. Người báo tin sẽ thấy tin báo đã bị huỷ.',
+                      confirmLabel: 'Huỷ ca',
+                      placeholder: 'Ví dụ: xác minh là báo nhầm / trùng với ca khác',
+                      tags: cancelTags(samePhone(incidents, confirmOf.inc)),
+                    })}
           onClose={() => setConfirmOf(null)}
           onConfirm={async (reason) => {
             const { kind, inc } = confirmOf;
@@ -356,7 +365,13 @@ export function IncidentQueuePanel({
                     )
                   : kind === 'finish'
                     ? await run(inc, () => forceFinishIncident(inc.id, reason), `Đã kết thúc ca ${inc.id}`)
-                    : await run(inc, () => cancelByOfficer(inc.id, reason), `Đã huỷ ca ${inc.id}`);
+                    : kind === 'false-alarm'
+                      ? await run(
+                          inc,
+                          () => cancelByOfficer(inc.id, reason, { falseAlarm: true }),
+                          `Đã huỷ ca ${inc.id}: báo khống`,
+                        )
+                      : await run(inc, () => cancelByOfficer(inc.id, reason), `Đã huỷ ca ${inc.id}`);
             if (ok) {
               setConfirmOf(null);
               onRetry();
@@ -460,6 +475,14 @@ function QueueCard({
             <ElapsedBadge incident={inc} now={now} />
           )}
           <ReportTypeBadge incident={inc} />
+          {inc.ipFalseAlarmCount > 0 && (
+            <span
+              style={badgeStyle('rgba(239, 68, 68, 0.15)', '#fca5a5', 'rgba(239, 68, 68, 0.45)')}
+              title="Cùng địa chỉ IP với các ca bị kết luận báo khống trong 24 giờ qua (chỉ để cảnh giác, nhiều người có thể chung IP)"
+            >
+              ⚠ IP: {inc.ipFalseAlarmCount} ca báo khống
+            </span>
+          )}
         </div>
         {onOpenDetail && (
           <button
@@ -630,6 +653,13 @@ function ClaimControls({ incident: inc, holding, busy, canCall, actions }) {
         title: 'Huỷ ca này (ghi lý do), ở bất kỳ bước nào',
         look: ['rgba(239, 68, 68, 0.15)', '#f87171', '#fecaca'],
         onClick: actions.cancel,
+      },
+      {
+        key: 'false-alarm',
+        label: 'Báo khống',
+        title: 'Huỷ ca vì báo tin giả: tính vào khoá số điện thoại của người báo',
+        look: ['rgba(239, 68, 68, 0.22)', '#ef4444', '#fecaca'],
+        onClick: actions.falseAlarm,
       },
       {
         key: 'handover',

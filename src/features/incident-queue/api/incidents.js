@@ -158,6 +158,8 @@ export async function getIncidentDetail(id) {
     // report_type: SELF (tự báo) / PROXY (báo hộ, chưa mở); ca cũ BE điền SELF
     reportType: d.report_type || 'SELF',
     reportTypeLabel: d.report_type_label || 'Tự báo',
+    // false alarms from the same IP in the last 24 h (warning only, IPs are shared on 4G)
+    ipFalseAlarmCount: d.ip_false_alarm_count || 0,
     transferredFromLabel: d.transferred_from_label || null,
     transferReason: d.transfer_reason || null,
     escalationNote: d.escalation_note || null,
@@ -260,7 +262,13 @@ export async function forceFinishIncident(id, reason) {
   });
 }
 
-/** Officer holding the case cancels it at any step (reason 5-255): CANCELLED. */
-export async function cancelByOfficer(id, reason) {
-  await api.post(`/api/v1/incidents/${encodeURIComponent(id)}/officer-cancel`, { reason });
+/**
+ * Officer holding the case cancels it at any step (reason 5-255): CANCELLED. falseAlarm = "Báo khống": counts
+ * towards locking the reporter's phone (3 in 24 h -> 24 h lock, 3rd lock in 30 days -> permanent).
+ */
+export async function cancelByOfficer(id, reason, { falseAlarm = false } = {}) {
+  await api.post(`/api/v1/incidents/${encodeURIComponent(id)}/officer-cancel`, {
+    reason,
+    false_alarm: falseAlarm,
+  });
 }

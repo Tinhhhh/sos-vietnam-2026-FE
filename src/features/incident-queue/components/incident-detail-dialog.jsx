@@ -134,6 +134,12 @@ function DetailBody({ data, onPreview }) {
     ['Mô tả', data.description || null],
     ['Người báo', data.citizenName || 'Không để tên'],
     ['Hình thức báo', data.reportTypeLabel],
+    [
+      'Cảnh báo IP',
+      data.ipFalseAlarmCount > 0
+        ? `Cùng IP có ${data.ipFalseAlarmCount} ca báo khống trong 24 giờ qua`
+        : null,
+    ],
     ['Số điện thoại', data.phone || null, data.phone ? `tel:${data.phone}` : null],
     ['Địa điểm', place || null],
     [
