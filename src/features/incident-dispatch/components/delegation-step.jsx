@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { useToast } from '@/components/ui/toast/toast-context';
 
 import { delegateDispatch, getDelegationCandidates, withdrawDelegation } from '../api/dispatch-api';
+import { initials } from '../utils/initials';
 import styles from './delegation.module.css';
 
 /**
@@ -188,12 +189,6 @@ function Candidates({ incidentId, plan, onDone }) {
       </ul>
     </div>
   );
-}
-
-function initials(name) {
-  const words = (name || '').trim().split(/\s+/).filter(Boolean);
-  if (!words.length) return 'CB';
-  return (words[0][0] + (words.length > 1 ? words[words.length - 1][0] : '')).toUpperCase();
 }
 
 /** "Thu hồi uỷ quyền": the officer did not answer / cannot be reached -> back to choosing (asks first). */

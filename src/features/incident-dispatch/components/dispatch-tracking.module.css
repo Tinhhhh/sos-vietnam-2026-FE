@@ -304,6 +304,13 @@
   cursor: wait;
 }
 
+/* before "Khởi hành": greyed out, the tooltip explains */
+.simulateLocked button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
 /* "Lực lượng phụ trách": the officer going to the scene (name, badge, call) */
 .tracker {
   display: flex;

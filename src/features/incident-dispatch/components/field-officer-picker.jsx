@@ -3,6 +3,8 @@ import { useEffect, useRef, useState } from 'react';
 import { useToast } from '@/components/ui/toast/toast-context';
 
 import { changeFieldMember, getFieldCandidates } from '../api/dispatch-api';
+import { initials } from '../utils/initials';
+import list from './delegation.module.css';
 import styles from './field-officer.module.css';
 
 /**
@@ -77,6 +79,113 @@ export function FieldOfficerPicker({ incidentId, value, onChange, compact = fals
           Đổi người
         </button>
       )}
+    </div>
+  );
+}
+
+/**
+ * Officers of my unit as a list like the "Uỷ quyền" step (avatar, online, phone): "Chọn đi hiện trường" saves
+ * that person as the field officer right away (the delegated ward officer's window, before "Khởi hành").
+ *
+ * @param {{ incidentId: string, unitName: string, onPlan: (plan) => void }} props
+ */
+export function FieldOfficerList({ incidentId, unitName, onPlan }) {
+  const toast = useToast();
+  const [state, setState] = useState({ status: 'loading', items: [], error: null });
+  const [reload, setReload] = useState(0);
+  const [refreshing, setRefreshing] = useState(false);
+  const [busyId, setBusyId] = useState(null);
+
+  useEffect(() => {
+    let alive = true;
+    getFieldCandidates(incidentId)
+      .then((items) => alive && setState({ status: 'ready', items, error: null }))
+      .catch((err) => alive && setState((s) => ({ ...s, status: 'error', error: err.message })))
+      .finally(() => alive && setRefreshing(false));
+    return () => {
+      alive = false;
+    };
+  }, [incidentId, reload]);
+
+  const pick = async (o) => {
+    setBusyId(o.memberId);
+    try {
+      onPlan?.(await changeFieldMember(incidentId, o.memberId));
+      toast.show(`${o.fullName} đi hiện trường: gửi link rồi bấm "Khởi hành"`, { tone: 'success' });
+    } catch (err) {
+      toast.show(err.message, { tone: 'error' });
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const online = state.items.filter((o) => o.online).length;
+  return (
+    <div className={list.card}>
+      <div className={list.cardHead}>
+        <div className={list.cardTitle}>
+          Chọn người đi hiện trường · {unitName} · {state.items.length} người, {online} trực tuyến
+        </div>
+        <button
+          type="button"
+          className={list.refresh}
+          disabled={refreshing}
+          onClick={() => {
+            setRefreshing(true);
+            setReload((n) => n + 1);
+          }}
+        >
+          {refreshing ? 'Đang tải...' : 'Làm mới'}
+        </button>
+      </div>
+      <div className={list.meta}>
+        Người đi cầm điện thoại GPS (số hiệu = mã thiết bị), người dân thấy và gọi được.
+      </div>
+      {state.status === 'loading' && <div className={list.meta}>Đang tải...</div>}
+      {state.status === 'error' && <div className={list.error}>Không tải được danh sách: {state.error}</div>}
+      <ul className={list.officers}>
+        {state.items.map((o) => (
+          <li key={o.memberId} className={`${list.officer} ${o.selectable ? '' : list.offline}`}>
+            <span className={list.avatar} aria-hidden="true">
+              {initials(o.fullName)}
+              <i className={o.online ? list.dotOn : list.dotOff} />
+            </span>
+            <div className={list.officerMain}>
+              <div className={list.officerName}>
+                {o.fullName}{' '}
+                <span className={o.online ? list.chipOn : list.chipOff}>
+                  {o.online ? 'Trực tuyến' : 'Ngoại tuyến'}
+                </span>
+                {o.me && <span className={list.chipOff}> Bạn</span>}
+              </div>
+              <div className={list.officerSub}>
+                {o.selectable
+                  ? [o.badgeNumber && `Số hiệu ${o.badgeNumber}`, o.position].filter(Boolean).join(' · ')
+                  : o.unavailableReason}
+                {o.phone && (
+                  <>
+                    {' · '}
+                    <a href={`tel:${o.phone}`}>{o.phone}</a>
+                  </>
+                )}
+              </div>
+            </div>
+            <button
+              type="button"
+              className={list.contact}
+              disabled={!!busyId || !o.selectable}
+              title={o.unavailableReason || 'Người này cầm điện thoại GPS đi hiện trường'}
+              onClick={() => pick(o)}
+            >
+              {busyId === o.memberId
+                ? 'Đang lưu...'
+                : o.selectable
+                  ? 'Chọn đi hiện trường'
+                  : 'Không chọn được'}
+            </button>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

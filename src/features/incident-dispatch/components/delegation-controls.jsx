@@ -3,19 +3,14 @@ import { useState } from 'react';
 import { Modal } from '@/components/ui/modal/modal';
 import { useToast } from '@/components/ui/toast/toast-context';
 
-import {
-  acceptDelegation,
-  arriveDispatch,
-  changeFieldMember,
-  departDelegation,
-  rejectDelegation,
-} from '../api/dispatch-api';
+import { acceptDelegation, arriveDispatch, departDelegation, rejectDelegation } from '../api/dispatch-api';
 import { useDispatchPlan } from '../hooks/use-dispatch-plan';
 import { ArriveControl, DepartButton } from './arrive-control';
 import styles from './delegation.module.css';
+import { DispatchStepper } from './dispatch-stepper';
 import { DispatchTrackingView } from './dispatch-tracking-view';
 import { FieldLinkBox } from './field-link-box';
-import { FieldOfficerChange, FieldOfficerPicker } from './field-officer-picker';
+import { FieldOfficerChange, FieldOfficerList } from './field-officer-picker';
 import { FinishPanel } from './finish-panel';
 
 const MIN_REASON = 5;
@@ -222,33 +217,32 @@ function FieldCallButton({ incident, onCall }) {
   );
 }
 
+/** Steps as the delegating officer sees them; the ward officer joins at step 2 "Uỷ quyền". */
+const STEPS = [
+  { key: 'route', title: 'Chọn tuyến' },
+  { key: 'delegate', title: 'Uỷ quyền' },
+  { key: 'track', title: 'Theo dõi' },
+  { key: 'finish', title: 'Kết thúc' },
+];
+// step 2 only while choosing who goes; once chosen it is "Theo dõi" ("Khởi hành" on the card)
+const STEP_OF = { ACCEPTED: 'track', EN_ROUTE: 'track', ARRIVED: 'finish', DONE: 'finish' };
+
 /**
- * "Chi tiết điều động" of the delegated ward officer:
- * - accepted: pick the field officer (GPS phone) then "Lập tức điều động"
- * - on the way: tracking map (call / simulate), change the field officer, field link, "Đã đến"
- * - arrived: tracking + "Kết thúc xử lý"
+ * "Chi tiết điều động" of the delegated ward officer: the steps, the map and route, then
+ * - accepted, nobody chosen (step 2): the unit's officers, "Chọn đi hiện trường"
+ * - chosen, not gone yet (step 3): the tracking card with "Khởi hành" in place of "Đã đến" (simulation greyed out
+ *   until then), change the person, field link
+ * - on the way (step 3): tracking (call / simulate), change the person, field link, "Đã đến"
+ * - arrived (step 4): tracking + "Kết thúc xử lý"
  * Colleagues (not assigned) only see the tracking map.
  */
 function DelegationDetailModal({ incident, mine, onClose, onCallField, onCallReceiver, onFinished }) {
-  const toast = useToast();
   const { plan, status } = useDispatchPlan({ incidentId: incident.id, refreshKey: incident });
   const [local, setLocal] = useState(null);
-  const [fieldId, setFieldId] = useState(null);
-  const [busy, setBusy] = useState(false);
-  const current = local && plan && local.citizenConfirmedAt === plan.citizenConfirmedAt ? local : plan;
+  // the answer of my last click until the next poll / push brings a newer plan
+  const current = pickNewer(local, plan);
   const st = current?.status;
-
-  const run = async (fn, success) => {
-    setBusy(true);
-    try {
-      await fn();
-      toast.show(success, { tone: 'success' });
-    } catch (err) {
-      toast.show(err.message, { tone: 'error' });
-    } finally {
-      setBusy(false);
-    }
-  };
+  const choosing = mine && st === 'ACCEPTED' && !current?.tracker;
 
   let body;
   if (!current) {
@@ -257,54 +251,49 @@ function DelegationDetailModal({ incident, mine, onClose, onCallField, onCallRec
         {status === 'error' ? 'Không tải được kế hoạch điều động.' : 'Đang tải...'}
       </div>
     );
-  } else if (st === 'ACCEPTED' && mine && !current.tracker) {
-    // accepted: choose who goes out with the GPS phone (saved; "Khởi hành" comes next)
-    body = (
-      <div className={styles.detailBody}>
-        <FieldOfficerPicker incidentId={incident.id} value={fieldId} onChange={setFieldId} />
-        <button
-          type="button"
-          className={styles.depart}
-          disabled={busy || !fieldId}
-          onClick={() =>
-            run(
-              () => changeFieldMember(incident.id, fieldId),
-              'Đã chọn người phụ trách hiện trường: gửi link rồi bấm "Khởi hành"',
-            )
-          }
-        >
-          {busy ? 'Đang lưu...' : fieldId ? 'Chọn người này' : 'Chọn người phụ trách hiện trường'}
-        </button>
-      </div>
-    );
-  } else if (st === 'ACCEPTED' && mine) {
-    // person chosen, not set off yet: link (SMS) for them, change the person, "Khởi hành"
-    body = (
-      <div className={styles.detailBody}>
-        <FieldOfficerChange incidentId={incident.id} plan={current} />
-        <FieldLinkBox incidentId={incident.id} plan={current} />
-        <DepartButton who={current.tracker.fullName} onDepart={() => departDelegation(incident.id)} />
-      </div>
-    );
   } else {
     body = (
       <div className={styles.detailBody}>
+        <DispatchStepper steps={STEPS} current={choosing ? 'delegate' : STEP_OF[st] || 'track'} />
         <DispatchTrackingView
           plan={current}
           incidentId={incident.id}
           onCallTracker={onCallField}
           onCallReceiver={onCallReceiver}
+          between={
+            choosing ? (
+              <FieldOfficerList incidentId={incident.id} unitName={current.origin.name} onPlan={setLocal} />
+            ) : null
+          }
+          // chosen, not gone: "Khởi hành" where "Đã đến" goes
+          renderDepart={
+            mine && current.tracker
+              ? () => (
+                  <DepartButton
+                    who={current.tracker.fullName}
+                    onDepart={() => departDelegation(incident.id)}
+                    onPlan={setLocal}
+                  />
+                )
+              : null
+          }
           // "Đã đến" only within the GPS radius (no override here: only the officer holding the case has one)
           renderArrive={
             mine
-              ? (check) => <ArriveControl check={check} onArrive={() => arriveDispatch(incident.id)} />
+              ? (check) => (
+                  <ArriveControl
+                    check={check}
+                    onArrive={() => arriveDispatch(incident.id)}
+                    onPlan={setLocal}
+                  />
+                )
               : null
           }
         />
-        {mine && st === 'EN_ROUTE' && (
+        {mine && current.tracker && (st === 'ACCEPTED' || st === 'EN_ROUTE') && (
           <>
-            <FieldOfficerChange incidentId={incident.id} plan={current} />
-            {current.tracker && <FieldLinkBox incidentId={incident.id} plan={current} />}
+            <FieldOfficerChange incidentId={incident.id} plan={current} onPlan={setLocal} />
+            <FieldLinkBox incidentId={incident.id} plan={current} />
           </>
         )}
         {mine && st === 'ARRIVED' && (
@@ -325,10 +314,25 @@ function DelegationDetailModal({ incident, mine, onClose, onCallField, onCallRec
       open
       onClose={onClose}
       solid
-      containerStyle={{ maxWidth: 720, width: 'min(720px, calc(100vw - 16px))' }}
-      title={<span className={styles.title}>Chi tiết điều động · Ca {incident.id}</span>}
+      containerStyle={{ maxWidth: 1000, width: 'min(1000px, calc(100vw - 16px))' }}
+      title={<span className={styles.title}>Điều động lực lượng · Ca {incident.id}</span>}
     >
       {body}
     </Modal>
   );
+}
+
+/** My click's answer wins until the polled plan moves on (another status / person / confirmation). */
+function pickNewer(local, plan) {
+  if (!local) return plan;
+  if (!plan) return local;
+  const same =
+    local.status === plan.status &&
+    local.tracker?.memberId === plan.tracker?.memberId &&
+    local.citizenConfirmedAt === plan.citizenConfirmedAt;
+  return same ? plan : local.dispatchId === plan.dispatchId && rank(local) > rank(plan) ? local : plan;
+}
+const RANK = { ACCEPTED: 1, EN_ROUTE: 2, ARRIVED: 3, DONE: 4 };
+function rank(p) {
+  return (RANK[p.status] || 0) * 2 + (p.tracker ? 1 : 0);
 }

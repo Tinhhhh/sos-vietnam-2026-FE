@@ -31,7 +31,9 @@ const telOf = (phone) => (phone || '').replace(/[^0-9+]/g, '');
  *   the bottom; actions = extra buttons next to "Gọi" ("Đổi người", "Đổi điểm đến" of the dispatch window);
  *   onCallTracker(tracker) = "Gọi" starts a video call to the field officer (else a tel: link);
  *   onCallReceiver(receiver) = "Gọi" on the "Người nhận ca" row (none for the holder: it is them);
- *   renderArrive(arrivalCheck) = the "Đã đến" control, fed with the distance polled every 5 s
+ *   renderArrive(arrivalCheck) = the "Đã đến" control, fed with the distance polled every 5 s;
+ *   renderDepart() = the "Khởi hành" control in its place while the person is chosen but not gone (ACCEPTED): the
+ *   simulation buttons then show greyed out ("Hãy khởi hành trước"); between = a section between map and card
  */
 export function DispatchTrackingView({
   plan,
@@ -43,12 +45,15 @@ export function DispatchTrackingView({
   onCallTracker = null,
   onCallReceiver = null,
   renderArrive = null,
+  renderDepart = null,
+  between = null,
   fetchPlan = null,
   trackerCall = true, // false on the field officer's own page (the tracker is them)
 }) {
   const o = plan.origin;
   const arrived = plan.status === 'ARRIVED' || plan.status === 'DONE';
   const enRoute = plan.status === 'EN_ROUTE';
+  const awaitingDeparture = plan.status === 'ACCEPTED' && !!renderDepart;
   const phone = telOf(o.phone);
   const sheet = variant === 'sheet';
 
@@ -106,6 +111,8 @@ export function DispatchTrackingView({
         )}
       </div>
 
+      {between}
+
       <div className={sheet ? styles.sheetCard : styles.card}>
         <div className={styles.etaRow}>
           <div className={styles.etaMain}>
@@ -129,6 +136,7 @@ export function DispatchTrackingView({
         {enRoute && incidentId && (live.simulation || plan.simulation) && (
           <SimulateControl incidentId={incidentId} simulation={live.simulation || plan.simulation} />
         )}
+        {awaitingDeparture && <SimulateControl locked />}
 
         {plan.receiver && (
           <div className={styles.tracker}>
@@ -206,6 +214,7 @@ export function DispatchTrackingView({
           </div>
         )}
         {renderArrive && enRoute && renderArrive(live.polled ? live.arrivalCheck : plan.arrivalCheck)}
+        {awaitingDeparture && renderDepart()}
         {footer}
       </div>
     </div>
@@ -224,7 +233,10 @@ function newer(a, b) {
   return (a.computedAt?.getTime() ?? 0) >= (b.computedAt?.getTime() ?? 0) ? a : b;
 }
 
-function SimulateControl({ incidentId, simulation }) {
+const LOCKED_HINT = 'Hãy khởi hành trước';
+
+/** locked: before "Khởi hành" the buttons show greyed out, hovering says why (the BE takes no GPS yet). */
+function SimulateControl({ incidentId, simulation, locked = false }) {
   const toast = useToast();
   const [busy, setBusy] = useState(false);
   // value set by the last click, until the next poll brings the BE's own state
@@ -234,7 +246,33 @@ function SimulateControl({ incidentId, simulation }) {
     setSeen(simulation);
     setOverride(null);
   }
-  const running = override ?? simulation.running;
+  const running = !locked && (override ?? simulation.running);
+  if (locked) {
+    return (
+      <div className={styles.simulate} title={LOCKED_HINT}>
+        <span className={styles.simulateText}>Chạy thử xe theo tuyến, không cần điện thoại GPS</span>
+        {/* disabled buttons get no hover: the tooltip sits on the wrapper */}
+        <div className={`${styles.simulateButtons} ${styles.simulateLocked}`} title={LOCKED_HINT}>
+          <button
+            type="button"
+            className={styles.simulateDetour}
+            disabled
+            aria-label={`Rẽ đường khác: ${LOCKED_HINT}`}
+          >
+            ↪ Rẽ đường khác
+          </button>
+          <button
+            type="button"
+            className={styles.simulateStart}
+            disabled
+            aria-label={`Mô phỏng: ${LOCKED_HINT}`}
+          >
+            ▶ Mô phỏng
+          </button>
+        </div>
+      </div>
+    );
+  }
   if (!simulation.available && !running) return null;
 
   const detour = async () => {
