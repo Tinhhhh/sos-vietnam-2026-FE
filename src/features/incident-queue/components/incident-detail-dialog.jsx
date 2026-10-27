@@ -152,14 +152,16 @@ function DetailBody({ data, onPreview }) {
     ['Đơn vị tiếp nhận', data.handlingUnit],
   ].filter(([, v]) => v);
 
-  const timeline = [
+  // phases in the order they happened; the escalation deadline is still to come (grey); last update at the end
+  const phases = [
     ['Báo tin', data.createdAt],
     ['Tiếp nhận', data.acceptedAt],
-    ['Hạn chuyển tỉnh', data.escalatedAt ? null : data.escalateAt],
     ['Chuyển lên tỉnh', data.escalatedAt],
     ['Huỷ', data.cancelledAt],
-    ['Cập nhật cuối', data.updatedAt],
-  ].filter(([, d]) => d);
+  ]
+    .filter(([, d]) => d)
+    .sort((a, b) => a[1] - b[1]);
+  const upcoming = !data.escalatedAt && !data.cancelledAt && data.escalateAt ? data.escalateAt : null;
 
   return (
     <div className={styles.body}>
@@ -212,24 +214,34 @@ function DetailBody({ data, onPreview }) {
       </Section>
 
       <Section title="Mốc thời gian">
-        <ul className={styles.times}>
-          {timeline.map(([k, d]) => (
-            <li key={k}>
-              <span>{k}</span>
-              <b>{fmt(d)}</b>
+        <ol className={styles.phases}>
+          {phases.map(([k, d], i) => (
+            <li key={k} className={styles.phase}>
+              <span className={styles.phaseDot}>{i + 1}</span>
+              <span className={styles.timeChip}>{fmt(d)}</span>
+              <span className={styles.phaseLabel}>{k}</span>
             </li>
           ))}
-        </ul>
+          {upcoming && (
+            <li className={`${styles.phase} ${styles.phaseNext}`}>
+              <span className={styles.phaseDot}>{phases.length + 1}</span>
+              <span className={`${styles.timeChip} ${styles.timeChipNext}`}>{fmt(upcoming)}</span>
+              <span className={styles.phaseLabel}>Hạn chuyển tỉnh (nếu chưa ai xử lý)</span>
+            </li>
+          )}
+        </ol>
+        {data.updatedAt && <div className={styles.note}>Cập nhật cuối: {fmt(data.updatedAt)}</div>}
       </Section>
 
       {data.dispatches.length > 0 && (
         <Section title={`Lực lượng được điều động (${data.dispatches.length})`}>
           <ul className={styles.list}>
             {data.dispatches.map((d, i) => (
-              <li key={i}>
+              <li key={i} className={styles.timed}>
+                {d.dispatchedAt && <span className={styles.timeChip}>{fmt(d.dispatchedAt)}</span>}
                 <b>{d.stationName}</b>
                 <span>
-                  {[d.agencyLabel, d.phone, d.dispatchedBy && `bởi ${d.dispatchedBy}`, fmt(d.dispatchedAt)]
+                  {[d.agencyLabel, d.phone, d.dispatchedBy && `bởi ${d.dispatchedBy}`]
                     .filter(Boolean)
                     .join(' · ')}
                 </span>
@@ -246,12 +258,14 @@ function DetailBody({ data, onPreview }) {
         ) : (
           <ul className={styles.list}>
             {data.claims.map((c, i) => (
-              <li key={i}>
+              <li key={i} className={styles.timed}>
+                <span className={styles.timeChip}>
+                  {fmt(c.claimedAt)}
+                  {c.releasedAt ? ` → ${fmt(c.releasedAt)}` : ''}
+                </span>
                 <b>{c.officerName || 'Cán bộ'}</b>
                 <span>
-                  Nhận {fmt(c.claimedAt)}
-                  {c.releasedAt ? ` → ${fmt(c.releasedAt)}` : ' · đang giữ ca'}
-                  {c.endReasonLabel ? ` · ${c.endReasonLabel}` : ''}
+                  {c.releasedAt ? c.endReasonLabel || 'Kết thúc lượt giữ ca' : 'Đang giữ ca'}
                   {c.handedToName ? ` cho ${c.handedToName}` : ''}
                 </span>
                 {/* reason of a release / handover: only on the turn that ended */}
