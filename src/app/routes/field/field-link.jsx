@@ -103,15 +103,17 @@ export function FieldLinkRoute() {
         </div>
       )}
       {call?.state === 'incoming' && (
-        <div className={styles.incoming} role="alertdialog" aria-label="Cuộc gọi đến">
-          <div className={styles.incomingTitle}>{callPeerLabel(call) || 'Cuộc gọi'} đang gọi video</div>
-          <div className={styles.incomingRow}>
-            <button type="button" className={styles.reject} onClick={phone.reject}>
-              Từ chối
-            </button>
-            <button type="button" className={styles.accept} onClick={phone.accept}>
-              Nghe
-            </button>
+        <div className={styles.incomingBackdrop}>
+          <div className={styles.incoming} role="alertdialog" aria-label="Cuộc gọi đến">
+            <div className={styles.incomingTitle}>{callPeerLabel(call) || 'Cuộc gọi'} đang gọi video</div>
+            <div className={styles.incomingRow}>
+              <button type="button" className={styles.reject} onClick={phone.reject}>
+                Từ chối
+              </button>
+              <button type="button" className={styles.accept} onClick={phone.accept}>
+                Nghe
+              </button>
+            </div>
           </div>
         </div>
       )}
