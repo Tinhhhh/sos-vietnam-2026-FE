@@ -41,6 +41,30 @@
   color: #fca5a5;
 }
 
+/* quick reasons: a click fills the reason box */
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.tag {
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  background: rgba(148, 163, 184, 0.12);
+  color: #e2e8f0;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.tag:hover {
+  border-color: #38bdf8;
+  color: #e0f2fe;
+}
+
 .actions {
   display: flex;
   justify-content: flex-end;

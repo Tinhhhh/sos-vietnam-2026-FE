@@ -64,6 +64,12 @@ export function normalizeIncident(raw) {
     // report_type: SELF (tự báo) / PROXY (báo hộ, chưa mở); ca cũ BE điền SELF
     reportType: raw.report_type || 'SELF',
     reportTypeLabel: raw.report_type_label || 'Tự báo',
+    // other open cases from the same phone (BE other_open_cases, docs/spec-multi-case.md; not sent yet)
+    otherOpenCases: (raw.other_open_cases || []).map((o) => ({
+      id: o.id,
+      typeLabel: o.type_label || null,
+      statusLabel: o.status_label || null,
+    })),
     transferredFromLabel: raw.transferred_from_label || null,
     transferReason: raw.transfer_reason || null,
     escalationNote: raw.escalation_note || null,

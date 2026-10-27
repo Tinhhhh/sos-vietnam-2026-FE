@@ -8,12 +8,18 @@ import styles from './incident-lookup-modal.module.css';
 const TIME = new Intl.DateTimeFormat('vi-VN', { dateStyle: 'short', timeStyle: 'short' });
 const fmt = (v) => (v ? TIME.format(new Date(v)) : null);
 
+const OPEN_STATUSES = ['PENDING', 'VERIFYING', 'RESOLVING'];
+const PENDING_FEATURE = 'Vào lại màn hình gọi: tính năng đang chờ phát triển.';
+
 /**
- * Citizen re-reads the rescue record of a finished incident with its lookup code + last 4 phone digits.
+ * "Tra Cứu" with the case code + last 4 phone digits (docs/spec-multi-case.md):
+ * - case still open: "Vào lại màn hình theo dõi / gọi" (the BE answers with a fresh citizen token,
+ *   onResume({ incident, citizenAccessToken }) keeps it on this device and opens /sos/{id})
+ * - case closed: the rescue record, as before.
  * documentSlot: "Xem & ký văn bản báo cáo" of the report feature (composed by the route), given
  * { lookupCode, phoneLast4 }.
  */
-export function IncidentLookupModal({ open, onClose, documentSlot }) {
+export function IncidentLookupModal({ open, onClose, documentSlot, onResume }) {
   const [code, setCode] = useState('');
   const [last4, setLast4] = useState('');
   const [error, setError] = useState('');
@@ -35,7 +41,11 @@ export function IncidentLookupModal({ open, onClose, documentSlot }) {
     try {
       setResult(await lookupIncident(code, last4));
     } catch (err) {
-      setError(err.message || 'Không tra cứu được, vui lòng thử lại');
+      setError(
+        err.status === 429
+          ? err.data?.message || 'Nhập sai quá nhiều lần với mã này, vui lòng thử lại sau ít phút.'
+          : err.message || 'Không tra cứu được, vui lòng thử lại',
+      );
     } finally {
       setBusy(false);
     }
@@ -53,6 +63,7 @@ export function IncidentLookupModal({ open, onClose, documentSlot }) {
         <LookupResult
           data={result}
           onBack={() => setResult(null)}
+          onResume={onResume}
           document={
             result.status === 'RESOLVED' && documentSlot
               ? documentSlot({ lookupCode: code, phoneLast4: last4 })
@@ -62,11 +73,11 @@ export function IncidentLookupModal({ open, onClose, documentSlot }) {
       ) : (
         <form className={styles.form} onSubmit={submit} noValidate>
           <p className={styles.hint}>
-            Nhập mã tra cứu nhận được khi sự việc xử lý xong và 4 số cuối số điện thoại bạn đã dùng để báo
-            tin.
+            Nhập mã ca (hiện trên màn hình chờ / gửi qua SMS khi lực lượng tiếp nhận) và 4 số cuối số điện
+            thoại bạn đã dùng để báo tin. Tin báo chưa kết thúc thì vào lại được màn hình theo dõi / gọi.
           </p>
           <label className={styles.field}>
-            <span>Mã tra cứu</span>
+            <span>Mã ca</span>
             <input
               className={styles.codeInput}
               value={code}
@@ -129,16 +140,40 @@ function Section({ title, rows, children }) {
   );
 }
 
-function LookupResult({ data, onBack, document }) {
+function LookupResult({ data, onBack, document, onResume }) {
   const place = data.full_address || [data.address, data.ward, data.province].filter(Boolean).join(', ');
   const report = data.report;
+  const stillOpen = data.open === true || OPEN_STATUSES.includes(data.status);
+  const [note, setNote] = useState('');
+
+  // the BE gives a fresh citizen token for an open case (not built yet: then say so)
+  const resume = () => {
+    if (data.citizen_access_token && data.incident && onResume) {
+      onResume({ incident: data.incident, citizenAccessToken: data.citizen_access_token });
+    } else {
+      setNote(PENDING_FEATURE);
+    }
+  };
 
   return (
     <div className={styles.result}>
+      {stillOpen && (
+        <section className={styles.section}>
+          <div className={styles.sectionTitle}>Tin báo đang được xử lý</div>
+          <button type="button" className={styles.submit} onClick={resume}>
+            Vào lại màn hình theo dõi / gọi
+          </button>
+          {note && (
+            <div className={styles.hint} role="status" style={{ marginTop: 8 }}>
+              {note}
+            </div>
+          )}
+        </section>
+      )}
       <Section
         title="Thông tin chung"
         rows={[
-          ['Mã tra cứu', data.lookup_code],
+          ['Mã ca', data.lookup_code],
           ['Tình trạng', data.status_label],
           ['Báo tin lúc', fmt(data.created_at)],
           ['Huỷ lúc', fmt(data.cancelled_at)],

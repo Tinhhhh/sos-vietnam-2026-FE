@@ -41,6 +41,7 @@ const AUTO_RETURN_S = 5;
  *   initialIncident: raw incident from POST /incidents (or the copy saved in sessionStorage)
  *   dispatchSlot: "..." button of the dispatch feature (tracking map), composed by the route
  *   documentSlot: "Xem & ký văn bản báo cáo" of the report feature, shown once the incident is RESOLVED
+ *   notice: extra line under the status (e.g. "Bạn có 1 tin báo khác đang mở" from the route)
  */
 export function SosTrackingScreen(props) {
   // Portal to <body>: the portal's main column creates a stacking context under the dock
@@ -55,6 +56,7 @@ function TrackingContent({
   dispatchSlot,
   documentSlot,
   mediaSlot,
+  notice = null,
 }) {
   // The tracking socket also carries call signals; the call hook is created after it
   const signalHandler = useRef(() => {});
@@ -214,14 +216,11 @@ function TrackingContent({
             call={call}
             peerName={peerLabel(call)}
           />
-          {incident.lookupCode ? (
-            <>
-              <LookupCode code={incident.lookupCode} />
-              {incident.status === 'RESOLVED' && documentSlot?.({ incident, token })}
-            </>
-          ) : (
-            <div className={styles.incidentId}>Mã tin báo: {incident.id}</div>
-          )}
+          {/* the case code from the start: the citizen re-opens this screen with it ("Tra Cứu") if the tab closes */}
+          <LookupCode code={incident.lookupCode} />
+          {incident.status === 'RESOLVED' && documentSlot?.({ incident, token })}
+          <div className={styles.incidentId}>Mã tin báo: {incident.id}</div>
+          {notice}
         </div>
 
         {incoming && (
@@ -305,7 +304,10 @@ function AutoReturn({ paused, onReturn }) {
   );
 }
 
-/** Shown once the incident is RESOLVED: code + last 4 phone digits re-open the record via "Tra Cứu". */
+/**
+ * The case code: with the last 4 phone digits it re-opens this screen (case still open) or the record (closed)
+ * via "Tra Cứu". The BE does not send it before RESOLVED yet (docs/spec-multi-case.md): then say so.
+ */
 function LookupCode({ code }) {
   const [copied, setCopied] = useState(false);
   const copy = async () => {
@@ -317,9 +319,17 @@ function LookupCode({ code }) {
       setCopied(false);
     }
   };
+  if (!code) {
+    return (
+      <div className={styles.lookupBox}>
+        <div className={styles.lookupLabel}>Mã ca</div>
+        <div className={styles.lookupHint}>Tính năng đang chờ phát triển.</div>
+      </div>
+    );
+  }
   return (
     <div className={styles.lookupBox}>
-      <div className={styles.lookupLabel}>Mã tra cứu của bạn</div>
+      <div className={styles.lookupLabel}>Mã ca của bạn</div>
       <div className={styles.lookupRow}>
         <span className={styles.lookupCode}>{code}</span>
         <button type="button" className={styles.lookupCopy} onClick={copy}>
@@ -327,8 +337,8 @@ function LookupCode({ code }) {
         </button>
       </div>
       <div className={styles.lookupHint}>
-        Lưu lại mã này. Bấm "Tra Cứu" ở trang chủ, nhập mã và 4 số cuối số điện thoại để xem lại thông tin cứu
-        hộ.
+        Lưu lại mã này. Lỡ đóng trang: bấm "Tra Cứu" ở trang chủ, nhập mã và 4 số cuối số điện thoại để vào
+        lại (tin báo chưa xong) hoặc xem lại thông tin cứu hộ.
       </div>
     </div>
   );

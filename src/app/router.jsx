@@ -19,6 +19,11 @@ const router = createBrowserRouter([
         index: true,
         lazy: async () => ({ Component: (await import('./routes/citizen/home')).CitizenHomeRoute }),
       },
+      {
+        // same screen, opened on one of the device's open SOS cases
+        path: 'sos/:incidentId',
+        lazy: async () => ({ Component: (await import('./routes/citizen/home')).CitizenHomeRoute }),
+      },
     ],
   },
 

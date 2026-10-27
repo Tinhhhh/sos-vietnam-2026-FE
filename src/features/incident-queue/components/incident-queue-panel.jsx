@@ -257,6 +257,7 @@ export function IncidentQueuePanel({
               onSelect={onSelect}
               onOpenDetail={onOpenDetail}
               renderDelegation={renderDelegation}
+              samePhone={samePhone(incidents, inc)}
             />
           ))}
         </div>
@@ -335,6 +336,7 @@ export function IncidentQueuePanel({
                       'Ca sẽ bị huỷ và rời hàng đợi, không thể khôi phục. Người báo tin sẽ thấy tin báo đã bị huỷ.',
                     confirmLabel: 'Huỷ ca',
                     placeholder: 'Ví dụ: xác minh là báo nhầm / trùng với ca khác',
+                    tags: cancelTags(samePhone(incidents, confirmOf.inc)),
                   })}
           onClose={() => setConfirmOf(null)}
           onConfirm={async (reason) => {
@@ -366,6 +368,37 @@ export function IncidentQueuePanel({
   );
 }
 
+/**
+ * Other open cases from the same phone (docs/spec-multi-case.md): the BE list when it sends one
+ * (`otherOpenCases`, not built yet), else the ones in this queue.
+ */
+const OPEN_STATUS_LABEL = {
+  PENDING: 'chờ tiếp nhận',
+  VERIFYING: 'đang xác minh',
+  RESOLVING: 'đang điều động',
+};
+function samePhone(incidents, inc) {
+  if (inc.otherOpenCases?.length) return inc.otherOpenCases;
+  if (!inc.phone) return [];
+  return incidents
+    .filter((o) => o.id !== inc.id && o.phone === inc.phone)
+    .map((o) => ({
+      id: o.id,
+      typeLabel: (TYPE_LOOK[o.type] || TYPE_LOOK.POLICE).label,
+      statusLabel: OPEN_STATUS_LABEL[o.status] || null,
+    }));
+}
+
+/** Quick reasons of "Huỷ ca": a click fills the reason box (the officer can still edit it). */
+function cancelTags(others) {
+  return [
+    ...(others.length ? others.map((o) => `Trùng với ca ${o.id}`) : ['Trùng với ca SOS-']),
+    'Báo nhầm',
+    'Đã xử lý ở ca khác',
+    'Không liên lạc được người báo tin',
+  ];
+}
+
 function QueueCard({
   incident: inc,
   now,
@@ -378,6 +411,7 @@ function QueueCard({
   onSelect,
   onOpenDetail,
   renderDelegation,
+  samePhone: others = [],
 }) {
   const look = TYPE_LOOK[inc.type] || TYPE_LOOK.POLICE;
   const delegatedHere = !!inc.delegation?.delegatedToMyUnit && !!renderDelegation;
@@ -473,6 +507,38 @@ function QueueCard({
               </a>
             </>
           )}
+        </div>
+      )}
+
+      {others.length > 0 && (
+        <div style={{ fontSize: 11.5, color: '#fcd34d', marginBottom: 8 }}>
+          SĐT này đang có {others.length} ca khác:{' '}
+          {others.map((o, i) => (
+            <span key={o.id}>
+              {i > 0 && ', '}
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onOpenDetail?.(o.id);
+                }}
+                style={{
+                  padding: 0,
+                  border: 0,
+                  background: 'none',
+                  color: '#fde68a',
+                  font: 'inherit',
+                  fontWeight: 800,
+                  textDecoration: 'underline',
+                  cursor: 'pointer',
+                }}
+              >
+                {o.id}
+              </button>
+              {[o.typeLabel, o.statusLabel].filter(Boolean).length > 0 &&
+                ` (${[o.typeLabel, o.statusLabel].filter(Boolean).join(' · ')})`}
+            </span>
+          ))}
         </div>
       )}
 

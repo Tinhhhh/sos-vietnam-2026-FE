@@ -1,6 +1,8 @@
 export const paths = {
   citizen: {
     home: { path: '/', getHref: () => '/' },
+    // one open SOS per tab: the waiting / call screen of that case
+    sos: { path: '/sos/:incidentId', getHref: (incidentId) => `/sos/${incidentId}` },
   },
   officer: {
     login: { path: '/officer/login', getHref: () => '/officer/login' },
