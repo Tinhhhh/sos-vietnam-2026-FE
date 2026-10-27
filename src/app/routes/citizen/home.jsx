@@ -92,6 +92,7 @@ export function CitizenHomeRoute() {
               access={{ incidentId: incident.id, token }}
               notify={toast.show}
               closeOnSign
+              autoOpen
               className="btn-refresh-loc"
               style={{ margin: '10px auto 0', padding: '8px 16px', fontWeight: 700, display: 'flex' }}
             />

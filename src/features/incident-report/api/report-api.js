@@ -11,7 +11,8 @@ import { api } from '@/lib/api-client';
  *   POST /api/v1/incidents/{id}/document/sign-proxy    body Sign + { reason (>= 5), authorized: true }
  *   GET  /api/v1/incidents/{id}/document/docx          -> file .docx
  * Người dân:
- *   GET  /api/v1/incidents/{id}/document/citizen       header X-SOS-Access-Token (404 khi cán bộ chưa lập)
+ *   GET  /api/v1/incidents/{id}/document/citizen       header X-SOS-Access-Token (ca xong mà cán bộ chưa lưu:
+ *                                                        bản nháp saved=false, chưa ký được)
  *   POST /api/v1/incidents/{id}/document/citizen-sign  header X-SOS-Access-Token, body Sign
  *   POST /api/v1/incidents/lookup/document             body { lookup_code, phone_last4 }
  *   POST /api/v1/incidents/lookup/document/sign        body Sign + { lookup_code, phone_last4 }
