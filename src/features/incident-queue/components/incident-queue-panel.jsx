@@ -116,8 +116,9 @@ export function IncidentQueuePanel({
   const holding = incidents.find((i) => i.heldByMe) || null;
   const [busyId, setBusyId] = useState(null);
   const [handoverOf, setHandoverOf] = useState(null);
-  const [confirmOf, setConfirmOf] = useState(null); // { kind: 'finish' | 'cancel' | 'escalate' | 'transfer', inc }
-  const [transferTo, setTransferTo] = useState(''); // force picked in the "Chuyển lực lượng" dialog
+  const [confirmOf, setConfirmOf] = useState(null); // { kind: 'finish' | 'cancel' | 'transfer', inc }
+  // picked in the "Chuyển lực lượng" dialog: a force (POLICE / CSGT / FIRE) or ESCALATE_TARGET (lên cấp tỉnh)
+  const [transferTo, setTransferTo] = useState('');
   // The queue only holds open incidents (they are dealt with now), so no 1 / 7 / 30 day filter here
   const [page, setPage] = useState(0);
 
@@ -163,14 +164,13 @@ export function IncidentQueuePanel({
     forceFinish: (inc) => setConfirmOf({ kind: 'finish', inc }),
     cancel: (inc) => setConfirmOf({ kind: 'cancel', inc }),
     canOpenDispatch: !!onOpenDispatch,
-    // Cannot handle it at ward level: hand it to the province right now
-    // wrong force picked by the citizen: hand the case to another force's queue (reason required)
+    // One dialog (reason required): wrong force picked by the citizen -> another force's queue, or the ward
+    // cannot handle it -> the province right now (reason saved as escalation_note). Only one choice: picked.
     transfer: (inc) => {
-      setTransferTo('');
+      const targets = transferTargets(inc);
+      setTransferTo(targets.length === 1 ? targets[0].value : '');
       setConfirmOf({ kind: 'transfer', inc });
     },
-    // asks for the reason first (saved on the incident: escalation_note)
-    escalate: (inc) => setConfirmOf({ kind: 'escalate', inc }),
     // Red phone: calling = taking the case (two officers never call the same citizen)
     call: async (inc) => {
       if (!onCall) return;
@@ -288,15 +288,20 @@ export function IncidentQueuePanel({
           busy={busyId === confirmOf.inc.id}
           {...(confirmOf.kind === 'transfer'
             ? {
-                title: `Chuyển ca ${confirmOf.inc.id} sang lực lượng khác?`,
+                title: `Chuyển ca ${confirmOf.inc.id}?`,
                 message:
-                  'Dùng khi người dân chọn nhầm lực lượng. Ca về hàng đợi của lực lượng mới (chờ nhận lại), bạn sẽ không giữ ca này nữa.',
-                confirmLabel: 'Chuyển lực lượng',
-                placeholder: 'Ví dụ: xác minh qua điện thoại là cháy nhà, cần PCCC',
+                  transferTo === ESCALATE_TARGET
+                    ? 'Ca về hàng đợi cấp tỉnh/thành phố ngay, bạn sẽ không giữ ca này nữa. Lý do được lưu vào hồ sơ ca và cấp tỉnh thấy được.'
+                    : 'Chọn lực lượng khác khi người dân chọn nhầm (ca về hàng đợi lực lượng mới, chờ nhận lại), hoặc lên cấp tỉnh/thành phố khi cấp xã không xử lý được. Bạn sẽ không giữ ca này nữa.',
+                confirmLabel: transferTo === ESCALATE_TARGET ? 'Chuyển lên tỉnh' : 'Chuyển lực lượng',
+                placeholder:
+                  transferTo === ESCALATE_TARGET
+                    ? 'Ví dụ: vượt khả năng lực lượng xã, cần CSCĐ / nhiều đơn vị phối hợp'
+                    : 'Ví dụ: xác minh qua điện thoại là cháy nhà, cần PCCC',
                 canConfirm: !!transferTo,
                 extra: (
                   <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', margin: '4px 0 10px' }}>
-                    {TRANSFER_TARGETS.filter((t) => t.key !== confirmOf.inc.agency).map((t) => (
+                    {transferTargets(confirmOf.inc).map((t) => (
                       <button
                         key={t.value}
                         type="button"
@@ -314,69 +319,61 @@ export function IncidentQueuePanel({
                   </div>
                 ),
               }
-            : confirmOf.kind === 'escalate'
+            : confirmOf.kind === 'finish'
               ? {
-                  title: `Chuyển ca ${confirmOf.inc.id} lên cấp tỉnh/thành phố?`,
+                  title: `Kết thúc ca ${confirmOf.inc.id}?`,
                   message:
-                    'Ca về hàng đợi cấp tỉnh/thành phố ngay, bạn sẽ không giữ ca này nữa. Lý do được lưu vào hồ sơ ca và cấp tỉnh thấy được.',
-                  confirmLabel: 'Chuyển lên tỉnh',
-                  placeholder: 'Ví dụ: vượt khả năng lực lượng xã, cần CSCĐ / nhiều đơn vị phối hợp',
+                    'Ca sẽ đóng ngay (đã xử lý xong), không chờ người dân xác nhận và không lập văn bản đầy đủ. Lý do được lưu vào hồ sơ ca.',
+                  confirmLabel: 'Kết thúc ca',
+                  placeholder: 'Ví dụ: đã xử lý xong, người báo không trả lời để xác nhận',
                 }
-              : confirmOf.kind === 'finish'
-                ? {
-                    title: `Kết thúc ca ${confirmOf.inc.id}?`,
-                    message:
-                      'Ca sẽ đóng ngay (đã xử lý xong), không chờ người dân xác nhận và không lập văn bản đầy đủ. Lý do được lưu vào hồ sơ ca.',
-                    confirmLabel: 'Kết thúc ca',
-                    placeholder: 'Ví dụ: đã xử lý xong, người báo không trả lời để xác nhận',
-                  }
-                : {
-                    title: `Huỷ ca ${confirmOf.inc.id}?`,
-                    message: (
-                      <>
-                        Ca sẽ bị huỷ và rời hàng đợi, không thể khôi phục. Người báo tin sẽ thấy tin báo đã bị
-                        huỷ.
-                        <br />
-                        <b>Báo khống</b> = huỷ vì báo tin giả: số điện thoại báo khống 3 lần trong 24 giờ bị
-                        khoá gửi SOS 24 giờ, lần khoá thứ 3 trong 30 ngày là khoá vĩnh viễn.
-                      </>
-                    ),
-                    confirmLabel: 'Huỷ ca',
-                    placeholder:
-                      'Ví dụ: xác minh là báo nhầm / trùng với ca khác / người báo thừa nhận trêu đùa',
-                    tags: cancelTags(samePhone(incidents, confirmOf.inc)),
-                    secondary: {
-                      label: 'Báo khống',
-                      title: 'Huỷ ca vì báo tin giả: tính vào khoá số điện thoại của người báo',
-                      onConfirm: async (reason) => {
-                        const { inc } = confirmOf;
-                        const ok = await run(
-                          inc,
-                          () => cancelByOfficer(inc.id, reason, { falseAlarm: true }),
-                          `Đã huỷ ca ${inc.id}: báo khống`,
-                        );
-                        if (ok) {
-                          setConfirmOf(null);
-                          onRetry();
-                        }
-                      },
+              : {
+                  title: `Huỷ ca ${confirmOf.inc.id}?`,
+                  message: (
+                    <>
+                      Ca sẽ bị huỷ và rời hàng đợi, không thể khôi phục. Người báo tin sẽ thấy tin báo đã bị
+                      huỷ.
+                      <br />
+                      <b>Báo khống</b> = huỷ vì báo tin giả: số điện thoại báo khống 3 lần trong 24 giờ bị
+                      khoá gửi SOS 24 giờ, lần khoá thứ 3 trong 30 ngày là khoá vĩnh viễn.
+                    </>
+                  ),
+                  confirmLabel: 'Huỷ ca',
+                  placeholder:
+                    'Ví dụ: xác minh là báo nhầm / trùng với ca khác / người báo thừa nhận trêu đùa',
+                  tags: cancelTags(samePhone(incidents, confirmOf.inc)),
+                  secondary: {
+                    label: 'Báo khống',
+                    title: 'Huỷ ca vì báo tin giả: tính vào khoá số điện thoại của người báo',
+                    onConfirm: async (reason) => {
+                      const { inc } = confirmOf;
+                      const ok = await run(
+                        inc,
+                        () => cancelByOfficer(inc.id, reason, { falseAlarm: true }),
+                        `Đã huỷ ca ${inc.id}: báo khống`,
+                      );
+                      if (ok) {
+                        setConfirmOf(null);
+                        onRetry();
+                      }
                     },
-                  })}
+                  },
+                })}
           onClose={() => setConfirmOf(null)}
           onConfirm={async (reason) => {
             const { kind, inc } = confirmOf;
             const ok =
-              kind === 'transfer'
+              kind === 'transfer' && transferTo === ESCALATE_TARGET
                 ? await run(
                     inc,
-                    () => transferIncident(inc.id, transferTo, reason),
-                    `Đã chuyển ca ${inc.id} sang ${TRANSFER_TARGETS.find((t) => t.value === transferTo)?.label}`,
+                    () => escalateIncident(inc.id, reason),
+                    `Đã chuyển ca ${inc.id} lên cấp tỉnh/thành phố`,
                   )
-                : kind === 'escalate'
+                : kind === 'transfer'
                   ? await run(
                       inc,
-                      () => escalateIncident(inc.id, reason),
-                      `Đã chuyển ca ${inc.id} lên cấp tỉnh/thành phố`,
+                      () => transferIncident(inc.id, transferTo, reason),
+                      `Đã chuyển ca ${inc.id} sang ${TRANSFER_TARGETS.find((t) => t.value === transferTo)?.label}`,
                     )
                   : kind === 'finish'
                     ? await run(inc, () => forceFinishIncident(inc.id, reason), `Đã kết thúc ca ${inc.id}`)
@@ -601,6 +598,16 @@ const TRANSFER_TARGETS = [
   { value: 'CSGT', key: 'csgt', label: 'CSGT' },
   { value: 'FIRE', key: 'fire', label: 'PCCC & CNCH' },
 ];
+const ESCALATE_TARGET = 'PROVINCE';
+
+/** A held ward case can go up to the province (VERIFYING or RESOLVING); another force only while VERIFYING. */
+const canEscalate = (inc) => inc.level === 'ward' && !inc.escalatedAt;
+function transferTargets(inc) {
+  return [
+    ...(canEscalate(inc) ? [{ value: ESCALATE_TARGET, label: 'Lên cấp tỉnh/thành phố' }] : []),
+    ...(inc.status === 'VERIFYING' ? TRANSFER_TARGETS.filter((t) => t.key !== inc.agency) : []),
+  ];
+}
 
 function ClaimControls({ incident: inc, holding, busy, canCall, actions }) {
   const stop = (fn) => (e) => {
@@ -609,7 +616,6 @@ function ClaimControls({ incident: inc, holding, busy, canCall, actions }) {
   };
   if (inc.heldByMe) {
     const verifying = inc.status === 'VERIFYING';
-    const canEscalate = inc.level === 'ward' && !inc.escalatedAt;
     const buttons = [
       verifying && {
         key: 'dispatch',
@@ -626,17 +632,12 @@ function ClaimControls({ incident: inc, holding, busy, canCall, actions }) {
           look: ['rgba(52, 211, 153, 0.18)', '#34d399', '#d1fae5'],
           onClick: actions.openDispatch,
         },
-      canEscalate && {
-        key: 'escalate',
-        label: 'Chuyển lên tỉnh',
-        title: 'Cấp xã không xử lý được: chuyển ca lên cấp tỉnh/thành phố ngay',
-        look: ['rgba(255, 42, 75, 0.15)', '#ff6b81', '#fecdd3'],
-        onClick: actions.escalate,
-      },
-      verifying && {
+      (verifying || canEscalate(inc)) && {
         key: 'transfer',
         label: 'Chuyển lực lượng',
-        title: 'Người dân chọn nhầm lực lượng: chuyển ca sang Công an / CSGT / PCCC',
+        title: canEscalate(inc)
+          ? 'Chuyển ca lên cấp tỉnh/thành phố, hoặc sang Công an / CSGT / PCCC khi người dân chọn nhầm'
+          : 'Người dân chọn nhầm lực lượng: chuyển ca sang Công an / CSGT / PCCC',
         look: ['rgba(56, 189, 248, 0.15)', '#38bdf8', '#bae6fd'],
         onClick: actions.transfer,
       },
