@@ -100,6 +100,14 @@ export function normalizePlan(raw) {
           phone: raw.assigned_to.phone || '',
         }
       : null,
+    // "Người nhận ca": the officer holding the case (phone only in the officers' copy)
+    receiver: raw.receiver
+      ? {
+          memberId: raw.receiver.member_id,
+          fullName: raw.receiver.full_name,
+          phone: raw.receiver.phone || '',
+        }
+      : null,
     // field officer (delegated officer, else the dispatching one): name, badge (= Traccar device id), phone
     tracker: raw.tracker
       ? {

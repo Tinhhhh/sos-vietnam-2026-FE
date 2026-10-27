@@ -125,6 +125,7 @@ export function FieldLinkPanel({ token, onCall, callBusy = false, onIncident }) 
         plan={plan}
         fetchPlan={fetchPlan}
         trackerCall={false}
+        onCallReceiver={onCall ? (r) => onCall('officer', r.fullName || data.handlerName || null) : null}
         footer={
           <div className={styles.actions}>
             {mapsUrl && (

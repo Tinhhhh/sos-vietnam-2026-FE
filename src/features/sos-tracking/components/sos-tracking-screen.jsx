@@ -160,7 +160,10 @@ function TrackingContent({
           onToggleMic={phone.setMic}
           onToggleCamera={phone.setCamera}
           onSwitchCamera={phone.switchCamera}
-          extraControl={!closed && dispatchSlot?.({ incident, token, variant: 'call', callTracker })}
+          extraControl={
+            !closed &&
+            dispatchSlot?.({ incident, token, variant: 'call', callTracker, callReceiver: callBack })
+          }
         />
         {switchDialog}
       </>
@@ -184,7 +187,8 @@ function TrackingContent({
           />
           {conn.text}
         </span>
-        {!closed && dispatchSlot?.({ incident, token, variant: 'screen', callTracker })}
+        {!closed &&
+          dispatchSlot?.({ incident, token, variant: 'screen', callTracker, callReceiver: callBack })}
       </div>
 
       <div className={styles.center} onClickCapture={() => closed && setStayedFor(incident.documentStatus)}>

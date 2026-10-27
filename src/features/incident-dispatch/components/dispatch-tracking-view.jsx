@@ -21,14 +21,16 @@ const telOf = (phone) => (phone || '').replace(/[^0-9+]/g, '');
 /**
  * "Theo dõi" like a ride-hailing app: map with the station emblem, the SOS point, the route and, while
  * the force is on the way, the live GPS dot of the field officer (Traccar Client on their phone, polled
- * every 5 s); then a card with the field officer ("Lực lượng phụ trách": name, badge, call), the unit,
- * ETA and distance. Used by the citizen's tracking sheet, the ward card and step 3 of the dispatch window.
+ * every 5 s); then a card with "Người nhận ca" (the officer holding the case), the delegated ward officer if any,
+ * "Người đi hiện trường" (the field officer: name, badge, call), the unit, ETA and distance. Used by the citizen's
+ * tracking sheet, the ward card, the field link page and step 3 of the dispatch window.
  *
  * @param {{ plan: object, incidentId?: string, citizenToken?: string, variant?: 'inline' | 'sheet',
  *           footer?: React.ReactNode, actions?: React.ReactNode }} props  plan from normalizePlan(); incidentId
  *   enables the live GPS; sheet = fills its (full-screen) parent: map takes the free height, the card sits at
  *   the bottom; actions = extra buttons next to "Gọi" ("Đổi người", "Đổi điểm đến" of the dispatch window);
- *   onCallTracker(tracker) = "Gọi" starts a video call to the field officer (else a tel: link)
+ *   onCallTracker(tracker) = "Gọi" starts a video call to the field officer (else a tel: link);
+ *   onCallReceiver(receiver) = "Gọi" on the "Người nhận ca" row (none for the holder: it is them)
  */
 export function DispatchTrackingView({
   plan,
@@ -38,6 +40,7 @@ export function DispatchTrackingView({
   footer = null,
   actions = null,
   onCallTracker = null,
+  onCallReceiver = null,
   fetchPlan = null,
   trackerCall = true, // false on the field officer's own page (the tracker is them)
 }) {
@@ -125,10 +128,38 @@ export function DispatchTrackingView({
           <SimulateControl incidentId={incidentId} simulation={live.simulation || plan.simulation} />
         )}
 
+        {plan.receiver && (
+          <div className={styles.tracker}>
+            <div className={styles.unitMain}>
+              <div className={styles.trackerLabel}>Người nhận ca</div>
+              <div className={styles.unitName}>{plan.receiver.fullName}</div>
+            </div>
+            {onCallReceiver && (
+              <button
+                type="button"
+                className={styles.callBtn}
+                title={`Gọi video cho ${plan.receiver.fullName}`}
+                onClick={() => onCallReceiver(plan.receiver)}
+              >
+                Gọi
+              </button>
+            )}
+          </div>
+        )}
+
+        {plan.assignedTo && plan.assignedTo.memberId !== plan.receiver?.memberId && (
+          <div className={styles.tracker}>
+            <div className={styles.unitMain}>
+              <div className={styles.trackerLabel}>Cán bộ được uỷ quyền</div>
+              <div className={styles.unitName}>{plan.assignedTo.fullName}</div>
+            </div>
+          </div>
+        )}
+
         {tracker && (
           <div className={styles.tracker}>
             <div className={styles.unitMain}>
-              <div className={styles.trackerLabel}>Lực lượng phụ trách</div>
+              <div className={styles.trackerLabel}>Người đi hiện trường</div>
               <div className={styles.unitName}>{tracker.fullName}</div>
               {tracker.badgeNumber && <div className={styles.unitSub}>Số hiệu {tracker.badgeNumber}</div>}
             </div>

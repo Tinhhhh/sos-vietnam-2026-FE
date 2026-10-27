@@ -18,7 +18,13 @@ const TRACK_STEP = 3;
  * @param {{ incident: object, token: string, variant?: 'call' | 'screen' }} props
  *   incident = live tracking incident (re-read the plan on every push), token = citizen access token
  */
-export function CitizenDispatchButton({ incident, token, variant = 'screen', callTracker = null }) {
+export function CitizenDispatchButton({
+  incident,
+  token,
+  variant = 'screen',
+  callTracker = null,
+  callReceiver = null,
+}) {
   const [open, setOpen] = useState(false);
   const [seen, setSeen] = useState(null); // dispatch id + step already opened
   const { plan } = useDispatchPlan({
@@ -63,6 +69,14 @@ export function CitizenDispatchButton({ incident, token, variant = 'screen', cal
                 }
               : null
           }
+          onCallReceiver={
+            callReceiver
+              ? () => {
+                  setOpen(false);
+                  callReceiver();
+                }
+              : null
+          }
           onClose={() => setOpen(false)}
         />
       )}
@@ -70,7 +84,7 @@ export function CitizenDispatchButton({ incident, token, variant = 'screen', cal
   );
 }
 
-function TrackingSheet({ plan, incidentId, token, onCallTracker, onClose }) {
+function TrackingSheet({ plan, incidentId, token, onCallTracker, onCallReceiver, onClose }) {
   useEffect(() => {
     const onKey = (e) => e.key === 'Escape' && onClose();
     document.addEventListener('keydown', onKey);
@@ -100,6 +114,7 @@ function TrackingSheet({ plan, incidentId, token, onCallTracker, onClose }) {
             incidentId={incidentId}
             citizenToken={token}
             onCallTracker={onCallTracker}
+            onCallReceiver={onCallReceiver}
             variant="sheet"
             footer={
               plan.status === 'EN_ROUTE' ? (

@@ -169,6 +169,14 @@ export function DelegationControls({ incident, onFinished, onCall = null }) {
           incident={incident}
           mine={mine}
           onClose={() => setDetail(false)}
+          onCallReceiver={
+            mine && onCall
+              ? (receiver) => {
+                  setDetail(false);
+                  onCall(incident, 'officer', receiver.fullName);
+                }
+              : null
+          }
           onCallField={
             mine && onCall
               ? (tracker) => {
@@ -214,7 +222,7 @@ function FieldCallButton({ incident, onCall }) {
  * - arrived: tracking + "Kết thúc xử lý"
  * Colleagues (not assigned) only see the tracking map.
  */
-function DelegationDetailModal({ incident, mine, onClose, onCallField, onFinished }) {
+function DelegationDetailModal({ incident, mine, onClose, onCallField, onCallReceiver, onFinished }) {
   const toast = useToast();
   const { plan, status } = useDispatchPlan({ incidentId: incident.id, refreshKey: incident });
   const [local, setLocal] = useState(null);
@@ -264,7 +272,12 @@ function DelegationDetailModal({ incident, mine, onClose, onCallField, onFinishe
   } else {
     body = (
       <div className={styles.detailBody}>
-        <DispatchTrackingView plan={current} incidentId={incident.id} onCallTracker={onCallField} />
+        <DispatchTrackingView
+          plan={current}
+          incidentId={incident.id}
+          onCallTracker={onCallField}
+          onCallReceiver={onCallReceiver}
+        />
         {mine && st === 'EN_ROUTE' && (
           <>
             <FieldOfficerChange incidentId={incident.id} plan={current} />
