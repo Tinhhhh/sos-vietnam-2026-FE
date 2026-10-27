@@ -1,10 +1,14 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { LngLatBounds, Map, Marker } from '@/lib/maplibre';
 
 import { STATION_ICON } from '../utils/origin-candidates';
 import { locateOnRoute, splitRoute } from '../utils/route-progress';
 import styles from './dispatch.module.css';
+
+/** One "+" / "−" step: the map scale grows / shrinks by 25 % (zoom levels are log2 of the scale). */
+const ZOOM_STEP = Math.log2(1.25);
+const DEFAULT_FIT = { maxZoom: 16 };
 
 // Same raster base map as the command map (Vietnamese labels)
 const STYLE = {
@@ -99,6 +103,9 @@ export function RouteMap({
   // user zoomed / panned keep their view unless the start or end point changes (another station / stop).
   const fitRef = useRef({ key: '', ends: '' });
   const userMovedRef = useRef(false);
+  // zoom of the default view (auto fit), shown as 100 %; "⟲" goes back to it
+  const baseZoomRef = useRef(null);
+  const [zoomPct, setZoomPct] = useState(100);
   const paddingRef = useRef(padding);
   useEffect(() => {
     paddingRef.current = padding;
@@ -114,6 +121,16 @@ export function RouteMap({
     });
     mapRef.current = map;
     // originalEvent = a gesture (drag, wheel, pinch, double click), not our own fitBounds / jumpTo
+    // our own fit / jump (not a gesture, user has not zoomed): its real zoom is the default view = 100 %
+    map.on('moveend', (e) => {
+      if (e.originalEvent || userMovedRef.current) return;
+      baseZoomRef.current = map.getZoom();
+      setZoomPct(100);
+    });
+    map.on('zoom', () => {
+      const base = baseZoomRef.current;
+      setZoomPct(base == null ? 100 : Math.round(2 ** (map.getZoom() - base) * 100));
+    });
     map.on('movestart', (e) => {
       if (e.originalEvent) userMovedRef.current = true;
     });
@@ -233,7 +250,7 @@ export function RouteMap({
       if (pts.length > 1) {
         const b = pts.reduce((acc, p) => acc.extend(p), new LngLatBounds(pts[0], pts[0]));
         boundsRef.current = b;
-        map.fitBounds(b, { padding: paddingRef.current, maxZoom: 16, duration: 600 });
+        map.fitBounds(b, { padding: paddingRef.current, ...DEFAULT_FIT, duration: 600 });
       }
     };
     if (map.getSource('route')) draw();
@@ -298,5 +315,47 @@ export function RouteMap({
     };
   }, []);
 
-  return <div ref={containerRef} className={className || styles.map} />;
+  const zoomBy = (steps) => {
+    const map = mapRef.current;
+    if (!map) return;
+    userMovedRef.current = true; // keep this zoom when the plan is polled again
+    map.easeTo({ zoom: map.getZoom() + steps * ZOOM_STEP, duration: 250 });
+  };
+  const resetZoom = () => {
+    const map = mapRef.current;
+    if (!map) return;
+    userMovedRef.current = false;
+    if (boundsRef.current) {
+      map.fitBounds(boundsRef.current, { padding: paddingRef.current, ...DEFAULT_FIT, duration: 400 });
+    } else if (baseZoomRef.current != null) {
+      map.easeTo({ zoom: baseZoomRef.current, duration: 250 });
+    }
+  };
+
+  // the wrapper takes the size (className), the map fills it and the zoom bar floats on top
+  return (
+    <div className={`${className || styles.map} ${styles.mapWrap}`}>
+      <div ref={containerRef} className={styles.mapCanvas} />
+      <div className={styles.zoomBar} role="group" aria-label="Thu phóng bản đồ">
+        <button type="button" className={styles.zoomBtn} onClick={() => zoomBy(-1)} aria-label="Thu nhỏ 25%">
+          −
+        </button>
+        <span className={styles.zoomPct} aria-live="polite">
+          {zoomPct}%
+        </span>
+        <button type="button" className={styles.zoomBtn} onClick={() => zoomBy(1)} aria-label="Phóng to 25%">
+          +
+        </button>
+        <button
+          type="button"
+          className={styles.zoomBtn}
+          onClick={resetZoom}
+          aria-label="Về mức zoom mặc định"
+          title="Về mức zoom mặc định"
+        >
+          ⟲
+        </button>
+      </div>
+    </div>
+  );
 }

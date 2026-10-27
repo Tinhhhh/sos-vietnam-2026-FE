@@ -16,6 +16,16 @@ const MAP_PADDING = { top: 56, bottom: 28, left: 36, right: 36 }; // room for th
 /** No new GPS point for this long: "Đang kết nối lại…" (the app sends one every 5 s). */
 const STALE_MS = 20000;
 
+/** Short status for the chip on a narrow map (phone). */
+const STATUS_SHORT = {
+  PENDING_ACCEPT: 'Chờ nhận',
+  ACCEPTED: 'Đã nhận',
+  READY: 'Chờ khởi hành',
+  EN_ROUTE: 'Đang di chuyển',
+  ARRIVED: 'Đã tới nơi',
+  DONE: 'Đã xong',
+};
+
 const telOf = (phone) => (phone || '').replace(/[^0-9+]/g, '');
 
 /**
@@ -74,17 +84,21 @@ export function DispatchTrackingView({
   const position = enRoute ? live.position : arrived ? plan.lastPosition : null;
   const now = useNow(enRoute, 2000);
   const stale = enRoute && (!position?.receivedAt || now - position.receivedAt.getTime() > STALE_MS);
+  const speed = position?.speedKmh != null ? ` · ${Math.round(position.speedKmh)} km/h` : '';
+  const lastAt = position?.receivedAt ? CLOCK.format(position.receivedAt) : '';
+  // [long, short]: the short one is shown when the map is narrow (phone)
   const gpsChip = arrived
     ? position
-      ? `Đã đến · vị trí cuối ${position.receivedAt ? CLOCK.format(position.receivedAt) : ''}`.trim()
+      ? [`Đã đến · vị trí cuối ${lastAt}`.trim(), `Đã đến ${lastAt}`.trim()]
       : null
     : !enRoute
       ? null
       : !position
-        ? 'Đang chờ tín hiệu GPS…'
+        ? ['Đang chờ tín hiệu GPS…', 'Chờ GPS…']
         : stale
-          ? 'Đang kết nối lại…'
-          : `GPS trực tiếp${position.speedKmh != null ? ` · ${Math.round(position.speedKmh)} km/h` : ''}`;
+          ? ['Đang kết nối lại…', 'Mất GPS…']
+          : [`GPS trực tiếp${speed}`, `GPS${speed}`];
+  const statusShort = STATUS_SHORT[plan.status === 'ACCEPTED' && plan.tracker ? 'READY' : plan.status];
   const tracker = plan.tracker;
   const trackerTel = telOf(tracker?.phone) || phone;
 
@@ -100,13 +114,25 @@ export function DispatchTrackingView({
           className={sheet ? styles.mapFill : styles.mapInline}
           padding={MAP_PADDING}
         />
-        <span className={styles.statusChip}>
-          {plan.statusLabel}
-          {enRoute && route?.rerouted ? ' · đã tính lại đường' : ''}
+        <span className={styles.statusChip} title={plan.statusLabel}>
+          <span className={statusShort ? styles.chipLong : undefined}>
+            {plan.statusLabel}
+            {enRoute && route?.rerouted ? ' · đã tính lại đường' : ''}
+          </span>
+          {statusShort && (
+            <span className={styles.chipShort}>
+              {statusShort}
+              {enRoute && route?.rerouted ? ' · tuyến mới' : ''}
+            </span>
+          )}
         </span>
         {gpsChip && (
-          <span className={`${styles.gpsChip} ${position && !stale ? styles.gpsLive : styles.gpsWait}`}>
-            {gpsChip}
+          <span
+            className={`${styles.gpsChip} ${position && !stale ? styles.gpsLive : styles.gpsWait}`}
+            title={gpsChip[0]}
+          >
+            <span className={styles.chipLong}>{gpsChip[0]}</span>
+            <span className={styles.chipShort}>{gpsChip[1]}</span>
           </span>
         )}
       </div>
@@ -173,23 +199,26 @@ export function DispatchTrackingView({
               <div className={styles.unitName}>{tracker.fullName}</div>
               {tracker.badgeNumber && <div className={styles.unitSub}>Số hiệu {tracker.badgeNumber}</div>}
             </div>
-            {actions && <div className={styles.actions}>{actions}</div>}
-            {!trackerCall ? null : onCallTracker ? (
-              <button
-                type="button"
-                className={styles.callBtn}
-                title={`Gọi video cho ${tracker.fullName}`}
-                onClick={() => onCallTracker(tracker)}
-              >
-                Gọi
-              </button>
-            ) : (
-              trackerTel && (
-                <a className={styles.callBtn} href={`tel:${trackerTel}`} title={`Gọi ${tracker.fullName}`}>
+            {/* own line under the name on a narrow card (phone) */}
+            <div className={styles.trackerButtons}>
+              {actions && <div className={styles.actions}>{actions}</div>}
+              {!trackerCall ? null : onCallTracker ? (
+                <button
+                  type="button"
+                  className={styles.callBtn}
+                  title={`Gọi video cho ${tracker.fullName}`}
+                  onClick={() => onCallTracker(tracker)}
+                >
                   Gọi
-                </a>
-              )
-            )}
+                </button>
+              ) : (
+                trackerTel && (
+                  <a className={styles.callBtn} href={`tel:${trackerTel}`} title={`Gọi ${tracker.fullName}`}>
+                    Gọi
+                  </a>
+                )
+              )}
+            </div>
           </div>
         )}
 
