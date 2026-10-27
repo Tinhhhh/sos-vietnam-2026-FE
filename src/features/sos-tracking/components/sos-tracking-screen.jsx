@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
 import { CallIcon } from '@/components/ui/call-icons/call-icons';
+import { Modal } from '@/components/ui/modal/modal';
 import { CallSwitchDialog } from '@/components/ui/call-switch-dialog/call-switch-dialog';
 import { callPeerLabel, callPeerRole, useCall } from '@/hooks/use-call';
 import { useNow } from '@/hooks/use-now';
@@ -216,9 +217,10 @@ function TrackingContent({
             call={call}
             peerName={peerLabel(call)}
           />
-          {/* the case code from the start: the citizen re-opens this screen with it ("Tra Cứu") if the tab closes */}
-          <LookupCode code={incident.lookupCode} />
           {incident.status === 'RESOLVED' && documentSlot?.({ incident, token })}
+          {/* the case code from the start: the citizen re-opens this screen with it ("Tra Cứu") if the tab closes.
+              A popup once per case, then one small line here (and in the "..." sheet) */}
+          <LookupCode key={incident.id} incidentId={incident.id} code={incident.lookupCode} />
           <div className={styles.incidentId}>Mã tin báo: {incident.id}</div>
           {notice}
         </div>
@@ -306,9 +308,23 @@ function AutoReturn({ paused, onReturn }) {
 
 /**
  * The case code: with the last 4 phone digits it re-opens this screen (case still open) or the record (closed)
- * via "Tra Cứu". The BE does not send it before RESOLVED yet (docs/spec-multi-case.md): then say so.
+ * via "Tra Cứu". Pops up by itself the first time this case's screen opens (remembered per case), then stays
+ * as one small line that re-opens the popup.
  */
-function LookupCode({ code }) {
+function LookupCode({ incidentId, code }) {
+  const [open, setOpen] = useState(() => !!code && firstTime(incidentId));
+  if (!code) return null;
+  return (
+    <>
+      <button type="button" className={styles.codeLine} onClick={() => setOpen(true)}>
+        Mã ca: <b>{code}</b> <span>· Xem / sao chép</span>
+      </button>
+      <CaseCodeDialog open={open} code={code} onClose={() => setOpen(false)} />
+    </>
+  );
+}
+
+function CaseCodeDialog({ open, code, onClose }) {
   const [copied, setCopied] = useState(false);
   const copy = async () => {
     try {
@@ -319,29 +335,36 @@ function LookupCode({ code }) {
       setCopied(false);
     }
   };
-  if (!code) {
-    return (
-      <div className={styles.lookupBox}>
-        <div className={styles.lookupLabel}>Mã ca</div>
-        <div className={styles.lookupHint}>Tính năng đang chờ phát triển.</div>
-      </div>
-    );
-  }
   return (
-    <div className={styles.lookupBox}>
-      <div className={styles.lookupLabel}>Mã ca của bạn</div>
-      <div className={styles.lookupRow}>
-        <span className={styles.lookupCode}>{code}</span>
+    <Modal open={open} onClose={onClose} solid containerStyle={{ maxWidth: 400 }} title="Mã ca của bạn">
+      <div className={styles.lookupCode}>{code}</div>
+      <p className={styles.lookupHint}>
+        Lưu lại mã này. Lỡ đóng trang: bấm "Tra Cứu" ở trang chủ, nhập mã và 4 số cuối số điện thoại để vào
+        lại (tin báo chưa xong) hoặc xem lại thông tin cứu hộ. Xem lại mã: bấm dòng "Mã ca" trên màn hình hoặc
+        nút ⋯.
+      </p>
+      <div className={styles.codeActions}>
         <button type="button" className={styles.lookupCopy} onClick={copy}>
-          {copied ? 'Đã chép' : 'Sao chép'}
+          {copied ? 'Đã chép' : 'Sao chép mã'}
+        </button>
+        <button type="button" className={styles.codeClose} onClick={onClose}>
+          Đã lưu
         </button>
       </div>
-      <div className={styles.lookupHint}>
-        Lưu lại mã này. Lỡ đóng trang: bấm "Tra Cứu" ở trang chủ, nhập mã và 4 số cuối số điện thoại để vào
-        lại (tin báo chưa xong) hoặc xem lại thông tin cứu hộ.
-      </div>
-    </div>
+    </Modal>
   );
+}
+
+/** true only the first time for this case on this device (storage blocked: show it every time) */
+function firstTime(incidentId) {
+  const key = `sos_code_shown_${incidentId}`;
+  try {
+    if (localStorage.getItem(key)) return false;
+    localStorage.setItem(key, '1');
+  } catch {
+    // private mode / blocked storage
+  }
+  return true;
 }
 
 /** The handler as citizens see it: the account name (often the unit, e.g. "Công an TP. Hồ Chí Minh"), else a generic label. */

@@ -60,6 +60,7 @@ export function CitizenDispatchButton({
         <TrackingSheet
           plan={tracking ? plan : null}
           incidentId={incident.id}
+          lookupCode={incident.lookupCode}
           token={token}
           onCallTracker={
             callTracker
@@ -84,7 +85,7 @@ export function CitizenDispatchButton({
   );
 }
 
-function TrackingSheet({ plan, incidentId, token, onCallTracker, onCallReceiver, onClose }) {
+function TrackingSheet({ plan, incidentId, lookupCode, token, onCallTracker, onCallReceiver, onClose }) {
   useEffect(() => {
     const onKey = (e) => e.key === 'Escape' && onClose();
     document.addEventListener('keydown', onKey);
@@ -108,6 +109,7 @@ function TrackingSheet({ plan, incidentId, token, onCallTracker, onCallReceiver,
             </svg>
           </button>
         </div>
+        {lookupCode && <CaseCodeRow code={lookupCode} />}
         {plan ? (
           <DispatchTrackingView
             plan={plan}
@@ -139,6 +141,33 @@ function TrackingSheet({ plan, incidentId, token, onCallTracker, onCallReceiver,
       </div>
     </div>,
     document.body,
+  );
+}
+
+/** The case code again (the waiting screen shows it as a popup once): "Tra Cứu" re-opens the case with it. */
+function CaseCodeRow({ code }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <div className={styles.codeRow}>
+      <span>
+        Mã ca: <b>{code}</b>
+      </span>
+      <button
+        type="button"
+        className={styles.codeCopy}
+        onClick={async () => {
+          try {
+            await navigator.clipboard.writeText(code);
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
+          } catch {
+            setCopied(false);
+          }
+        }}
+      >
+        {copied ? 'Đã chép' : 'Sao chép'}
+      </button>
+    </div>
   );
 }
 

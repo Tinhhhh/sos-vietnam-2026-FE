@@ -516,55 +516,69 @@
   cursor: not-allowed;
 }
 
-.lookupBox {
-  margin-top: 14px;
-  padding: 12px 14px;
-  border-radius: 14px;
-  border: 1px solid rgba(56, 189, 248, 0.45);
-  background: rgba(14, 165, 233, 0.1);
-  text-align: left;
-  max-width: 340px;
-  margin-inline: auto;
+/* "Mã ca: XXXX-XXXX" line under the status (opens the code popup) */
+.codeLine {
+  display: block;
+  margin: 10px auto 0;
+  padding: 2px 6px;
+  border: 0;
+  background: none;
+  color: #94a3b8;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
 }
-
-.lookupLabel {
-  font-size: 12px;
-  font-weight: 700;
+.codeLine b {
+  color: #e0f2fe;
+  font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace;
+  letter-spacing: 0.06em;
+}
+.codeLine span {
   color: #7dd3fc;
-}
-
-.lookupRow {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  margin: 4px 0 6px;
+  text-decoration: underline;
 }
 
 .lookupCode {
+  margin: 4px 0 12px;
+  text-align: center;
   font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace;
-  font-size: 24px;
+  font-size: clamp(22px, 7vw, 30px);
   font-weight: 800;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.1em;
   color: #f8fafc;
-}
-
-.lookupCopy {
-  padding: 6px 12px;
-  border-radius: 9px;
-  border: 1px solid rgba(56, 189, 248, 0.6);
-  background: transparent;
-  color: #e0f2fe;
-  font: inherit;
-  font-size: 12.5px;
-  font-weight: 700;
-  cursor: pointer;
+  white-space: nowrap;
 }
 
 .lookupHint {
-  font-size: 12px;
-  line-height: 1.45;
+  margin: 0 0 14px;
+  font-size: 13px;
+  line-height: 1.5;
   color: #94a3b8;
+}
+
+.codeActions {
+  display: flex;
+  gap: 8px;
+}
+
+.lookupCopy,
+.codeClose {
+  flex: 1;
+  padding: 10px 12px;
+  border-radius: 10px;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+.lookupCopy {
+  border: 1px solid rgba(56, 189, 248, 0.6);
+  background: rgba(14, 165, 233, 0.15);
+  color: #e0f2fe;
+}
+.codeClose {
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  background: transparent;
+  color: #e2e8f0;
 }
 
 /* 5 call controls (mic, camera, switch, "...", hang up) on narrow phones */

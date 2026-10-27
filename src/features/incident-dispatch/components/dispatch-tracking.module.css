@@ -413,6 +413,34 @@
   box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.3);
 }
 
+/* "Mã ca" row under the sheet head (citizen) */
+.codeRow {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 16px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.15);
+  font-size: 13px;
+  color: #94a3b8;
+}
+.codeRow b {
+  color: #e0f2fe;
+  font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace;
+  letter-spacing: 0.06em;
+}
+.codeCopy {
+  padding: 5px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(56, 189, 248, 0.6);
+  background: transparent;
+  color: #e0f2fe;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
 .empty {
   margin: auto;
   padding: 24px 20px;
