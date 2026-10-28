@@ -1,4 +1,6 @@
+import { VoiceMuteIcon } from '@/components/ui/voice-mute-icon';
 import { useNow } from '@/hooks/use-now';
+import { CITIZEN_VOICE, useVoiceMuted } from '@/hooks/use-voice-muted';
 
 import styles from './citizen-desktop.module.css';
 
@@ -12,7 +14,8 @@ const CLOCK = new Intl.DateTimeFormat('vi-VN', {
 
 /**
  * Top bar of the citizen home (Stitch reference). Desktop: one fixed row, system name + Vietnam time on the
- * left, compact GPS pill + "Cổng Cán Bộ" on the right. Phone: system pill + officer button, then the GPS card.
+ * left, compact GPS pill + "Tắt tiếng" + "Cổng" on the right. Phone: system pill + both buttons, then the GPS card.
+ * "Tắt tiếng" silences the voice prompt of the SOS button (silent report).
  * Only real data: the GPS fix of the browser, no made-up weather or status numbers.
  *
  * @param {{ geo: object, onPickOnMap?: () => void, officerHref: string }} props
@@ -22,14 +25,28 @@ export function CitizenTopBar({ geo, onPickOnMap, officerHref }) {
   const locating = geo.status === 'locating' && !geo.coords;
   const unavailable = geo.status === 'unavailable' || (!geo.coords && !locating);
   const weak = geo.accuracy != null && geo.accuracy > 100;
+  const [muted, setMuted] = useVoiceMuted(CITIZEN_VOICE);
+  const muteLabel = muted ? 'Đang tắt tiếng hướng dẫn SOS, bấm để bật' : 'Tắt tiếng hướng dẫn khi bấm SOS';
   const officer = (
-    <a className={styles.officerLink} href={officerHref} target="_blank" rel="noopener">
-      <svg className="svg-ico ico-sm" viewBox="0 0 24 24" aria-hidden="true">
-        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-        <path d="M9 12l2 2 4-4" />
-      </svg>
-      Cổng Cán Bộ
-    </a>
+    <span className={styles.topActions}>
+      <button
+        type="button"
+        className={`${styles.muteBtn} ${muted ? styles.muteOn : ''}`}
+        aria-pressed={muted}
+        aria-label={muteLabel}
+        title={muteLabel}
+        onClick={() => setMuted(!muted)}
+      >
+        <VoiceMuteIcon muted={muted} />
+      </button>
+      <a className={styles.officerLink} href={officerHref} target="_blank" rel="noopener" title="Cổng cán bộ">
+        <svg className="svg-ico ico-sm" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+          <path d="M9 12l2 2 4-4" />
+        </svg>
+        Cổng
+      </a>
+    </span>
   );
 
   return (

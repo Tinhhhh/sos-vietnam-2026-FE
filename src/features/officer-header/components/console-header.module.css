@@ -311,3 +311,9 @@ button.info:focus-visible,
     animation: none;
   }
 }
+
+/* voice of new SOS alerts muted (button next to the bell) */
+.muteOn {
+  color: #fca5a5;
+  background: rgba(127, 29, 29, 0.35);
+}

@@ -320,6 +320,11 @@ export function OfficerLoginForm() {
 
   return (
     <div className={s.page}>
+      <a className={s.backToSos} href="/" title="Về màn hình báo SOS của người dân">
+        <span aria-hidden="true">←</span>
+        <span className={s.backLong}>Về màn báo SOS</span>
+        <span className={s.backShort}>Báo SOS</span>
+      </a>
       {/* ── Background: Live Satellite Video & Orbit Layer ──── */}
       <div className={s.bgContainer} aria-hidden="true">
         {/* Vietnam S-Curve Satellite Zoom Layer */}
