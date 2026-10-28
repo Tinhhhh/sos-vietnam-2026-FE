@@ -361,3 +361,46 @@
   color: #fecaca;
   font-size: 12.5px;
 }
+
+/* accepted delegation: action grid like a held queue card */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.detail,
+.callHolder,
+.callField {
+  padding: 8px 10px;
+  border-radius: 8px;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.detail {
+  border: 1px solid #34d399;
+  background: rgba(52, 211, 153, 0.18);
+  color: #d1fae5;
+}
+
+.callHolder {
+  border: 1px solid #38bdf8;
+  background: rgba(56, 189, 248, 0.15);
+  color: #bae6fd;
+}
+
+.callField {
+  grid-column: 1 / -1;
+  border: 1px solid #22c55e;
+  background: rgba(22, 163, 74, 0.2);
+  color: #dcfce7;
+}
+
+.detailBody {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}

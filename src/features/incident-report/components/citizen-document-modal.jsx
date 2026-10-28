@@ -13,7 +13,8 @@ const POLL_MS = 8000;
 
 /**
  * Citizen reads and signs the report of their incident. access = { incidentId, token } from the tracking screen,
- * or { lookupCode, phoneLast4 } from "Tra Cứu". Until officers save the document it says so and checks again.
+ * or { lookupCode, phoneLast4 } from "Tra Cứu". Before officers save it the BE sends the auto-filled draft
+ * (saved = false): the citizen can read and check it right away, signing comes once it is saved.
  *
  * @param {{ access: object | null, onClose: () => void, notify?: (msg, opts) => void }} props
  */
@@ -108,11 +109,13 @@ function CitizenDocumentWindow({ access, onClose, notify, onSigned }) {
               In / PDF
             </button>
             <span className={styles.meta}>
-              {doc.locked
-                ? 'Văn bản đã đủ chữ ký 2 bên'
-                : doc.citizenSignature
-                  ? 'Bạn đã ký · chờ lực lượng chức năng ký xác nhận'
-                  : 'Đọc kỹ nội dung rồi ký xác nhận ở ô "Người báo tin / người dân"'}
+              {!doc.saved
+                ? 'Bản nháp: lực lượng chức năng đang hoàn thiện văn bản, bạn ký được khi văn bản được lưu'
+                : doc.locked
+                  ? 'Văn bản đã đủ chữ ký 2 bên'
+                  : doc.citizenSignature
+                    ? 'Bạn đã ký · chờ lực lượng chức năng ký xác nhận'
+                    : 'Đọc kỹ nội dung rồi ký xác nhận ở ô "Người báo tin / người dân"'}
             </span>
           </div>
           <div className={styles.scroll}>
@@ -121,6 +124,7 @@ function CitizenDocumentWindow({ access, onClose, notify, onSigned }) {
               fields={doc.fields}
               editable={false}
               citizenAction={
+                doc.saved &&
                 !doc.citizenSignature &&
                 !doc.locked && (
                   <button type="button" className={sheetStyles.sigBtn} onClick={() => setPadOpen(true)}>

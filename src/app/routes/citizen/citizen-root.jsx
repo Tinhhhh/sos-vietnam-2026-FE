@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { Outlet } from 'react-router';
+import { Outlet, useNavigate } from 'react-router';
 
 import { CitizenDock } from '@/components/layouts/citizen-layout/citizen-dock';
 import { CitizenLayout } from '@/components/layouts/citizen-layout/citizen-layout';
@@ -11,6 +11,7 @@ import { InstallGuideModal, useInstallApp } from '@/features/install-app';
 import { CitizenDocumentButton } from '@/features/incident-report';
 import { useGeolocation } from '@/features/location/hooks/use-geolocation';
 import { SurvivalGuideModal } from '@/features/survival-guide/components/survival-guide-modal';
+import { saveActiveIncident } from '@/stores/active-incident';
 
 /**
  * Citizen portal shell. Owns the state several features share — the GPS
@@ -22,7 +23,9 @@ export function CitizenRoot() {
   const toast = useToast();
   const [openModal, setOpenModal] = useState(null);
   const closeModal = useCallback(() => setOpenModal(null), []);
+  const openLookup = useCallback(() => setOpenModal('lookup'), []);
   const installApp = useInstallApp(toast.show);
+  const navigate = useNavigate();
 
   return (
     <CitizenLayout
@@ -31,7 +34,7 @@ export function CitizenRoot() {
           onInstallApp={installApp.install}
           onOpenFamilySos={() => setOpenModal('family')}
           onOpenSurvivalGuide={() => setOpenModal('guide')}
-          onOpenLookup={() => setOpenModal('lookup')}
+          onOpenLookup={openLookup}
           dispatcherHref={paths.officer.login.getHref()}
         />
       }
@@ -52,6 +55,12 @@ export function CitizenRoot() {
           <IncidentLookupModal
             open={openModal === 'lookup'}
             onClose={closeModal}
+            // open case found by code + phone: keep it on this device and go back to its call screen
+            onResume={({ incident, citizenAccessToken }) => {
+              saveActiveIncident(incident, citizenAccessToken);
+              closeModal();
+              navigate(paths.citizen.sos.getHref(incident.id));
+            }}
             documentSlot={(access) => (
               <CitizenDocumentButton
                 access={access}
@@ -70,7 +79,7 @@ export function CitizenRoot() {
         </>
       }
     >
-      <Outlet context={{ geo }} />
+      <Outlet context={{ geo, openLookup }} />
     </CitizenLayout>
   );
 }

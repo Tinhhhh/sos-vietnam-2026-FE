@@ -19,6 +19,11 @@ const router = createBrowserRouter([
         index: true,
         lazy: async () => ({ Component: (await import('./routes/citizen/home')).CitizenHomeRoute }),
       },
+      {
+        // same screen, opened on one of the device's open SOS cases
+        path: 'sos/:incidentId',
+        lazy: async () => ({ Component: (await import('./routes/citizen/home')).CitizenHomeRoute }),
+      },
     ],
   },
 
@@ -64,6 +69,14 @@ const router = createBrowserRouter([
         }),
       },
     ],
+  },
+
+  // ── Field officer's link (public, the code is the key) ────────────
+  {
+    path: paths.field.link.path,
+    lazy: async () => ({ Component: (await import('./routes/field/field-link')).FieldLinkRoute }),
+    ErrorBoundary: RouteErrorBoundary,
+    HydrateFallback: RouteLoading,
   },
 
   // ── Legacy dispatcher placeholder ────────────────────────────────

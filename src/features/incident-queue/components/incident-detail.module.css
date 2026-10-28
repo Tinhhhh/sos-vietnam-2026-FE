@@ -206,6 +206,76 @@
   color: #f1f5f9;
 }
 
+/* time first, in a green pill (dispatches, claim history, phases) */
+.timeChip {
+  align-self: flex-start;
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: #15803d;
+  color: #fff !important;
+  font-size: 12.5px !important;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+.timeChipNext {
+  background: rgba(148, 163, 184, 0.25);
+  color: #e2e8f0 !important;
+}
+.list li.timed {
+  gap: 4px;
+}
+
+/* "Mốc thời gian" as numbered phases joined by a line */
+.phases {
+  margin: 0 0 8px;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+}
+.phase {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 0 6px 0;
+}
+.phase:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  left: 11px;
+  top: 30px;
+  bottom: -6px;
+  width: 2px;
+  background: rgba(34, 197, 94, 0.45);
+}
+.phaseDot {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #16a34a;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 800;
+}
+.phaseLabel {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #f1f5f9;
+}
+.phaseNext .phaseDot {
+  background: rgba(148, 163, 184, 0.35);
+}
+.phaseNext .phaseLabel {
+  color: #94a3b8;
+  font-weight: 600;
+}
+
 .list {
   margin: 0;
   padding: 0;

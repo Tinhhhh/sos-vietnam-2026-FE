@@ -16,16 +16,21 @@ const STUN_ONLY = [{ urls: ['stun:stun.cloudflare.com:3478', 'stun:stun.l.google
 let cache = null; // { key, servers, expiresAt }
 
 /**
- * @param {{ incidentId?: string, citizenAccessToken?: string }} [citizen] leave empty for officers
+ * @param {{ incidentId?: string, citizenAccessToken?: string, fieldToken?: string }} [caller] leave empty for
+ *   officers; fieldToken = the field officer's link code (header X-SOS-Field-Token)
  * @returns {Promise<RTCIceServer[]>}
  */
-export async function getIceServers({ incidentId, citizenAccessToken } = {}) {
-  const key = citizenAccessToken ? `citizen:${incidentId}` : 'officer';
+export async function getIceServers({ incidentId, citizenAccessToken, fieldToken } = {}) {
+  const key = fieldToken ? `field:${fieldToken}` : citizenAccessToken ? `citizen:${incidentId}` : 'officer';
   if (cache && cache.key === key && cache.expiresAt > Date.now()) return cache.servers;
   try {
     const body = await api.get('/api/v1/calls/ice-servers', {
       params: citizenAccessToken ? { incident_id: incidentId } : undefined,
-      headers: citizenAccessToken ? { 'X-SOS-Access-Token': citizenAccessToken } : undefined,
+      headers: fieldToken
+        ? { 'X-SOS-Field-Token': fieldToken }
+        : citizenAccessToken
+          ? { 'X-SOS-Access-Token': citizenAccessToken }
+          : undefined,
     });
     const servers = (body?.data?.ice_servers || []).filter((s) => s?.urls);
     if (!servers.length) return STUN_ONLY;

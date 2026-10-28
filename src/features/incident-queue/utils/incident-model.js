@@ -61,6 +61,17 @@ export function normalizeIncident(raw) {
     escalateAt: toDate(raw.escalate_at),
     escalatedAt: toDate(raw.escalated_at),
     escalationReasonLabel: raw.escalation_reason_label || null,
+    // report_type: SELF (tự báo) / PROXY (báo hộ, chưa mở); ca cũ BE điền SELF
+    reportType: raw.report_type || 'SELF',
+    reportTypeLabel: raw.report_type_label || 'Tự báo',
+    // false alarms from the same IP in the last 24 h (warning only, IPs are shared on 4G)
+    ipFalseAlarmCount: raw.ip_false_alarm_count || 0,
+    // other open cases from the same phone (BE other_open_cases, docs/spec-multi-case.md; not sent yet)
+    otherOpenCases: (raw.other_open_cases || []).map((o) => ({
+      id: o.id,
+      typeLabel: o.type_label || null,
+      statusLabel: o.status_label || null,
+    })),
     transferredFromLabel: raw.transferred_from_label || null,
     transferReason: raw.transfer_reason || null,
     escalationNote: raw.escalation_note || null,

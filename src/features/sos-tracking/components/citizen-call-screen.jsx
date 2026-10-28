@@ -2,6 +2,8 @@ import { CallIcon } from '@/components/ui/call-icons/call-icons';
 import { VideoTile } from '@/components/ui/video-tile/video-tile';
 import { useNow } from '@/hooks/use-now';
 
+import { CALL_ROLE_LABEL, CALLING_TEXT, callPeerRole } from '@/hooks/use-call';
+
 import { formatDuration } from '../utils/tracking-model';
 import styles from './sos-tracking.module.css';
 
@@ -12,15 +14,17 @@ const STATE_TEXT = {
 };
 
 /**
- * Citizen during a call: own camera full screen (they aim it at the scene), the officer in a
+ * Citizen (or field officer) during a call: own camera full screen (they aim it at the scene), the other side in a
  * small tile, controls at the bottom. Back camera first; mirrored only for the front camera.
+ * The citizen calling the officer sees "Đang gọi lực lượng chức năng..."; anyone else sees who they call.
  *
- * @param {{ call: object, officerName?: string | null,
+ * @param {{ call: object, officerName?: string | null, citizenSide?: boolean,
  *           onHangUp, onToggleMic, onToggleCamera, onSwitchCamera }} props
  */
 export function CitizenCallScreen({
   call,
   officerName,
+  citizenSide = true, // false on the field officer's link page
   onHangUp,
   onToggleMic,
   onToggleCamera,
@@ -28,7 +32,11 @@ export function CitizenCallScreen({
   extraControl = null, // e.g. the "..." dispatch tracking button
 }) {
   const now = useNow(call.state === 'live');
-  const overlay = STATE_TEXT[call.state];
+  const role = callPeerRole(call) || 'officer';
+  const generic = citizenSide && role === 'officer'; // the citizen only knows "lực lượng chức năng"
+  const overlay = call.state === 'ringing' && !generic ? CALLING_TEXT[role] : STATE_TEXT[call.state];
+  const peerTag = generic ? 'LỰC LƯỢNG TIẾP NHẬN' : (CALL_ROLE_LABEL[role] || 'Lực lượng tiếp nhận').toUpperCase();
+  const fallbackName = generic ? 'Lực lượng tiếp nhận' : CALL_ROLE_LABEL[role];
 
   return (
     <div className={styles.callScreen}>
@@ -51,9 +59,9 @@ export function CitizenCallScreen({
       <VideoTile
         className={styles.pip}
         stream={call.remoteStream}
-        fallback={<div className={styles.avatar}>👮</div>}
+        fallback={<div className={styles.avatar}>{role === 'citizen' ? '🧑' : '👮'}</div>}
       >
-        <span className={styles.pipLabel}>LỰC LƯỢNG TIẾP NHẬN</span>
+        <span className={styles.pipLabel}>{peerTag}</span>
       </VideoTile>
 
       <div className={styles.callTop}>
@@ -64,7 +72,7 @@ export function CitizenCallScreen({
             : 'SOS'}
         </span>
         <span className={styles.callBadge} style={{ marginRight: 'min(32vw, 160px)' }}>
-          {officerName || 'Lực lượng tiếp nhận'}
+          {officerName || fallbackName}
         </span>
       </div>
 

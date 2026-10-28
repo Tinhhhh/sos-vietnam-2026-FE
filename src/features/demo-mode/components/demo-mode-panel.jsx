@@ -41,11 +41,16 @@ export function DemoModePanel() {
   const [state, setState] = useState(null);
   const [error, setError] = useState(null);
   const [busy, setBusy] = useState(false);
+  const [speed, setSpeed] = useState('');
 
   useEffect(() => {
     let alive = true;
     getDemoSettings()
-      .then((s) => alive && setState(s))
+      .then((s) => {
+        if (!alive) return;
+        setState(s);
+        setSpeed(String(s?.simulation_speed_kmh ?? ''));
+      })
       .catch((e) => alive && setError(e.message));
     return () => {
       alive = false;
@@ -57,8 +62,11 @@ export function DemoModePanel() {
     try {
       const next = await updateDemoSettings(patch);
       setState(next);
+      setSpeed(String(next?.simulation_speed_kmh ?? ''));
       notify(
-        'hidden' in patch
+        'simulation_speed_kmh' in patch
+          ? `Tốc độ mô phỏng: ${next.simulation_speed_kmh} km/h (áp dụng cho lần bấm Mô phỏng sau).`
+          : 'hidden' in patch
           ? patch.hidden
             ? 'Đã ẩn ca demo khỏi hàng đợi và lịch sử.'
             : 'Ca demo hiện lại trong hàng đợi và lịch sử.'
@@ -101,6 +109,38 @@ export function DemoModePanel() {
               disabled={busy}
               onChange={(v) => change({ hidden: v })}
             />
+          </SettingsRow>
+          <SettingsRow
+            title="Tốc độ mô phỏng (km/h)"
+            desc="Tốc độ xe giả khi bấm “Mô phỏng” trên màn điều động, từ 5 đến 150 km/h. Đang chạy thì bấm Mô phỏng lại để áp dụng."
+          >
+            <form
+              className={styles.speed}
+              onSubmit={(e) => {
+                e.preventDefault();
+                const v = Number(speed);
+                if (!Number.isFinite(v) || v < 5 || v > 150) {
+                  notify('Tốc độ từ 5 đến 150 km/h.', { tone: 'error' });
+                  return;
+                }
+                change({ simulation_speed_kmh: v });
+              }}
+            >
+              <input
+                type="number"
+                min={5}
+                max={150}
+                step={1}
+                inputMode="numeric"
+                aria-label="Tốc độ mô phỏng (km/h)"
+                value={speed}
+                disabled={busy}
+                onChange={(e) => setSpeed(e.target.value)}
+              />
+              <button type="submit" disabled={busy || Number(speed) === state.simulation_speed_kmh}>
+                Lưu
+              </button>
+            </form>
           </SettingsRow>
           <div className={styles.muted}>
             Áp dụng ngay cho mọi tài khoản.

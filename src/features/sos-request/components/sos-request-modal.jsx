@@ -31,11 +31,21 @@ const NO_LOCATION_ERROR =
  * submit button is locked and the citizen is asked to turn location on or pick the spot on the map.
  *
  * @param {{ open: boolean, onClose: () => void, location: object, onPickLocation?: () => void,
- *           notify: Function, onSubmitted: (result: { incident: object, mediaError?: string }) => void }} props
- *   The phone already has an open SOS: BE answers with that incident (resumed = true, new token) and
- *   the call screen opens on it instead of a new report.
+ *           notify: Function, onSubmitted: (result: { incident: object, mediaError?: string }) => void,
+ *           onOpenLookup?: () => void }} props
+ *   The phone already has open SOS cases (docs/spec-multi-case.md): BE answers 409 OPEN_CASE_EXISTS (1 open:
+ *   "Tra cứu ngay" / "Báo sự việc khác" = send again with new_case / "Trở lại menu") or OPEN_CASE_LIMIT (2 open:
+ *   "Tra cứu" / "Trở lại menu"). Older BE still answers with the open incident itself (resumed = true).
  */
-export function SosRequestModal({ open, onClose, location, onPickLocation, notify, onSubmitted }) {
+export function SosRequestModal({
+  open,
+  onClose,
+  location,
+  onPickLocation,
+  notify,
+  onSubmitted,
+  onOpenLookup,
+}) {
   const [agencyId, setAgencyId] = useState(DEFAULT_AGENCY_ID);
   const [tags, setTags] = useState([]);
   const [notes, setNotes] = useState('');
@@ -44,6 +54,8 @@ export function SosRequestModal({ open, onClose, location, onPickLocation, notif
   const [phoneError, setPhoneError] = useState(null);
   const phoneInputRef = useRef(null);
   const [submitting, setSubmitting] = useState(false);
+  // 'exists' (1 open case for this phone) | 'limit' (2 open) | null
+  const [openCases, setOpenCases] = useState(null);
 
   const notifyWarning = useCallback((message) => notify(message, { tone: 'warning' }), [notify]);
   const media = useMediaAttachments({ onError: notifyWarning });
@@ -71,7 +83,8 @@ export function SosRequestModal({ open, onClose, location, onPickLocation, notif
     media.clear();
   };
 
-  const handleSubmit = async () => {
+  const handleSubmit = async ({ newCase = false } = {}) => {
+    setOpenCases(null);
     if (!location.hasFix) {
       notifyWarning(NO_LOCATION_ERROR);
       return;
@@ -88,6 +101,7 @@ export function SosRequestModal({ open, onClose, location, onPickLocation, notif
     try {
       const body = await createIncident({
         emergency_type: agency.emergencyType,
+        report_type: 'SELF', // báo hộ (PROXY) chưa mở
         incident_tags: tags.map(cleanIncidentLabel), // emoji chỉ để hiển thị trên ô chọn
         description: notes.trim() || null,
         citizen_name: reporterName.trim() || DEFAULT_REPORTER_NAME,
@@ -96,6 +110,8 @@ export function SosRequestModal({ open, onClose, location, onPickLocation, notif
         latitude: location.coords.lat,
         longitude: location.coords.lng,
         accuracy: location.accuracy != null ? Math.round(location.accuracy) : null,
+        // "Báo sự việc khác" after the "đã có 1 tin báo đang mở" window
+        ...(newCase ? { new_case: true } : {}),
       });
       // body = { http_status, message, data: { incident, citizen_access_token } }
       const result = body?.data;
@@ -126,6 +142,11 @@ export function SosRequestModal({ open, onClose, location, onPickLocation, notif
       resetForm();
       onSubmitted({ incident: result.incident, mediaError });
     } catch (err) {
+      const code = err.data?.data?.code || err.data?.code;
+      if (err.status === 409 && (code === 'OPEN_CASE_EXISTS' || code === 'OPEN_CASE_LIMIT')) {
+        setOpenCases(code === 'OPEN_CASE_LIMIT' ? 'limit' : 'exists');
+        return;
+      }
       notify(`Không gửi được tín hiệu SOS: ${err.message}. ${HOTLINE_HINT}`, {
         tone: 'error',
         duration: 9000,
@@ -185,6 +206,26 @@ export function SosRequestModal({ open, onClose, location, onPickLocation, notif
             onRemove={media.remove}
             disabled={submitting}
           />
+
+          {/* who reports: only "Tự báo" for now; "Báo hộ" (reporting for someone else) comes later */}
+          <div className={formStyles.reportType} role="radiogroup" aria-label="Người báo tin">
+            <span className={formStyles.fieldLabel}>Người báo tin</span>
+            <div className={formStyles.reportTypeRow}>
+              <button type="button" role="radio" aria-checked="true" className={formStyles.reportTypeOn}>
+                Tự báo
+              </button>
+              <button
+                type="button"
+                role="radio"
+                aria-checked="false"
+                disabled
+                className={formStyles.reportTypeOff}
+                title="Báo hộ cho người khác: tính năng sắp có"
+              >
+                Báo hộ <small>Sắp có</small>
+              </button>
+            </div>
+          </div>
 
           <div className={formStyles.contactRow}>
             <div>
@@ -277,7 +318,7 @@ export function SosRequestModal({ open, onClose, location, onPickLocation, notif
           style={
             location.hasFix ? undefined : { opacity: 0.45, cursor: 'not-allowed', filter: 'grayscale(0.6)' }
           }
-          onClick={handleSubmit}
+          onClick={() => handleSubmit()}
         >
           {submitting ? (
             <>
@@ -327,6 +368,64 @@ export function SosRequestModal({ open, onClose, location, onPickLocation, notif
           )}
         </button>
       )}
+      {openCases && (
+        <OpenCaseDialog
+          limit={openCases === 'limit'}
+          busy={submitting}
+          onLookup={() => {
+            setOpenCases(null);
+            onOpenLookup?.();
+          }}
+          // Ca thứ 2 cho cùng số tạm khoá ở FE (BE đã nhận new_case): chỉ báo đang phát triển
+          onNewCase={() => notify('Tính năng đang được phát triển', { tone: 'info' })}
+          onMenu={() => {
+            setOpenCases(null);
+            close();
+          }}
+        />
+      )}
+    </Modal>
+  );
+}
+
+/**
+ * The phone already has open SOS cases. No details of them here (anyone can type a phone number): the citizen
+ * goes back to a case through "Tra cứu" with its code.
+ */
+function OpenCaseDialog({ limit, busy, onLookup, onNewCase, onMenu }) {
+  const btn = { flex: 1, justifyContent: 'center', padding: '11px 12px', fontWeight: 800 };
+  return (
+    <Modal
+      open
+      onClose={busy ? () => {} : onMenu}
+      solid
+      containerStyle={{ maxWidth: 440 }}
+      title={limit ? 'Không thể tạo thêm tin báo' : 'Bạn đã có tin báo đang mở'}
+    >
+      <p role="status" style={{ margin: '0 0 14px', color: '#e2e8f0', fontSize: 14.5, lineHeight: 1.5 }}>
+        {limit
+          ? 'Số điện thoại này đã có 2 tin báo đang mở. Quay lại tin báo bằng Tra cứu (mã ca + 4 số cuối số điện thoại). Cần hỗ trợ gấp: gọi 113 / 114 / 115.'
+          : 'Số điện thoại này đã có 1 tin báo đang mở. Quay lại tin đang mở bằng Tra cứu (mã ca + 4 số cuối số điện thoại), hoặc báo một sự việc khác.'}
+      </p>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <button type="button" className="btn-refresh-loc" style={btn} disabled={busy} onClick={onLookup}>
+          {limit ? 'Tra cứu' : 'Tra cứu ngay'}
+        </button>
+        {!limit && (
+          <button type="button" className="btn-submit-sos" style={btn} disabled={busy} onClick={onNewCase}>
+            {busy ? 'Đang gửi...' : 'Báo sự việc khác'}
+          </button>
+        )}
+        <button
+          type="button"
+          className="btn-refresh-loc"
+          style={{ ...btn, opacity: 0.8 }}
+          disabled={busy}
+          onClick={onMenu}
+        >
+          Trở lại menu
+        </button>
+      </div>
     </Modal>
   );
 }

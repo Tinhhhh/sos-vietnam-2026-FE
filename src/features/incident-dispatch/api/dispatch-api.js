@@ -55,6 +55,7 @@ function livePosition(p) {
     speedKmh: p.speed_kmh ?? null,
     heading: p.heading ?? null,
     receivedAt: toDate(p.received_at),
+    source: p.source || null, // TRACCAR (app) | BROWSER (field link page)
   };
 }
 
@@ -99,6 +100,26 @@ export function normalizePlan(raw) {
           phone: raw.assigned_to.phone || '',
         }
       : null,
+    // on the way: GPS distance to the destination; "Đã đến" allowed when within (30 m + accuracy, max 50 m)
+    arrivalCheck: raw.arrival_check
+      ? {
+          distanceM: raw.arrival_check.distance_m,
+          thresholdM: raw.arrival_check.threshold_m,
+          within: !!raw.arrival_check.within,
+        }
+      : null,
+    // how "Đã đến" was confirmed: GPS / HOLDER_OVERRIDE (+ note) / CITIZEN
+    arrivalSource: raw.arrival_source || null,
+    arrivalSourceLabel: raw.arrival_source_label || null,
+    arrivalNote: raw.arrival_note || null,
+    // "Người nhận ca": the officer holding the case (phone only in the officers' copy)
+    receiver: raw.receiver
+      ? {
+          memberId: raw.receiver.member_id,
+          fullName: raw.receiver.full_name,
+          phone: raw.receiver.phone || '',
+        }
+      : null,
     // field officer (delegated officer, else the dispatching one): name, badge (= Traccar device id), phone
     tracker: raw.tracker
       ? {
@@ -115,6 +136,8 @@ export function normalizePlan(raw) {
       : null,
     rejectReason: raw.reject_reason || null,
     officerConfirmedAt: toDate(raw.officer_confirmed_at),
+    // officers only: when the field officer's link was last issued (null = none / voided)
+    fieldLinkIssuedAt: toDate(raw.field_link_issued_at),
     citizenConfirmedAt: toDate(raw.citizen_confirmed_at),
     respondedAt: toDate(raw.responded_at),
     dispatchedAt: toDate(raw.dispatched_at),
@@ -225,8 +248,15 @@ export async function rejectDelegation(incidentId, reason) {
 }
 
 /** The delegated unit sets off with its field officer (người phụ trách hiện trường). */
-export async function departDelegation(incidentId, fieldMemberId) {
-  const body = await api.post(planPath(incidentId, '/depart'), { member_id: fieldMemberId });
+/**
+ * "Khởi hành" (ACCEPTED -> EN_ROUTE): the field officer chosen before (PUT /field-member), or fieldMemberId to
+ * choose and set off in one call.
+ */
+export async function departDelegation(incidentId, fieldMemberId = null) {
+  const body = await api.post(
+    planPath(incidentId, '/depart'),
+    fieldMemberId ? { member_id: fieldMemberId } : {}, // JSON body: the BE reads an optional body
+  );
   return normalizePlan(body.data);
 }
 
@@ -250,15 +280,40 @@ export async function getFieldCandidates(incidentId) {
   }));
 }
 
+/**
+ * Field officer's link /f/{token} (no login): POST .../dispatch-plan/field-link makes a new code (the old link stops
+ * working). The code comes back only here, once.
+ * @returns {Promise<{ token: string, path: string, issuedAt: Date|null, fieldMember: object|null }>}
+ */
+export async function issueFieldLink(incidentId) {
+  const body = await api.post(planPath(incidentId, '/field-link'));
+  const d = body.data || {};
+  return {
+    token: d.token,
+    path: d.path,
+    issuedAt: toDate(d.issued_at),
+    fieldMember: d.field_member
+      ? { fullName: d.field_member.full_name, badgeNumber: d.field_member.badge_number }
+      : null,
+    // link also sent by SMS to the field officer's phone (sent = the SMS gateway took it)
+    sms: d.sms
+      ? { sent: !!d.sms.sent, phoneMasked: d.sms.phone_masked || null, error: d.sms.error || null }
+      : null,
+  };
+}
+
 /** Change the field officer while the force is on the way (stops a running simulation). */
 export async function changeFieldMember(incidentId, fieldMemberId) {
   const body = await api.put(planPath(incidentId, '/field-member'), { member_id: fieldMemberId });
   return normalizePlan(body.data);
 }
 
-/** "Đã đến": the unit on site / field officer (JWT) or the citizen (citizenToken). */
-export async function arriveDispatch(incidentId, { citizenToken } = {}) {
-  const body = await api.post(planPath(incidentId, '/arrive'), null, {
+/**
+ * "Đã đến": officers / field officer only when the GPS is within the destination radius (BE checks); the officer
+ * holding the case may confirm without GPS with a reason; the citizen (citizenToken) always.
+ */
+export async function arriveDispatch(incidentId, { citizenToken, reason } = {}) {
+  const body = await api.post(planPath(incidentId, '/arrive'), reason ? { reason } : {}, {
     headers: citizenToken ? { [CITIZEN_TOKEN_HEADER]: citizenToken } : undefined,
   });
   return normalizePlan(body.data);

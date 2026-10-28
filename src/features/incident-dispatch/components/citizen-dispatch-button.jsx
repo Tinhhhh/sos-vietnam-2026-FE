@@ -18,7 +18,13 @@ const TRACK_STEP = 3;
  * @param {{ incident: object, token: string, variant?: 'call' | 'screen' }} props
  *   incident = live tracking incident (re-read the plan on every push), token = citizen access token
  */
-export function CitizenDispatchButton({ incident, token, variant = 'screen' }) {
+export function CitizenDispatchButton({
+  incident,
+  token,
+  variant = 'screen',
+  callTracker = null,
+  callReceiver = null,
+}) {
   const [open, setOpen] = useState(false);
   const [seen, setSeen] = useState(null); // dispatch id + step already opened
   const { plan } = useDispatchPlan({
@@ -54,7 +60,24 @@ export function CitizenDispatchButton({ incident, token, variant = 'screen' }) {
         <TrackingSheet
           plan={tracking ? plan : null}
           incidentId={incident.id}
+          lookupCode={incident.lookupCode}
           token={token}
+          onCallTracker={
+            callTracker
+              ? (tracker) => {
+                  setOpen(false); // the call screen takes over
+                  callTracker(tracker);
+                }
+              : null
+          }
+          onCallReceiver={
+            callReceiver
+              ? () => {
+                  setOpen(false);
+                  callReceiver();
+                }
+              : null
+          }
           onClose={() => setOpen(false)}
         />
       )}
@@ -62,7 +85,7 @@ export function CitizenDispatchButton({ incident, token, variant = 'screen' }) {
   );
 }
 
-function TrackingSheet({ plan, incidentId, token, onClose }) {
+function TrackingSheet({ plan, incidentId, lookupCode, token, onCallTracker, onCallReceiver, onClose }) {
   useEffect(() => {
     const onKey = (e) => e.key === 'Escape' && onClose();
     document.addEventListener('keydown', onKey);
@@ -86,11 +109,14 @@ function TrackingSheet({ plan, incidentId, token, onClose }) {
             </svg>
           </button>
         </div>
+        {lookupCode && <CaseCodeRow code={lookupCode} />}
         {plan ? (
           <DispatchTrackingView
             plan={plan}
             incidentId={incidentId}
             citizenToken={token}
+            onCallTracker={onCallTracker}
+            onCallReceiver={onCallReceiver}
             variant="sheet"
             footer={
               plan.status === 'EN_ROUTE' ? (
@@ -115,6 +141,33 @@ function TrackingSheet({ plan, incidentId, token, onClose }) {
       </div>
     </div>,
     document.body,
+  );
+}
+
+/** The case code again (the waiting screen shows it as a popup once): "Tra Cứu" re-opens the case with it. */
+function CaseCodeRow({ code }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <div className={styles.codeRow}>
+      <span>
+        Mã ca: <b>{code}</b>
+      </span>
+      <button
+        type="button"
+        className={styles.codeCopy}
+        onClick={async () => {
+          try {
+            await navigator.clipboard.writeText(code);
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
+          } catch {
+            setCopied(false);
+          }
+        }}
+      >
+        {copied ? 'Đã chép' : 'Sao chép'}
+      </button>
+    </div>
   );
 }
 
