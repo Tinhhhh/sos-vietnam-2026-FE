@@ -18,6 +18,24 @@ const LocationPicker = lazy(() =>
   import('@/features/location/components/location-picker').then((m) => ({ default: m.LocationPicker })),
 );
 
+// "Về trang chủ" pressed in this tab: stop jumping from "/" into the open case (new tab / session = jump again)
+const STAY_HOME_KEY = 'sos_stay_home';
+const stayHome = () => {
+  try {
+    return sessionStorage.getItem(STAY_HOME_KEY) === '1';
+  } catch {
+    return false;
+  }
+};
+const setStayHome = (on) => {
+  try {
+    if (on) sessionStorage.setItem(STAY_HOME_KEY, '1');
+    else sessionStorage.removeItem(STAY_HOME_KEY);
+  } catch {
+    // storage blocked: the menu just jumps back into the case as before
+  }
+};
+
 const TIME = new Intl.DateTimeFormat('vi-VN', { hour: '2-digit', minute: '2-digit' });
 
 /**
@@ -64,12 +82,12 @@ export function CitizenHomeRoute() {
 
   // "/" with exactly one open case: straight to its call screen (as before)
   useEffect(() => {
-    if (!incidentId && cases.length === 1) {
+    if (!incidentId && cases.length === 1 && !stayHome()) {
       navigate(paths.citizen.sos.getHref(cases[0].incident.id), { replace: true });
     }
   }, [incidentId, cases, navigate]);
   const [chooserDismissed, setChooserDismissed] = useState(false);
-  const chooser = !incidentId && cases.length >= 2 && !chooserDismissed;
+  const chooser = !incidentId && cases.length >= 2 && !chooserDismissed && !stayHome();
 
   const handleSubmitted = ({ incident, mediaError }) => {
     setRequestOpen(false);
@@ -83,7 +101,29 @@ export function CitizenHomeRoute() {
     }
   };
 
+  const goHome = () => {
+    setStayHome(true);
+    navigate(paths.citizen.home.getHref());
+  };
+  const openCase = () => {
+    setStayHome(false);
+    if (cases.length === 1) navigate(paths.citizen.sos.getHref(cases[0].incident.id));
+    else setChooserDismissed(false);
+  };
+  // SOS with a case already open on this device: a 2nd report is not open yet (BE accepts new_case, FE holds it)
+  const triggerSos = () => {
+    if (cases.length > 0) {
+      toast.show(
+        'Bạn đang có tin báo đang mở. Tính năng báo sự việc thứ 2 đang được phát triển. Khẩn cấp hãy gọi 113 / 114 / 115.',
+        { tone: 'info', duration: 8000 },
+      );
+      return;
+    }
+    setRequestOpen(true);
+  };
+
   const handleTrackingClosed = (message) => {
+    setStayHome(false);
     clearActiveIncident(active?.incident.id);
     refresh();
     navigate(paths.citizen.home.getHref(), { replace: true });
@@ -93,7 +133,26 @@ export function CitizenHomeRoute() {
   return (
     <div>
       <CitizenTopBar geo={geo} onPickOnMap={openPicker} officerHref={paths.officer.login.getHref()} />
-      <SosHero onTrigger={() => setRequestOpen(true)} />
+      {!incidentId && cases.length > 0 && (
+        <button
+          type="button"
+          className="btn-refresh-loc"
+          onClick={openCase}
+          style={{
+            margin: '10px auto 0',
+            padding: '10px 16px',
+            fontSize: 14,
+            fontWeight: 800,
+            display: 'flex',
+            gap: 6,
+            borderColor: 'rgba(248, 113, 113, 0.6)',
+            color: '#fecaca',
+          }}
+        >
+          🔴 Bạn đang có {cases.length > 1 ? `${cases.length} tin báo` : 'tin báo'} đang mở: Xem
+        </button>
+      )}
+      <SosHero onTrigger={triggerSos} />
       <SosRequestModal
         open={requestOpen}
         onClose={closeRequest}
@@ -134,6 +193,7 @@ export function CitizenHomeRoute() {
           token={active.citizenAccessToken}
           notify={toast.show}
           onClosed={handleTrackingClosed}
+          onHome={goHome}
           notice={
             others.length > 0 ? (
               <button

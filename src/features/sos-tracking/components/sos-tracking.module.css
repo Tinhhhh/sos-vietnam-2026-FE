@@ -587,3 +587,17 @@
     gap: 10px;
   }
 }
+
+/* "← Về trang chủ" while the case is open (it stays open, the menu links back to it) */
+.homeBtn {
+  align-self: flex-start;
+  margin-bottom: 8px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  background: rgba(15, 23, 42, 0.6);
+  color: #e2e8f0;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}

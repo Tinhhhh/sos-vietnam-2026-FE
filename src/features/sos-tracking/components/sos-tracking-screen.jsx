@@ -58,6 +58,7 @@ function TrackingContent({
   documentSlot,
   mediaSlot,
   notice = null,
+  onHome = null,
 }) {
   // The tracking socket also carries call signals; the call hook is created after it
   const signalHandler = useRef(() => {});
@@ -179,6 +180,12 @@ function TrackingContent({
 
   return (
     <div className={styles.screen} role="dialog" aria-label="Đang chờ tiếp nhận SOS">
+      {/* the case stays open and kept on the device; the menu shows a "Xem" strip to come back */}
+      {!closed && onHome && (
+        <button type="button" className={styles.homeBtn} onClick={onHome}>
+          ← Về trang chủ
+        </button>
+      )}
       <div className={styles.top}>
         <span className={styles.typeChip}>
           {type.icon} {type.label}
