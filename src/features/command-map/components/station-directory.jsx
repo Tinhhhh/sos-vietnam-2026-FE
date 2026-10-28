@@ -6,20 +6,20 @@ import { normalizeProvinceName } from '../utils/geo-math';
 import { stationMatchesAgency } from '../utils/station-model';
 import styles from './station-directory.module.css';
 
-const LEGACY_REGIONS = ['Cần Thơ', 'TP. Hồ Chí Minh', 'Hà Nội', 'Đà Nẵng'];
-const REGION_SHORT = { 'TP. Hồ Chí Minh': 'TP.HCM' };
 const RENDER_LIMIT = 200;
 
 const AGENCY_LOOK = {
-  police: { icon: '👮‍♂️', color: '#60a5fa' },
-  csgt: { icon: '🚗', color: '#fbbf24' },
-  fire: { icon: '🚒', color: '#f87171' },
-  hospital: { icon: '🚑', color: '#34d399' },
+  police: { icon: '👮‍♂️', color: '#60a5fa', label: 'Công an' },
+  csgt: { icon: '🚗', color: '#fbbf24', label: 'CSGT' },
+  fire: { icon: '🚒', color: '#f87171', label: 'PCCC' },
+  hospital: { icon: '🚑', color: '#34d399', label: 'Y tế' },
 };
+const AGENCIES = ['police', 'csgt', 'fire', 'hospital'];
 
 /**
- * Sidebar tab with the station directory (legacy #panelStationsView). Officers
- * only see their own agency; the region defaults to their province.
+ * Sidebar tab with the station directory. Officers only see their own agency; ADMIN picks one of the 4 forces
+ * (tabs) and sees only that force. The province list holds the provinces of that force, defaulting to the
+ * officer's own province (ADMIN: all).
  *
  * @param {{
  *   officer: { agency: string, province: string|null, isAdmin: boolean },
@@ -28,23 +28,36 @@ const AGENCY_LOOK = {
  * }} props
  */
 export function StationDirectory({ officer, stations, status, onFlyTo, onAdminAction }) {
-  const regions = useMemo(() => {
-    const own =
-      officer.province &&
-      !LEGACY_REGIONS.some((r) => normalizeProvinceName(r) === normalizeProvinceName(officer.province));
-    return [...(own ? [officer.province] : []), ...LEGACY_REGIONS];
-  }, [officer.province]);
-  const [region, setRegion] = useState(() => {
-    if (officer.isAdmin || !officer.province) return 'all';
-    return regions.find((r) => normalizeProvinceName(r) === normalizeProvinceName(officer.province)) || 'all';
-  });
+  const pickAgency = officer.isAdmin || officer.agency === 'all';
+  const [agencyTab, setAgencyTab] = useState('police');
+  const agency = pickAgency ? agencyTab : officer.agency;
+  const [province, setProvince] = useState(() =>
+    officer.isAdmin || !officer.province ? 'all' : officer.province,
+  );
   const [keyword, setKeyword] = useState('');
+
+  const ofAgency = useMemo(() => stations.filter((s) => stationMatchesAgency(s, agency)), [stations, agency]);
+  const counts = useMemo(() => {
+    const c = {};
+    stations.forEach((s) => {
+      c[s.agency] = (c[s.agency] || 0) + 1;
+    });
+    return c;
+  }, [stations]);
+  const provinces = useMemo(() => {
+    const names = new Map();
+    ofAgency.forEach((s) => s.province && names.set(normalizeProvinceName(s.province), s.province));
+    return [...names.values()].sort((a, b) => a.localeCompare(b, 'vi'));
+  }, [ofAgency]);
+  const provinceKey = province === 'all' ? null : normalizeProvinceName(province);
+  // the chosen province may have no station of the newly picked force: show all instead of an empty list
+  const activeProvince =
+    provinceKey && provinces.some((p) => normalizeProvinceName(p) === provinceKey) ? provinceKey : null;
 
   const filtered = useMemo(() => {
     const q = keyword.toLowerCase().trim();
-    return stations
-      .filter((s) => stationMatchesAgency(s, officer.agency))
-      .filter((s) => region === 'all' || normalizeProvinceName(s.province) === normalizeProvinceName(region))
+    return ofAgency
+      .filter((s) => !activeProvince || normalizeProvinceName(s.province) === activeProvince)
       .filter(
         (s) =>
           !q ||
@@ -53,65 +66,68 @@ export function StationDirectory({ officer, stations, status, onFlyTo, onAdminAc
           s.phone.toLowerCase().includes(q) ||
           s.ward.toLowerCase().includes(q),
       );
-  }, [stations, officer.agency, region, keyword]);
+  }, [ofAgency, activeProvince, keyword]);
 
   return (
-    <div
-      className={styles.panelStationsView}
-      style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, padding: '12px 14px' }}
-    >
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 10 }}>
-        {[...regions, 'all'].map((r) => (
-          <button
-            key={r}
-            type="button"
-            className={`btn-refresh-loc ${styles.stationRegionBtn} ${region === r ? `${styles.isActive} is-active` : ''}`}
-            style={{ padding: '3px 8px', fontSize: 11 }}
-            onClick={() => setRegion(r)}
-          >
-            {r === 'all' ? 'Tất cả' : REGION_SHORT[r] || r}
-          </button>
-        ))}
-      </div>
+    <div className={`${styles.panelStationsView} ${styles.panel}`}>
+      {pickAgency && (
+        <div className={styles.agencyTabs} role="tablist" aria-label="Lực lượng">
+          {AGENCIES.map((a) => (
+            <button
+              key={a}
+              type="button"
+              role="tab"
+              aria-selected={agency === a}
+              className={`${styles.agencyTab} ${agency === a ? styles.agencyTabOn : ''}`}
+              style={{ '--agency': AGENCY_LOOK[a].color }}
+              onClick={() => setAgencyTab(a)}
+            >
+              <span aria-hidden="true">{AGENCY_LOOK[a].icon}</span>
+              <span className={styles.agencyTabLabel}>{AGENCY_LOOK[a].label}</span>
+              <span className={styles.agencyTabCount}>{counts[a] || 0}</span>
+            </button>
+          ))}
+        </div>
+      )}
 
       {officer.isAdmin && (
-        <button
-          type="button"
-          className={`btn-refresh-loc ${styles.btnAddNewStationPick}`}
-          style={{
-            width: '100%',
-            justifyContent: 'center',
-            background: 'rgba(0, 210, 255, 0.15)',
-            borderColor: '#00d2ff',
-            color: '#38bdf8',
-            fontWeight: 700,
-            fontSize: 11,
-            padding: 7,
-            marginBottom: 10,
-            display: 'flex',
-            alignItems: 'center',
-            gap: 5,
-          }}
-          onClick={() => onAdminAction?.('add-station')}
-        >
-          <SvgIcon name="plus" color="blue" /> Chấm Thêm Trụ Sở Mới Trên Bản Đồ
+        <button type="button" className={styles.addBtn} onClick={() => onAdminAction?.('add-station')}>
+          <SvgIcon name="plus" color="blue" /> Chấm thêm trụ sở mới trên bản đồ
         </button>
       )}
 
-      <input
-        type="text"
-        className="input-field"
-        placeholder="Tìm trụ sở, phường, SĐT..."
-        style={{ marginBottom: 10, padding: '8px 10px', fontSize: 12 }}
-        value={keyword}
-        onChange={(e) => setKeyword(e.target.value)}
-      />
+      <div className={styles.filters}>
+        <select
+          className={`input-field ${styles.province}`}
+          aria-label="Tỉnh / thành phố"
+          value={activeProvince ? province : 'all'}
+          onChange={(e) => setProvince(e.target.value)}
+        >
+          <option value="all">Tất cả tỉnh / thành</option>
+          {provinces.map((p) => (
+            <option key={p} value={p}>
+              {p}
+            </option>
+          ))}
+        </select>
+        <input
+          type="text"
+          className={`input-field ${styles.search}`}
+          placeholder="Tìm trụ sở, phường, SĐT..."
+          value={keyword}
+          onChange={(e) => setKeyword(e.target.value)}
+        />
+      </div>
 
-      <div className={styles.stationsListContainer} style={{ overflowY: 'auto', flex: 1, paddingRight: 2 }}>
+      <div className={styles.listInfo}>
+        {status === 'ready' && `${filtered.length} trụ sở ${AGENCY_LOOK[agency]?.label || ''}`}
+      </div>
+
+      <div className={`${styles.stationsListContainer} ${styles.list}`}>
         {status === 'loading' && <EmptyState icon="⏳" text="Đang nạp danh bạ trụ sở..." />}
         {status === 'error' && <EmptyState icon="⚠️" text="Không tải được danh bạ trụ sở từ máy chủ" />}
         {status === 'ready' && filtered.length === 0 && (
-          <EmptyState icon="🏢" text="Không tìm thấy trụ sở nào phù hợp với đơn vị của bạn" />
+          <EmptyState icon="🏢" text="Không tìm thấy trụ sở nào phù hợp" />
         )}
 
         {filtered.slice(0, RENDER_LIMIT).map((st) => (
@@ -125,7 +141,7 @@ export function StationDirectory({ officer, stations, status, onFlyTo, onAdminAc
         ))}
 
         {filtered.length > RENDER_LIMIT && (
-          <div style={{ textAlign: 'center', color: '#94a3b8', fontSize: 10.5, padding: '8px 0 14px' }}>
+          <div className={styles.more}>
             Đang hiện {RENDER_LIMIT}/{filtered.length} trụ sở — gõ từ khoá hoặc chọn tỉnh để thu hẹp.
           </div>
         )}
@@ -134,134 +150,67 @@ export function StationDirectory({ officer, stations, status, onFlyTo, onAdminAc
   );
 }
 
+/** One station: name (full width), address / phone / officer, then the map buttons; ADMIN edit / delete below. */
 function StationCard({ station: st, isAdmin, onFlyTo, onAdminAction }) {
   const look = AGENCY_LOOK[st.agency] || AGENCY_LOOK.police;
   return (
-    <div className={styles.stationCard}>
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'flex-start',
-          gap: 8,
-          marginBottom: 6,
-          width: '100%',
-        }}
-      >
-        <div
-          style={{
-            fontSize: 13,
-            fontWeight: 800,
-            color: look.color,
-            display: 'flex',
-            alignItems: 'flex-start',
-            gap: 6,
-            flex: '1 1 auto',
-            minWidth: 0,
-            wordBreak: 'break-word',
-            lineHeight: 1.35,
-          }}
-        >
-          <span style={{ flexShrink: 0, marginTop: 1 }}>{look.icon}</span>{' '}
-          <span style={{ wordBreak: 'break-word' }}>{st.name}</span>
+    <article className={styles.stationCard} style={{ '--agency': look.color }}>
+      <h4 className={styles.cardName}>
+        <span aria-hidden="true">{look.icon}</span>
+        <span>{st.name}</span>
+      </h4>
+      <dl className={styles.cardInfo}>
+        <div>
+          <dt>📍 Địa chỉ</dt>
+          <dd>{st.address || 'Chưa cập nhật'}</dd>
         </div>
-        {isAdmin && (
-          <div style={{ display: 'flex', gap: 4, flexShrink: 0, alignItems: 'center' }}>
-            <button
-              type="button"
-              className={`btn-refresh-loc ${styles.btnEditStation}`}
-              style={{
-                padding: '2px 7px',
-                fontSize: 10,
-                borderColor: 'rgba(255,255,255,0.2)',
-                whiteSpace: 'nowrap',
-              }}
-              onClick={() => onAdminAction?.('edit-station')}
-            >
-              ✏️ Sửa
-            </button>
-            <button
-              type="button"
-              className={`btn-refresh-loc ${styles.btnDeleteStation}`}
-              style={{
-                padding: '2px 7px',
-                fontSize: 10,
-                background: 'rgba(255, 42, 75, 0.15)',
-                borderColor: '#ff2a4b',
-                color: '#ff6b81',
-                whiteSpace: 'nowrap',
-              }}
-              onClick={() => onAdminAction?.('delete-station')}
-            >
-              🗑️ Xóa
-            </button>
+        <div>
+          <dt>☎️ SĐT</dt>
+          <dd>
+            {st.phone ? (
+              <a href={`tel:${st.phone}`} className={styles.phone}>
+                {st.phone}
+              </a>
+            ) : (
+              'Chưa cập nhật'
+            )}
+          </dd>
+        </div>
+        {st.officer && (
+          <div>
+            <dt>👤 Phụ trách</dt>
+            <dd className={styles.officer}>{st.officer}</dd>
           </div>
         )}
-      </div>
-      <div
-        style={{ fontSize: 11, color: '#cbd5e1', marginBottom: 4, lineHeight: 1.4, wordBreak: 'break-word' }}
-      >
-        📍 <b>Địa chỉ:</b> {st.address || 'Chưa cập nhật'}
-      </div>
-      <div
-        style={{
-          fontSize: 11,
-          color: '#94a3b8',
-          display: 'flex',
-          flexWrap: 'wrap',
-          gap: 10,
-          marginBottom: 6,
-        }}
-      >
-        <span>
-          ☎️ <b>SĐT bàn:</b>{' '}
-          {st.phone ? (
-            <a href={`tel:${st.phone}`} style={{ color: '#38bdf8', fontWeight: 700, textDecoration: 'none' }}>
-              {st.phone}
-            </a>
-          ) : (
-            'Chưa cập nhật'
-          )}
-        </span>
-      </div>
-      {st.officer && (
-        <div style={{ fontSize: 11, color: '#a78bfa', marginBottom: 6, wordBreak: 'break-word' }}>
-          👤 <b>Phụ trách:</b> {st.officer}
-        </div>
-      )}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginTop: 6 }}>
-        <button
-          type="button"
-          className={`btn-refresh-loc ${styles.btnFlyStation}`}
-          style={{
-            justifyContent: 'center',
-            fontSize: 10,
-            background: 'rgba(0, 136, 255, 0.15)',
-            borderColor: '#0088ff',
-            color: '#60a5fa',
-          }}
-          onClick={() => onFlyTo(st)}
-        >
-          🗺️ Xem Trên Map
+      </dl>
+      <div className={styles.cardActions}>
+        <button type="button" className={styles.mapBtn} onClick={() => onFlyTo(st)}>
+          🗺️ Xem trên bản đồ
         </button>
         <a
           href={`https://www.google.com/maps/dir/?api=1&destination=${st.lat},${st.lng}`}
           target="_blank"
           rel="noopener noreferrer"
-          className="btn-refresh-loc"
-          style={{
-            justifyContent: 'center',
-            fontSize: 10,
-            background: 'rgba(66, 133, 244, 0.15)',
-            borderColor: '#4285f4',
-            color: '#93c5fd',
-            textDecoration: 'none',
-          }}
+          className={styles.mapBtn}
         >
           🚗 Google Maps
         </a>
+        {isAdmin && (
+          <>
+            <button type="button" className={styles.editBtn} onClick={() => onAdminAction?.('edit-station')}>
+              ✏️ Sửa
+            </button>
+            <button
+              type="button"
+              className={styles.deleteBtn}
+              onClick={() => onAdminAction?.('delete-station')}
+            >
+              🗑️ Xoá
+            </button>
+          </>
+        )}
       </div>
-    </div>
+    </article>
   );
 }
 
