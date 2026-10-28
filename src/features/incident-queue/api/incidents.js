@@ -254,14 +254,6 @@ export async function getWardOptions(provinceId) {
   return (body?.data || []).map((w) => ({ id: w.id, name: w.name }));
 }
 
-/** Officer holding the case ends it once forces are on the way / at the scene: RESOLVED, report FORCED. */
-export async function forceFinishIncident(id, reason) {
-  await api.post(`/api/v1/incidents/${encodeURIComponent(id)}/dispatch-plan/finish`, {
-    force: true,
-    note: reason,
-  });
-}
-
 /**
  * Officer holding the case cancels it at any step (reason 5-255): CANCELLED. falseAlarm = "Báo khống": counts
  * towards locking the reporter's phone (3 in 24 h -> 24 h lock, 3rd lock in 30 days -> permanent).

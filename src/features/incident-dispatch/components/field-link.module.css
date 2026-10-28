@@ -69,7 +69,6 @@
 }
 
 .issue {
-  align-self: flex-start;
   border: 1px solid rgba(125, 211, 252, 0.55);
   background: transparent;
   color: #e0f2fe;
@@ -96,4 +95,31 @@
 .smsErr {
   background: rgba(245, 158, 11, 0.14);
   color: #fde68a;
+}
+
+/* "Sao chép" + "Cấp lại" on one row, sharing the width */
+.actions {
+  display: flex;
+  gap: 8px;
+}
+
+.actions .copy,
+.actions .issue {
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 9px 12px;
+}
+
+.shortLabel {
+  display: none;
+}
+
+@media (max-width: 640px) {
+  .longLabel {
+    display: none;
+  }
+
+  .shortLabel {
+    display: inline;
+  }
 }

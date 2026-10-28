@@ -10,7 +10,6 @@ import {
   claimIncident,
   escalateIncident,
   transferIncident,
-  forceFinishIncident,
   releaseIncident,
   requestDispatch,
 } from '../api/incidents';
@@ -116,7 +115,7 @@ export function IncidentQueuePanel({
   const holding = incidents.find((i) => i.heldByMe) || null;
   const [busyId, setBusyId] = useState(null);
   const [handoverOf, setHandoverOf] = useState(null);
-  const [confirmOf, setConfirmOf] = useState(null); // { kind: 'finish' | 'cancel' | 'transfer', inc }
+  const [confirmOf, setConfirmOf] = useState(null); // { kind: 'cancel' | 'transfer', inc }
   // picked in the "Chuyển lực lượng" dialog: a force (POLICE / CSGT / FIRE) or ESCALATE_TARGET (lên cấp tỉnh)
   const [transferTo, setTransferTo] = useState('');
   // The queue only holds open incidents (they are dealt with now), so no 1 / 7 / 30 day filter here
@@ -161,7 +160,6 @@ export function IncidentQueuePanel({
         : run(inc, () => requestDispatch(inc.id), `Đã gửi yêu cầu điều động lực lượng cho ca ${inc.id}`),
     openDispatch: (inc) => onOpenDispatch?.(inc),
     // Both ask first (dialog with a required reason): end once forces are dispatched / cancel at any step
-    forceFinish: (inc) => setConfirmOf({ kind: 'finish', inc }),
     cancel: (inc) => setConfirmOf({ kind: 'cancel', inc }),
     canOpenDispatch: !!onOpenDispatch,
     // One dialog (reason required): wrong force picked by the citizen -> another force's queue, or the ward
@@ -319,46 +317,37 @@ export function IncidentQueuePanel({
                   </div>
                 ),
               }
-            : confirmOf.kind === 'finish'
-              ? {
-                  title: `Kết thúc ca ${confirmOf.inc.id}?`,
-                  message:
-                    'Ca sẽ đóng ngay (đã xử lý xong), không chờ người dân xác nhận và không lập văn bản đầy đủ. Lý do được lưu vào hồ sơ ca.',
-                  confirmLabel: 'Kết thúc ca',
-                  placeholder: 'Ví dụ: đã xử lý xong, người báo không trả lời để xác nhận',
-                }
-              : {
-                  title: `Huỷ ca ${confirmOf.inc.id}?`,
-                  message: (
-                    <>
-                      Ca sẽ bị huỷ và rời hàng đợi, không thể khôi phục. Người báo tin sẽ thấy tin báo đã bị
-                      huỷ.
-                      <br />
-                      <b>Báo khống</b> = huỷ vì báo tin giả: số điện thoại báo khống 3 lần trong 24 giờ bị
-                      khoá gửi SOS 24 giờ, lần khoá thứ 3 trong 30 ngày là khoá vĩnh viễn.
-                    </>
-                  ),
-                  confirmLabel: 'Huỷ ca',
-                  placeholder:
-                    'Ví dụ: xác minh là báo nhầm / trùng với ca khác / người báo thừa nhận trêu đùa',
-                  tags: cancelTags(samePhone(incidents, confirmOf.inc)),
-                  secondary: {
-                    label: 'Báo khống',
-                    title: 'Huỷ ca vì báo tin giả: tính vào khoá số điện thoại của người báo',
-                    onConfirm: async (reason) => {
-                      const { inc } = confirmOf;
-                      const ok = await run(
-                        inc,
-                        () => cancelByOfficer(inc.id, reason, { falseAlarm: true }),
-                        `Đã huỷ ca ${inc.id}: báo khống`,
-                      );
-                      if (ok) {
-                        setConfirmOf(null);
-                        onRetry();
-                      }
-                    },
+            : {
+                title: `Huỷ ca ${confirmOf.inc.id}?`,
+                message: (
+                  <>
+                    Ca sẽ bị huỷ và rời hàng đợi, không thể khôi phục. Người báo tin sẽ thấy tin báo đã bị
+                    huỷ.
+                    <br />
+                    <b>Báo khống</b> = huỷ vì báo tin giả: số điện thoại báo khống 3 lần trong 24 giờ bị khoá
+                    gửi SOS 24 giờ, lần khoá thứ 3 trong 30 ngày là khoá vĩnh viễn.
+                  </>
+                ),
+                confirmLabel: 'Huỷ ca',
+                placeholder: 'Ví dụ: xác minh là báo nhầm / trùng với ca khác / người báo thừa nhận trêu đùa',
+                tags: cancelTags(samePhone(incidents, confirmOf.inc)),
+                secondary: {
+                  label: 'Báo khống',
+                  title: 'Huỷ ca vì báo tin giả: tính vào khoá số điện thoại của người báo',
+                  onConfirm: async (reason) => {
+                    const { inc } = confirmOf;
+                    const ok = await run(
+                      inc,
+                      () => cancelByOfficer(inc.id, reason, { falseAlarm: true }),
+                      `Đã huỷ ca ${inc.id}: báo khống`,
+                    );
+                    if (ok) {
+                      setConfirmOf(null);
+                      onRetry();
+                    }
                   },
-                })}
+                },
+              })}
           onClose={() => setConfirmOf(null)}
           onConfirm={async (reason) => {
             const { kind, inc } = confirmOf;
@@ -375,9 +364,7 @@ export function IncidentQueuePanel({
                       () => transferIncident(inc.id, transferTo, reason),
                       `Đã chuyển ca ${inc.id} sang ${TRANSFER_TARGETS.find((t) => t.value === transferTo)?.label}`,
                     )
-                  : kind === 'finish'
-                    ? await run(inc, () => forceFinishIncident(inc.id, reason), `Đã kết thúc ca ${inc.id}`)
-                    : await run(inc, () => cancelByOfficer(inc.id, reason), `Đã huỷ ca ${inc.id}`);
+                  : await run(inc, () => cancelByOfficer(inc.id, reason), `Đã huỷ ca ${inc.id}`);
             if (ok) {
               setConfirmOf(null);
               onRetry();
@@ -648,15 +635,6 @@ function ClaimControls({ incident: inc, holding, busy, canCall, actions }) {
         look: ['rgba(148, 163, 184, 0.15)', '#94a3b8', '#e2e8f0'],
         onClick: actions.release,
       },
-      // Only once the forces are on the way / at the scene (step 3 "Theo dõi" or later)
-      inc.status === 'RESOLVING' &&
-        inc.dispatchStep >= 3 && {
-          key: 'force-finish',
-          label: 'Kết thúc ca',
-          title: 'Kết thúc ca ngay (ghi lý do), không chờ xác nhận / văn bản',
-          look: ['rgba(245, 158, 11, 0.15)', '#fbbf24', '#fde68a'],
-          onClick: actions.forceFinish,
-        },
       {
         key: 'cancel',
         label: 'Huỷ ca',

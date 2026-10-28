@@ -76,12 +76,7 @@ export function FieldLinkBox({ incidentId, plan }) {
         </div>
       )}
       {link ? (
-        <div className={styles.linkRow}>
-          <input className={styles.link} readOnly value={link.url} onFocus={(e) => e.target.select()} />
-          <button type="button" className={styles.copy} onClick={() => copy(link.url)}>
-            Sao chép
-          </button>
-        </div>
+        <input className={styles.link} readOnly value={link.url} onFocus={(e) => e.target.select()} />
       ) : (
         issuedAt && (
           <div className={styles.note}>
@@ -90,9 +85,32 @@ export function FieldLinkBox({ incidentId, plan }) {
           </div>
         )
       )}
-      <button type="button" className={styles.issue} disabled={busy} onClick={issue}>
-        {busy ? 'Đang tạo...' : link || issuedAt ? 'Cấp lại mã & gửi lại SMS' : 'Tạo link & gửi SMS'}
-      </button>
+      {/* "Sao chép" and "Cấp lại" side by side; on phones the second is just "Cấp lại" */}
+      <div className={styles.actions}>
+        {link && (
+          <button type="button" className={styles.copy} onClick={() => copy(link.url)}>
+            Sao chép
+          </button>
+        )}
+        <button
+          type="button"
+          className={styles.issue}
+          disabled={busy}
+          onClick={issue}
+          title={link || issuedAt ? 'Cấp lại mã & gửi lại SMS (link cũ hết hiệu lực)' : undefined}
+        >
+          {busy ? (
+            'Đang tạo...'
+          ) : link || issuedAt ? (
+            <>
+              <span className={styles.longLabel}>Cấp lại mã & gửi lại SMS</span>
+              <span className={styles.shortLabel}>Cấp lại</span>
+            </>
+          ) : (
+            'Tạo link & gửi SMS'
+          )}
+        </button>
+      </div>
     </div>
   );
 }
