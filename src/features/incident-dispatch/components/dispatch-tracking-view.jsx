@@ -6,6 +6,7 @@ import { useNow } from '@/hooks/use-now';
 import { detourSimulation, startSimulation, stopSimulation } from '../api/dispatch-api';
 import { formatDistance, formatDuration } from '../api/routing';
 import { useLivePosition } from '../hooks/use-live-position';
+import { remainingOnRoute } from '../utils/route-progress';
 import { STATION_ICON } from '../utils/origin-candidates';
 import styles from './dispatch-tracking.module.css';
 import { RouteMap } from './route-map';
@@ -78,10 +79,17 @@ export function DispatchTrackingView({
   const route = newer(live.route, plan.route);
   // a recalculated route starts at the vehicle: count its duration from when it was computed
   const etaFrom = route?.rerouted ? route.computedAt : plan.departedAt;
-  const eta =
-    etaFrom && route?.durationS != null ? new Date(etaFrom.getTime() + route.durationS * 1000) : null;
   // on the way: the polled point; arrived / done: the last point the BE kept, so the dot stays at the scene
   const position = enRoute ? live.position : arrived ? plan.lastPosition : null;
+  // on the way with a GPS point on the route: what is left from the vehicle, counted from that point
+  const left = enRoute && position?.receivedAt ? remainingOnRoute(route, position) : null;
+  const etaS = left ? left.durationS : route?.durationS;
+  const leftM = left ? left.distanceM : route?.distanceM;
+  const eta = left
+    ? new Date(position.receivedAt.getTime() + left.durationS * 1000)
+    : etaFrom && route?.durationS != null
+      ? new Date(etaFrom.getTime() + route.durationS * 1000)
+      : null;
   const now = useNow(enRoute, 2000);
   const stale = enRoute && (!position?.receivedAt || now - position.receivedAt.getTime() > STALE_MS);
   const speed = position?.speedKmh != null ? ` · ${Math.round(position.speedKmh)} km/h` : '';
@@ -144,7 +152,7 @@ export function DispatchTrackingView({
           <div className={styles.etaMain}>
             <div className={styles.etaLabel}>{arrived ? 'Lực lượng đã tới' : 'Dự kiến tới nơi'}</div>
             <div className={styles.eta}>
-              {arrived ? 'Đã tới hiện trường' : route ? formatDuration(route.durationS) : 'Đang tính...'}
+              {arrived ? 'Đã tới hiện trường' : route ? formatDuration(etaS) : 'Đang tính...'}
             </div>
           </div>
           <div className={styles.etaSide}>
@@ -152,7 +160,7 @@ export function DispatchTrackingView({
             {route && !arrived && (
               <span>
                 {route.estimated ? 'khoảng ' : ''}
-                {formatDistance(route.distanceM)} còn lại
+                {formatDistance(leftM)} còn lại
               </span>
             )}
           </div>

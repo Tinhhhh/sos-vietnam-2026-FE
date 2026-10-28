@@ -46,3 +46,22 @@ export function splitRoute(coords, at) {
     rest: [at.point, ...coords.slice(at.index + 1)],
   };
 }
+
+const segM = (a, b) => Math.hypot((b[0] - a[0]) * Math.cos((a[1] * Math.PI) / 180), b[1] - a[1]) * M_PER_DEG;
+
+/**
+ * What is left of the route from the vehicle: metres along the line from its nearest point to the end, and
+ * the route's own duration scaled by that share. Null when the vehicle is off the route (the BE re-routes it).
+ * @returns {{ distanceM: number, durationS: number } | null}
+ */
+export function remainingOnRoute(route, vehicle) {
+  const coords = route?.coords;
+  const at = locateOnRoute(coords, vehicle);
+  if (!at || !route.distanceM || route.durationS == null) return null;
+  let m = segM(at.point, coords[at.index + 1]);
+  for (let i = at.index + 1; i < coords.length - 1; i += 1) m += segM(coords[i], coords[i + 1]);
+  const total = coords.slice(1).reduce((sum, c, i) => sum + segM(coords[i], c), 0);
+  // the polyline and the router's distance differ a little: use the share, not raw metres
+  const share = total > 0 ? Math.min(1, m / total) : 1;
+  return { distanceM: Math.round(route.distanceM * share), durationS: Math.round(route.durationS * share) };
+}

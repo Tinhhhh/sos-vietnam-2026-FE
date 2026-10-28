@@ -5,8 +5,8 @@ import { ArriveControl, DepartButton } from './arrive-control';
 import { DispatchTrackingView } from './dispatch-tracking-view';
 import styles from './field-link-page.module.css';
 
-const REFRESH_MS = 10_000; // case status (arrived, closed...) besides the 5 s live position
-const SEND_EVERY_MS = 5_000; // same pace as the Traccar app
+const REFRESH_MS = 10_000; // case status (arrived, closed...) besides the 3 s live position
+const SEND_EVERY_MS = 3_000; // same pace as the live map polls
 
 /**
  * Field officer's link page /f/{token} (no login): the case, the route like a ride-hailing driver app, the citizen's
@@ -167,7 +167,7 @@ export function FieldLinkPanel({ token, onCall, callBusy = false, onIncident }) 
 }
 
 /**
- * Browser GPS of the field officer: watchPosition while the page is open, one point every 5 s, screen kept on
+ * Browser GPS of the field officer: watchPosition while the page is open, one point every 3 s, screen kept on
  * (Wake Lock). Stops when the tab is hidden / the screen turns off: the Traccar app stays the main source.
  */
 function useBrowserGps({ token, enabled }) {

@@ -2,12 +2,12 @@ import { useEffect, useRef, useState } from 'react';
 
 import { getDispatchPlan } from '../api/dispatch-api';
 
-/** The app on the field officer's phone sends a point every 5 s; asking at the same pace is enough. */
-const POLL_MS = 5000;
+/** The app on the field officer's phone sends a point every 3 s (simulation too); asking at the same pace is enough. */
+const POLL_MS = 3000;
 
 /**
  * Live GPS position of the field officer while the dispatch is on the way (EN_ROUTE): re-reads
- * GET /dispatch-plan every 5 s and keeps its `last_position` (the BE holds the latest Traccar point).
+ * GET /dispatch-plan every 3 s and keeps its `last_position` (the BE holds the latest Traccar point).
  * Polling instead of a STOMP channel: it recovers by itself after a network drop and needs no socket.
  *
  * @param {{ incidentId?: string, citizenToken?: string, enabled: boolean, initial?: object|null }} options

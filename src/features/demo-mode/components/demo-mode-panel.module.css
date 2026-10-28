@@ -54,3 +54,34 @@
   color: #fca5a5;
   font-size: 13.5px;
 }
+
+.speed {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.speed input {
+  width: 72px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+}
+
+.speed button {
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 0;
+  background: #2563eb;
+  color: #fff;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.speed button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
