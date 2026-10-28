@@ -57,6 +57,7 @@ export function useGeolocation() {
   }, []);
 
   // Never sets state before its first await, so it is safe to start from an effect.
+  // Resolves with the first fix ({ status: 'gps' | 'ip' | 'unavailable', accuracy }), or null when a newer run replaced it.
   const locate = useCallback(async () => {
     const runId = ++runIdRef.current;
     const isCurrent = () => runId === runIdRef.current;
@@ -75,7 +76,7 @@ export function useGeolocation() {
         // denied / timeout -> IP fallback below
       }
     }
-    if (!isCurrent()) return;
+    if (!isCurrent()) return null;
 
     if (fix) {
       fix.address = await addressFor(fix.coords);
@@ -91,12 +92,13 @@ export function useGeolocation() {
             address: '',
             jurisdiction: null,
           }));
+          return { status: 'unavailable', accuracy: null };
         }
-        return;
+        return null;
       }
       fix = { status: 'ip', coords: ip.coords, accuracy: 500, address: ip.address };
     }
-    if (!isCurrent()) return;
+    if (!isCurrent()) return null;
     setState({ ...fix, jurisdiction: null });
 
     // Ward/province that contains the point. The polygon is the source of
@@ -113,7 +115,7 @@ export function useGeolocation() {
       })
       .catch(() => {});
 
-    if (fix.status !== 'gps') return;
+    if (fix.status !== 'gps') return fix;
 
     // Refine with watchPosition + Kalman filter until accurate enough or 20 s.
     const kalman = new GpsKalmanFilter(fix.coords.lat, fix.coords.lng, fix.accuracy);
@@ -147,6 +149,7 @@ export function useGeolocation() {
       stopWatching,
       { enableHighAccuracy: true, timeout: REFINE_WINDOW_MS, maximumAge: 0 },
     );
+    return fix;
   }, [stopWatching]);
 
   /** Position chosen by the citizen on the map (GPS / IP unavailable or wrong). */
@@ -169,9 +172,10 @@ export function useGeolocation() {
     [stopWatching],
   );
 
+  /** Locate again; resolves like locate() so a button can say how it went. */
   const refresh = useCallback(() => {
     setState((s) => ({ ...s, status: 'locating', jurisdiction: null }));
-    locate();
+    return locate();
   }, [locate]);
 
   useEffect(() => {

@@ -1,3 +1,6 @@
+import { useEffect, useRef, useState } from 'react';
+
+import { useToast } from '@/components/ui/toast/toast-context';
 import { VoiceMuteIcon } from '@/components/ui/voice-mute-icon';
 import { useNow } from '@/hooks/use-now';
 import { CITIZEN_VOICE, useVoiceMuted } from '@/hooks/use-voice-muted';
@@ -11,6 +14,8 @@ const CLOCK = new Intl.DateTimeFormat('vi-VN', {
   hour12: false,
   timeZone: 'Asia/Ho_Chi_Minh',
 });
+
+const REFRESH_CLASS = { busy: styles.refreshBusy, ok: styles.refreshOk, warn: styles.refreshWarn };
 
 /**
  * Top bar of the citizen home (Stitch reference). Desktop: one fixed row, system name + Vietnam time on the
@@ -26,6 +31,44 @@ export function CitizenTopBar({ geo, onPickOnMap, officerHref }) {
   const unavailable = geo.status === 'unavailable' || (!geo.coords && !locating);
   const weak = geo.accuracy != null && geo.accuracy > 100;
   const [muted, setMuted] = useVoiceMuted(CITIZEN_VOICE);
+  const toast = useToast();
+  // refresh button: spins while locating, then a tick (or a warning) + a toast saying what was found
+  const [refreshState, setRefreshState] = useState('idle'); // idle | busy | ok | warn
+  const doneTimer = useRef(null);
+  useEffect(() => () => clearTimeout(doneTimer.current), []);
+  const refreshLocation = async () => {
+    if (refreshState === 'busy') return;
+    clearTimeout(doneTimer.current);
+    setRefreshState('busy');
+    const fix = await geo.refresh();
+    if (!fix) {
+      setRefreshState('idle'); // replaced by a newer run (map pick...)
+      return;
+    }
+    if (fix.status === 'gps') {
+      toast.show(`Đã cập nhật vị trí GPS${fix.accuracy != null ? ` (sai số ±${fix.accuracy} m)` : ''}.`, {
+        tone: 'success',
+      });
+    } else if (fix.status === 'ip') {
+      toast.show(
+        'Chưa lấy được GPS, đang dùng vị trí gần đúng theo mạng. Hãy bật định vị hoặc chọn trên bản đồ.',
+        {
+          tone: 'info',
+          duration: 6000,
+        },
+      );
+    } else {
+      toast.show(
+        'Không lấy được vị trí. Hãy bật định vị cho trình duyệt rồi thử lại, hoặc chọn trên bản đồ.',
+        {
+          tone: 'error',
+          duration: 6000,
+        },
+      );
+    }
+    setRefreshState(fix.status === 'gps' ? 'ok' : 'warn');
+    doneTimer.current = setTimeout(() => setRefreshState('idle'), 1800);
+  };
   const muteLabel = muted ? 'Đang tắt tiếng hướng dẫn SOS, bấm để bật' : 'Tắt tiếng hướng dẫn khi bấm SOS';
   const officer = (
     <span className={styles.topActions}>
@@ -127,15 +170,27 @@ export function CitizenTopBar({ geo, onPickOnMap, officerHref }) {
             )}
             <button
               type="button"
-              className={styles.iconBtn}
-              title="Làm mới vị trí GPS"
+              className={`${styles.iconBtn} ${REFRESH_CLASS[refreshState] || ''}`}
+              title={refreshState === 'busy' ? 'Đang lấy lại vị trí...' : 'Làm mới vị trí GPS'}
               aria-label="Làm mới vị trí GPS"
-              onClick={geo.refresh}
+              aria-busy={refreshState === 'busy'}
+              onClick={refreshLocation}
             >
-              <svg className="svg-ico ico-xs" viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M21 12a9 9 0 1 1-2.64-6.36L21 8" />
-                <path d="M21 3v5h-5" />
-              </svg>
+              {refreshState === 'ok' ? (
+                <svg className="svg-ico ico-xs" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M5 12.5l4.5 4.5L19 7.5" />
+                </svg>
+              ) : refreshState === 'warn' ? (
+                <svg className="svg-ico ico-xs" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M12 8v5M12 16.5v.5" />
+                  <circle cx="12" cy="12" r="9" />
+                </svg>
+              ) : (
+                <svg className="svg-ico ico-xs" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M21 12a9 9 0 1 1-2.64-6.36L21 8" />
+                  <path d="M21 3v5h-5" />
+                </svg>
+              )}
             </button>
           </div>
 
