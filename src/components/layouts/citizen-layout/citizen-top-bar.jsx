@@ -45,7 +45,15 @@ export function CitizenTopBar({ geo, onPickOnMap, officerHref }) {
       setRefreshState('idle'); // replaced by a newer run (map pick...)
       return;
     }
-    if (fix.status === 'gps') {
+    if (fix.permissionDenied) {
+      toast.show(
+        'Bạn đang chặn quyền vị trí. Hãy cho phép vị trí trong cài đặt trình duyệt để lực lượng tìm thấy bạn.',
+        {
+          tone: 'error',
+          duration: 7000,
+        },
+      );
+    } else if (fix.status === 'gps') {
       toast.show(`Đã cập nhật vị trí GPS${fix.accuracy != null ? ` (sai số ±${fix.accuracy} m)` : ''}.`, {
         tone: 'success',
       });
@@ -126,7 +134,11 @@ export function CitizenTopBar({ geo, onPickOnMap, officerHref }) {
             <div className={styles.gpsTexts}>
               <div className={styles.gpsLabelRow}>
                 <span className={styles.gpsLabel}>
-                  {geo.status === 'manual' ? 'Vị trí bạn chọn trên bản đồ' : 'Vị trí GPS của bạn'}
+                  {geo.status === 'manual'
+                    ? 'Vị trí bạn chọn trên bản đồ'
+                    : geo.permissionDenied
+                      ? 'Chưa cho phép vị trí'
+                      : 'Vị trí GPS của bạn'}
                 </span>
                 {geo.accuracy != null && geo.status !== 'manual' && (
                   <span className={`${styles.accuracy} ${weak ? styles.accuracyLow : ''}`}>
@@ -137,6 +149,12 @@ export function CitizenTopBar({ geo, onPickOnMap, officerHref }) {
               <div className={styles.gpsLine}>
                 {locating ? (
                   <span className={styles.gpsAddress}>Đang định vị GPS...</span>
+                ) : geo.permissionDenied && geo.status !== 'manual' ? (
+                  <span className={`${styles.gpsAddress} ${styles.gpsWarn}`}>
+                    {geo.coords
+                      ? 'Chỉ ước lượng theo mạng, có thể lệch xa'
+                      : 'Bật vị trí để lực lượng tìm thấy bạn'}
+                  </span>
                 ) : unavailable ? (
                   <span className={`${styles.gpsAddress} ${styles.gpsWarn}`}>
                     Không lấy được vị trí của bạn

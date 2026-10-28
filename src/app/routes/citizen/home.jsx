@@ -9,6 +9,7 @@ import { SosRequestModal } from '@/features/sos-request/components/sos-request-m
 import { SupplementMediaButton } from '@/features/sos-request/components/supplement-media-button';
 import { CitizenDispatchButton } from '@/features/incident-dispatch';
 import { CitizenDocumentButton } from '@/features/incident-report';
+import { LocationPermissionDialog } from '@/features/location/components/location-permission-dialog';
 import { SosTrackingScreen } from '@/features/sos-tracking';
 import { SosHero } from '@/features/sos-trigger/components/sos-hero';
 import { clearActiveIncident, loadOpenIncidents } from '@/stores/active-incident';
@@ -133,6 +134,7 @@ export function CitizenHomeRoute() {
   return (
     <div>
       <CitizenTopBar geo={geo} onPickOnMap={openPicker} officerHref={paths.officer.login.getHref()} />
+      <LocationPermissionDialog geo={geo} onPickOnMap={openPicker} />
       {!incidentId && cases.length > 0 && (
         <button
           type="button"
