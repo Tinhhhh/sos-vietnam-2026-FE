@@ -2,8 +2,8 @@ import { useEffect, useRef } from 'react';
 
 import { speakSosPrompt } from '../utils/sos-voice-prompt';
 import { CrystalOrb } from './crystal-orb';
-import { HotlineCards } from './hotline-cards';
 import { LegalWarningCard } from './legal-warning-card';
+import { SilentReportBar } from './silent-report-bar';
 import desk from '@/components/layouts/citizen-layout/citizen-desktop.module.css';
 
 import styles from './sos-hero.module.css';
@@ -39,7 +39,7 @@ export function SosHero({ onTrigger }) {
 
       <CrystalOrb onActivate={handleActivate} />
       <LegalWarningCard />
-      <HotlineCards />
+      <SilentReportBar />
     </section>
   );
 }
