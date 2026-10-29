@@ -57,6 +57,14 @@
   letter-spacing: 0.1px;
 }
 
+/* small explanation under the title, shown with the action */
+.hint {
+  margin: 8px 0 0 40px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #c4b5fd;
+}
+
 /* the action slides open under the text (0fr -> 1fr: no fixed height to guess) */
 .more {
   display: grid;

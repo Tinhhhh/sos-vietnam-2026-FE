@@ -28,9 +28,6 @@ export function SosHero({ onTrigger }) {
 
   return (
     <section className={styles.sosHero}>
-      <div className={`${styles.heroBadgePill} liquid-glass`}>
-        <span className={styles.liveDot} /> HỆ THỐNG ĐIỀU PHỐI KHẨN CẤP QUỐC GIA 24/7
-      </div>
       <h1 className={`${styles.sosHeroTitle} ${desk.heroTitle}`}>Sống An Toàn, Được Bảo Vệ Từng Giây</h1>
       <p className={`${styles.sosHeroSub} ${desk.heroSub}`}>
         Chạm vào nút bên dưới để gửi tọa độ GPS và thông báo sự cố ngay lập tức tới lực lượng Công an, Y tế,

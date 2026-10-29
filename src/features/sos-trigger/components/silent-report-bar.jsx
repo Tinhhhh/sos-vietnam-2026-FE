@@ -27,6 +27,10 @@ export function SilentReportBar() {
       </button>
       <div className={styles.more}>
         <div>
+          <p className={styles.hint}>
+            Báo cáo yên lặng là trường hợp đặc biệt không thể gọi thoại, nói chuyện, chỉ có thể truyền tin
+            bằng tin nhắn, hình ảnh, hoặc quay video nhưng giữ màn hình tắt tránh bị chú ý...
+          </p>
           <button
             type="button"
             className={styles.action}
