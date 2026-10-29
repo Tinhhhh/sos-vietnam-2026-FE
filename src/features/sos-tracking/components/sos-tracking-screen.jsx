@@ -175,7 +175,14 @@ function TrackingContent({
           onSwitchCamera={phone.switchCamera}
           extraControl={
             !closed &&
-            dispatchSlot?.({ incident, token, variant: 'call', callTracker, callReceiver: callBack, callDelegate })
+            dispatchSlot?.({
+              incident,
+              token,
+              variant: 'call',
+              callTracker,
+              callReceiver: callBack,
+              callDelegate,
+            })
           }
         />
         {switchDialog}
@@ -191,8 +198,24 @@ function TrackingContent({
     <div className={styles.screen} role="dialog" aria-label="Đang chờ tiếp nhận SOS">
       <EscalationNotice incident={incident} closed={closed} />
       <CompletionPrompt incident={incident} token={token} onUpdated={tracking.setIncident} notify={notify} />
-      {/* type, connection, "⋯" and "Về" on one row, "Về" at the right end */}
+      {/* "Về" (back arrow) at the left end, then the type; connection and "⋯" on the right */}
       <div className={styles.top}>
+        {/* the case stays open and kept on the device; the menu shows a "Xem" strip to come back */}
+        {!closed && onHome && (
+          <button type="button" className={styles.homeBtn} onClick={onHome} title="Về trang chủ">
+            <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+              <path
+                d="M10 5 4 11l6 6M4.5 11H14a6 6 0 0 1 6 6v2"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.4"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+            Về
+          </button>
+        )}
         <span className={styles.typeChip}>
           {type.icon} {type.label}
         </span>
@@ -204,13 +227,14 @@ function TrackingContent({
           {conn.text}
         </span>
         {!closed &&
-          dispatchSlot?.({ incident, token, variant: 'screen', callTracker, callReceiver: callBack, callDelegate })}
-        {/* the case stays open and kept on the device; the menu shows a "Xem" strip to come back */}
-        {!closed && onHome && (
-          <button type="button" className={styles.homeBtn} onClick={onHome} title="Về trang chủ">
-            Về
-          </button>
-        )}
+          dispatchSlot?.({
+            incident,
+            token,
+            variant: 'screen',
+            callTracker,
+            callReceiver: callBack,
+            callDelegate,
+          })}
       </div>
 
       <div className={styles.center} onClickCapture={() => closed && setStayedFor(incident.documentStatus)}>

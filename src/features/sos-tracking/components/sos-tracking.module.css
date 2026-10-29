@@ -37,7 +37,7 @@
   font-weight: 700;
 }
 .conn {
-  margin-left: auto; /* connection, "⋯" and "Về" packed on the right */
+  margin-left: auto; /* connection and "⋯" packed on the right */
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -592,8 +592,11 @@
 /* "← Về trang chủ" while the case is open (it stays open, the menu links back to it) */
 .homeBtn {
   flex-shrink: 0;
-  /* last item of the top row: right end */
-  padding: 5px 14px;
+  /* first item of the top row: left end, arrow + "Về" */
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 12px 5px 9px;
   border-radius: 999px;
   border: 1px solid rgba(148, 163, 184, 0.35);
   background: rgba(15, 23, 42, 0.6);
