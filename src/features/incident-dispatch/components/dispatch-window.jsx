@@ -26,9 +26,8 @@ import { DelegationStep } from './delegation-step';
 import delegationStyles from './delegation.module.css';
 import { DispatchStepper } from './dispatch-stepper';
 import { DispatchTrackingView } from './dispatch-tracking-view';
-import trackingStyles from './dispatch-tracking.module.css';
 import { FieldLinkBox } from './field-link-box';
-import { FieldOfficerChange, FieldOfficerList } from './field-officer-picker';
+import { FieldOfficerList } from './field-officer-picker';
 import { FinishPanel } from './finish-panel';
 import { RouteMap } from './route-map';
 
@@ -111,7 +110,6 @@ function DispatchWindowBody({
   const toast = useToast();
   const [draft, setDraft] = useState(initialPlan);
   const [editing, setEditing] = useState(!draft || draft.step === 1);
-  const [changingField, setChangingField] = useState(false);
   const [saving, setSaving] = useState(false);
 
   // The ward unit accepts / rejects / sets off on its own screen: every queue push of this incident
@@ -244,8 +242,7 @@ function DispatchWindowBody({
   const delegateTook = draft?.status === 'ACCEPTED' && !!draft?.assignedTo;
   // "Khởi hành" pressed: the earlier steps are closed for good
   const departed = ['EN_ROUTE', 'ARRIVED', 'DONE'].includes(draft?.status);
-  // own unit on the way: "Đổi người" (the field officer) next to the tracking card
-  const canArrive = step === 3 && draft?.status === 'EN_ROUTE' && !draft?.assignedTo;
+  // step 3 (set off) is locked: no "Đổi người" / "Đổi điểm" here any more, they belong to steps 1 and 2
   // the holder issues the field link when their unit goes or for a PCCC / CSGT team they appointed
   const holderLink =
     !!draft?.tracker && (!draft.assignedTo || draft.assignedTo.memberId === draft.tracker.memberId);
@@ -371,50 +368,9 @@ function DispatchWindowBody({
                     onPlan={setDraft}
                   />
                 )}
-                // the simulated vehicle drives this route with this officer: both changes wait until it stops
-                actions={
-                  (canArrive || (step === 3 && !draft.assignedTo)) &&
-                  (({ simulating }) => (
-                    <>
-                      {canArrive && (
-                        <button
-                          type="button"
-                          className={trackingStyles.actionBtn}
-                          disabled={simulating}
-                          title={simulating ? 'Đang mô phỏng: dừng mô phỏng rồi mới đổi người' : undefined}
-                          onClick={() => setChangingField(true)}
-                        >
-                          {simulating ? '🔒 Đổi người' : 'Đổi người'}
-                        </button>
-                      )}
-                      {/* a delegated trip is the ward's: the province changes neither origin nor destination */}
-                      {step === 3 && !draft.assignedTo && (
-                        <button
-                          type="button"
-                          className={trackingStyles.actionBtn}
-                          disabled={simulating}
-                          title={simulating ? 'Đang mô phỏng: dừng mô phỏng rồi mới đổi điểm' : undefined}
-                          onClick={() => setEditing(true)}
-                        >
-                          {simulating ? '🔒 ' : ''}
-                          {isWard ? 'Đổi điểm đến' : 'Đổi điểm xuất phát / điểm đến'}
-                        </button>
-                      )}
-                    </>
-                  ))
-                }
               />
               {holderLink && ['EN_ROUTE', 'ARRIVED'].includes(draft.status) && (
                 <FieldLinkBox incidentId={incident.id} plan={draft} />
-              )}
-              {canArrive && changingField && (
-                <FieldOfficerChange
-                  incidentId={incident.id}
-                  plan={draft}
-                  onPlan={setDraft}
-                  open
-                  onClose={() => setChangingField(false)}
-                />
               )}
             </>
           ) : (
