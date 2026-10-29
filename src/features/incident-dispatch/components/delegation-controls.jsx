@@ -229,7 +229,7 @@ const STEP_OF = { ACCEPTED: 'track', EN_ROUTE: 'track', ARRIVED: 'finish', DONE:
 
 /**
  * "Chi tiết điều động" of the delegated ward officer: the steps, the map and route, then
- * - accepted, nobody chosen (step 2): the unit's officers, "Chọn đi hiện trường"
+ * - accepted, nobody chosen (step 2): the unit's officers, "Chọn"
  * - chosen, not gone yet (step 3): the tracking card with "Khởi hành" in place of "Đã đến" (simulation greyed out
  *   until then), change the person, field link
  * - on the way (step 3): tracking (call / simulate), change the person, field link, "Đã đến"
@@ -287,7 +287,7 @@ function DelegationDetailModal({ incident, mine, onClose, onCallField, onCallRec
         />
         {/* below the ETA / receiver / delegate card, so the officer reads who is involved first */}
         {choosing && (
-          <FieldOfficerList incidentId={incident.id} unitName={current.origin.name} onPlan={setLocal} />
+          <FieldOfficerList incidentId={incident.id} onPlan={setLocal} />
         )}
         {mine && current.tracker && (st === 'ACCEPTED' || st === 'EN_ROUTE') && (
           <>

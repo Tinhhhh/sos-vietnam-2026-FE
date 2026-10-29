@@ -150,6 +150,13 @@ function TrackingContent({
       to: 'field',
       peer: { name: tracker?.fullName || null, role: 'field' },
     });
+  // "Gọi" on the "Cán bộ được uỷ quyền" row: the ward officer the province handed the case to
+  const callDelegate = (delegate) =>
+    phone.startCall({
+      incidentId: incident.id,
+      to: 'delegate',
+      peer: { name: delegate?.fullName || null, role: 'delegate' },
+    });
   const switchDialog = (
     <CallSwitchDialog waiting={phone.waiting} onYes={phone.switchToWaiting} onNo={phone.declineWaiting} />
   );
@@ -168,7 +175,7 @@ function TrackingContent({
           onSwitchCamera={phone.switchCamera}
           extraControl={
             !closed &&
-            dispatchSlot?.({ incident, token, variant: 'call', callTracker, callReceiver: callBack })
+            dispatchSlot?.({ incident, token, variant: 'call', callTracker, callReceiver: callBack, callDelegate })
           }
         />
         {switchDialog}
@@ -202,7 +209,7 @@ function TrackingContent({
           {conn.text}
         </span>
         {!closed &&
-          dispatchSlot?.({ incident, token, variant: 'screen', callTracker, callReceiver: callBack })}
+          dispatchSlot?.({ incident, token, variant: 'screen', callTracker, callReceiver: callBack, callDelegate })}
       </div>
 
       <div className={styles.center} onClickCapture={() => closed && setStayedFor(incident.documentStatus)}>

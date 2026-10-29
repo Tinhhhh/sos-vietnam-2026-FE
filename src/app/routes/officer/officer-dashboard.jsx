@@ -475,6 +475,10 @@ export function OfficerDashboardRoute() {
             setDispatchId(null); // the dispatch window covers the call pane
             phone.callField(inc, tracker);
           }}
+          onCallDelegate={(inc, delegate) => {
+            setDispatchId(null);
+            phone.callTo(inc, 'delegate', delegate.fullName);
+          }}
         />
       )}
       <ReportPromptDialog

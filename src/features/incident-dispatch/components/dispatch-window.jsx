@@ -107,6 +107,7 @@ function DispatchWindowBody({
   LocationPicker,
   initialPlan,
   onCallTracker,
+  onCallDelegate,
 }) {
   const toast = useToast();
   const [draft, setDraft] = useState(initialPlan);
@@ -357,6 +358,7 @@ function DispatchWindowBody({
                 plan={draft}
                 incidentId={incident.id}
                 onCallTracker={onCallTracker ? (tracker) => onCallTracker(incident, tracker) : null}
+                onCallDelegate={onCallDelegate ? (d) => onCallDelegate(incident, d) : null}
                 // "Đã đến" when the GPS is within the radius; the holder (this window) may confirm without GPS
                 renderArrive={(check) => (
                   <ArriveControl

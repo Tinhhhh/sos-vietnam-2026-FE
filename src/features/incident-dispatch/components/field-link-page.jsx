@@ -110,6 +110,7 @@ export function FieldLinkPanel({ token, onCall, callBusy = false, onIncident }) 
         fetchPlan={fetchPlan}
         trackerCall={false}
         onCallReceiver={onCall ? (r) => onCall('officer', r.fullName || data.handlerName || null) : null}
+        onCallDelegate={onCall ? (d) => onCall('delegate', d.fullName) : null}
         renderArrive={(check) => (
           <ArriveControl check={check} onArrive={() => fieldArrive(token)} onPlan={load} />
         )}
