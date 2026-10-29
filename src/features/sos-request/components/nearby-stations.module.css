@@ -1,0 +1,84 @@
+.list {
+  list-style: none;
+  margin: 0 0 8px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: rgba(15, 23, 42, 0.55);
+}
+
+.rank {
+  flex: 0 0 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(56, 189, 248, 0.18);
+  color: #7dd3fc;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.main {
+  flex: 1;
+  min-width: 0;
+}
+
+.name {
+  font-size: 13px;
+  font-weight: 800;
+  color: #f1f5f9;
+}
+
+.meta {
+  font-size: 11.5px;
+  color: #94a3b8;
+}
+
+.phone {
+  font-size: 12px;
+  color: #e2e8f0;
+  font-variant-numeric: tabular-nums;
+}
+
+.call {
+  flex-shrink: 0;
+  padding: 7px 14px;
+  border-radius: 999px;
+  background: #16a34a;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+/* "Khẩn cấp: gọi 113" under the police list */
+.callWide {
+  composes: call;
+  display: block;
+  margin-top: 10px;
+  text-align: center;
+  background: #dc2626;
+}
+
+.note {
+  font-size: 11px;
+  color: #94a3b8;
+  line-height: 1.5;
+}
+
+.error {
+  font-size: 12px;
+  color: #fca5a5;
+}
