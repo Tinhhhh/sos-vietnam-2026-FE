@@ -223,7 +223,7 @@ export function DispatchTrackingView({
               <div className={styles.unitName}>{tracker.fullName}</div>
               {tracker.badgeNumber && <div className={styles.unitSub}>Số hiệu {tracker.badgeNumber}</div>}
             </div>
-            {/* "Gọi" on the name's row (~15% of the width), the change buttons on their own row below */}
+            {/* "Gọi" on the name's row, the change buttons on their own row below */}
             {!trackerCall ? null : onCallTracker ? (
               <button
                 type="button"

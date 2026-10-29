@@ -550,12 +550,9 @@
   flex: 1 1 160px;
 }
 
-/* "Gọi" next to the field officer's name, about 15% of the card */
+/* "Gọi" next to the field officer's name: same size as the other "Gọi" buttons */
 .trackerCall {
-  flex: 0 0 15%;
-  min-width: 64px;
-  padding-left: 8px;
-  padding-right: 8px;
+  flex: 0 0 auto;
   text-align: center;
 }
 
