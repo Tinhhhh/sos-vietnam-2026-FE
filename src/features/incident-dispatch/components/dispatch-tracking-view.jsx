@@ -86,12 +86,15 @@ export function DispatchTrackingView({
   const position = enRoute ? live.position : arrived ? plan.lastPosition : null;
   // on the way with a GPS point on the route: what is left from the vehicle, counted from that point
   const left = enRoute && position?.receivedAt ? remainingOnRoute(route, position) : null;
-  const etaS = left ? left.durationS : route?.durationS;
   const leftM = left ? left.distanceM : route?.distanceM;
+  // at the "Mô phỏng" speed (Cài đặt) like the route step; unknown speed: the route's own times
+  const speedMs = plan.etaSpeedKmh ? (plan.etaSpeedKmh * 1000) / 3600 : null;
+  const atSpeed = (distanceM, durationS) => (speedMs && distanceM != null ? distanceM / speedMs : durationS);
+  const etaS = left ? atSpeed(left.distanceM, left.durationS) : atSpeed(route?.distanceM, route?.durationS);
   const eta = left
-    ? new Date(position.receivedAt.getTime() + left.durationS * 1000)
-    : etaFrom && route?.durationS != null
-      ? new Date(etaFrom.getTime() + route.durationS * 1000)
+    ? new Date(position.receivedAt.getTime() + etaS * 1000)
+    : etaFrom && etaS != null
+      ? new Date(etaFrom.getTime() + etaS * 1000)
       : null;
   const now = useNow(enRoute, 2000);
   // latest polled state: the parent's plan may be a few seconds older than the simulation control

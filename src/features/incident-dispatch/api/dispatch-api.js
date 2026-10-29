@@ -131,6 +131,8 @@ export function normalizePlan(raw) {
       : null,
     lastPosition: livePosition(raw.last_position),
     // officers only (null for the citizen): demo "Mô phỏng di chuyển" button
+    // speed the travel times are counted at (the "Mô phỏng" speed), km/h; null: use the route's times
+    etaSpeedKmh: raw.eta_speed_kmh || null,
     simulation: raw.simulation
       ? { available: !!raw.simulation.available, running: !!raw.simulation.running }
       : null,
