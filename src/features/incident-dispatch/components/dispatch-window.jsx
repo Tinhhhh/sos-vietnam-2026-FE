@@ -241,6 +241,8 @@ function DispatchWindowBody({
 
   // Handed to a ward officer who has not answered yet: the plan is locked (BE refuses changes too)
   const waitingAnswer = draft?.status === 'PENDING_ACCEPT' && !!draft?.assignedTo;
+  // The ward took the delegated case: the next steps are theirs, the holder cannot go back and re-plan (BE 409)
+  const delegateTook = draft?.status === 'ACCEPTED' && !!draft?.assignedTo;
   // "Khởi hành" pressed: the earlier steps are closed for good
   const departed = ['EN_ROUTE', 'ARRIVED', 'DONE'].includes(draft?.status);
   // own unit on the way: "Đổi người" (the field officer) next to the tracking card
@@ -372,7 +374,7 @@ function DispatchWindowBody({
                 )}
                 // the simulated vehicle drives this route with this officer: both changes wait until it stops
                 actions={
-                  (canArrive || (step === 3 && !waitingAnswer)) &&
+                  (canArrive || (step === 3 && !draft.assignedTo)) &&
                   (({ simulating }) => (
                     <>
                       {canArrive && (
@@ -386,7 +388,8 @@ function DispatchWindowBody({
                           {simulating ? '🔒 Đổi người' : 'Đổi người'}
                         </button>
                       )}
-                      {step === 3 && !waitingAnswer && (
+                      {/* a delegated trip is the ward's: the province changes neither origin nor destination */}
+                      {step === 3 && !draft.assignedTo && (
                         <button
                           type="button"
                           className={trackingStyles.actionBtn}
@@ -420,7 +423,7 @@ function DispatchWindowBody({
               <ChosenSummary
                 draft={draft}
                 canPickOrigin={!isWard}
-                locked={waitingAnswer}
+                locked={waitingAnswer || delegateTook}
                 onEdit={() => setEditing(true)}
               />
               {ownUnit ? (
@@ -464,12 +467,16 @@ function DispatchWindowBody({
                   Đang chờ {draft.assignedTo.fullName} trả lời: tạm khoá. Không liên lạc được thì bấm "Thu hồi
                   uỷ quyền" ở trên để chọn lại.
                 </span>
-              ) : departed ? (
+              ) : departed || delegateTook ? (
                 <button
                   type="button"
                   className={styles.btnBack}
                   disabled
-                  title="Đã khởi hành: không quay lại bước trước được nữa"
+                  title={
+                    departed
+                      ? 'Đã khởi hành: không quay lại bước trước được nữa'
+                      : `${draft.assignedTo.fullName} đã nhận ca uỷ quyền: không quay lại bước trước được nữa`
+                  }
                 >
                   🔒 Quay lại bước trước
                 </button>
