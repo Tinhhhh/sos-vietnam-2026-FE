@@ -85,3 +85,35 @@
   opacity: 0.5;
   cursor: default;
 }
+
+/* "Dọn ca demo": two delete buttons, red outline / solid red for "all" */
+.purge {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+.purge button {
+  min-height: 0;
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(248, 113, 113, 0.6);
+  background: transparent;
+  color: #fca5a5;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.purge .purgeAll {
+  border-color: #dc2626;
+  background: #dc2626;
+  color: #fff;
+}
+
+.purge button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}

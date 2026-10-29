@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { SettingsRow, SettingsSection } from '@/components/ui/settings-dialog/settings-dialog';
 import { useToast } from '@/components/ui/toast/toast-context';
 
-import { getDemoSettings, updateDemoSettings } from '../api/demo';
+import { getDemoSettings, purgeDemoIncidents, updateDemoSettings } from '../api/demo';
 import styles from './demo-mode-panel.module.css';
 
 const formatTime = (iso) =>
@@ -67,14 +67,31 @@ export function DemoModePanel() {
         'simulation_speed_kmh' in patch
           ? `Tốc độ mô phỏng: ${next.simulation_speed_kmh} km/h (áp dụng cho lần bấm Mô phỏng sau).`
           : 'hidden' in patch
-          ? patch.hidden
-            ? 'Đã ẩn ca demo khỏi hàng đợi và lịch sử.'
-            : 'Ca demo hiện lại trong hàng đợi và lịch sử.'
-          : patch.generate
-            ? 'Đã bật tự sinh ca demo.'
-            : 'Đã tắt tự sinh ca demo.',
+            ? patch.hidden
+              ? 'Đã ẩn ca demo khỏi hàng đợi và lịch sử.'
+              : 'Ca demo hiện lại trong hàng đợi và lịch sử.'
+            : patch.generate
+              ? 'Đã bật tự sinh ca demo.'
+              : 'Đã tắt tự sinh ca demo.',
         { tone: 'success' },
       );
+    } catch (e) {
+      notify(e.message, { tone: 'error' });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  // "Dọn ca demo": delete open [DEMO] incidents, or all of them, after a confirmation
+  const purge = async (scope) => {
+    const n = scope === 'OPEN' ? state.open_count : state.total_count;
+    const what = scope === 'OPEN' ? `${n} ca demo đang mở` : `toàn bộ ${n} ca demo (kể cả ca đã đóng)`;
+    if (!window.confirm(`Xoá hẳn ${what}? Không khôi phục được. Ai đang giữ ca demo sẽ mất ca đó.`)) return;
+    setBusy(true);
+    try {
+      const res = await purgeDemoIncidents(scope);
+      if (res?.settings) setState(res.settings);
+      notify(`Đã xoá ${res?.deleted ?? 0} ca demo.`, { tone: 'success' });
     } catch (e) {
       notify(e.message, { tone: 'error' });
     } finally {
@@ -141,6 +158,24 @@ export function DemoModePanel() {
                 Lưu
               </button>
             </form>
+          </SettingsRow>
+          <SettingsRow
+            title="Dọn ca demo"
+            desc="Xoá hẳn các ca “[DEMO]” khỏi hệ thống (hàng đợi, lịch sử, thống kê). Không khôi phục được."
+          >
+            <div className={styles.purge}>
+              <button type="button" disabled={busy || !state.open_count} onClick={() => purge('OPEN')}>
+                Xoá ca đang mở ({state.open_count})
+              </button>
+              <button
+                type="button"
+                className={styles.purgeAll}
+                disabled={busy || !state.total_count}
+                onClick={() => purge('ALL')}
+              >
+                Xoá tất cả ({state.total_count ?? 0})
+              </button>
+            </div>
           </SettingsRow>
           <div className={styles.muted}>
             Áp dụng ngay cho mọi tài khoản.

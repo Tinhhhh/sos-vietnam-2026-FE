@@ -190,7 +190,7 @@ export function SosRequestModal({
       <AgencyPicker value={agencyId} onChange={selectAgency} />
 
       {agency.directory ? (
-        <ServiceDirectoryNotice directory={agency.directory} />
+        <ServiceDirectoryNotice directory={agency.directory} location={location} />
       ) : (
         <>
           <div className={formStyles.sectionTitle}>

@@ -1,11 +1,12 @@
+import { NearbyStations } from './nearby-stations';
 import styles from './sos-request-form.module.css';
 
 /**
  * Shown instead of the SOS form for "Dịch vụ cứu hộ" and "Cấp cứu".
- * Legacy listed nearby rescue companies / hospitals here; that directory
- * (and its be-v2 API) is module 5, so for now it explains and offers 115.
+ * "Cấp cứu": the 5 nearest hospitals by GPS (call, distance, time at 40 km/h) and 115.
+ * Rescue companies are module 5, so that one only explains for now.
  */
-export function ServiceDirectoryNotice({ directory }) {
+export function ServiceDirectoryNotice({ directory, location }) {
   if (directory === 'hospitals') {
     return (
       <div className={styles.serviceSectionHospital}>
@@ -16,10 +17,7 @@ export function ServiceDirectoryNotice({ directory }) {
           </div>
           <span className={styles.serviceBadgeHospital}>DỊCH VỤ CÔNG</span>
         </div>
-        <p className={styles.serviceText}>
-          Danh sách trạm 115 và bệnh viện gần vị trí của bạn sẽ hiển thị ở đây (Module 5). Trong lúc chờ, hãy
-          gọi trực tiếp Cấp cứu 115.
-        </p>
+        <NearbyStations kind="HOSPITAL" location={location} />
         <a className={styles.serviceCall} href="tel:115">
           <svg className="svg-ico ico-md ico-white" viewBox="0 0 24 24" aria-hidden="true">
             <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />

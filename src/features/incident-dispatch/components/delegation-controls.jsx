@@ -287,14 +287,13 @@ function DelegationDetailModal({ incident, mine, onClose, onCallField, onCallRec
           }
         />
         {/* below the ETA / receiver / delegate card, so the officer reads who is involved first */}
-        {choosing && (
-          <FieldOfficerList incidentId={incident.id} onPlan={setLocal} />
+        {choosing && <FieldOfficerList incidentId={incident.id} onPlan={setLocal} />}
+        {/* "Đổi người" only before "Khởi hành"; once on the way (step 3) it is locked, the link stays */}
+        {mine && current.tracker && st === 'ACCEPTED' && (
+          <FieldOfficerChange incidentId={incident.id} plan={current} onPlan={setLocal} />
         )}
         {mine && current.tracker && (st === 'ACCEPTED' || st === 'EN_ROUTE') && (
-          <>
-            <FieldOfficerChange incidentId={incident.id} plan={current} onPlan={setLocal} />
-            <FieldLinkBox incidentId={incident.id} plan={current} />
-          </>
+          <FieldLinkBox incidentId={incident.id} plan={current} />
         )}
         {mine && st === 'ARRIVED' && (
           <FinishPanel

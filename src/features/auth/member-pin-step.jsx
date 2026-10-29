@@ -14,6 +14,8 @@ const PIN_RE = /^\d{4,6}$/;
 
 const ROLE_LABEL = { COMMANDER: 'Chỉ huy', MEMBER: 'Cán bộ' };
 
+const COARSE_POINTER = typeof window !== 'undefined' && window.matchMedia?.('(pointer: coarse)').matches;
+
 /**
  * @param {{ unitToken: string, s: Record<string, string>, onDone: () => Promise<void> | void, onBack: () => void }} props
  */
@@ -122,7 +124,8 @@ export function MemberPinStep({ unitToken, s, onDone, onBack }) {
               placeholder="Tìm theo tên hoặc số hiệu..."
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              autoFocus
+              // not on touch screens: the keyboard would pop up and eat the first tap on a name
+              autoFocus={!COARSE_POINTER}
             />
           </div>
         )}
@@ -275,6 +278,7 @@ const memberBtnStyle = {
   color: '#e8eef8',
   textAlign: 'left',
   cursor: 'pointer',
+  touchAction: 'manipulation', // no double-tap zoom: one tap picks
 };
 
 /** lowercase without Vietnamese diacritics, for search */

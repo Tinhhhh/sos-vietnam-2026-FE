@@ -5,11 +5,11 @@ import { CitizenDock } from '@/components/layouts/citizen-layout/citizen-dock';
 import { CitizenLayout } from '@/components/layouts/citizen-layout/citizen-layout';
 import { useToast } from '@/components/ui/toast/toast-context';
 import { paths } from '@/config/paths';
-import { FamilySosModal } from '@/features/family-sos/components/family-sos-modal';
 import { IncidentLookupModal } from '@/features/incident-lookup';
 import { InstallGuideModal, useInstallApp } from '@/features/install-app';
 import { CitizenDocumentButton } from '@/features/incident-report';
 import { useGeolocation } from '@/features/location/hooks/use-geolocation';
+import { NearbyPoliceModal } from '@/features/sos-request/components/nearby-police-modal';
 import { SurvivalGuideModal } from '@/features/survival-guide/components/survival-guide-modal';
 import { saveActiveIncident } from '@/stores/active-incident';
 
@@ -32,7 +32,7 @@ export function CitizenRoot() {
       dock={
         <CitizenDock
           onInstallApp={installApp.install}
-          onOpenFamilySos={() => setOpenModal('family')}
+          onOpenNearbyPolice={() => setOpenModal('police')}
           onOpenSurvivalGuide={() => setOpenModal('guide')}
           onOpenLookup={openLookup}
           dispatcherHref={paths.officer.login.getHref()}
@@ -40,12 +40,7 @@ export function CitizenRoot() {
       }
       overlay={
         <>
-          <FamilySosModal
-            open={openModal === 'family'}
-            onClose={closeModal}
-            location={geo}
-            notify={toast.show}
-          />
+          <NearbyPoliceModal open={openModal === 'police'} onClose={closeModal} location={geo} />
           <SurvivalGuideModal open={openModal === 'guide'} onClose={closeModal} />
           <InstallGuideModal
             open={!!installApp.guide}

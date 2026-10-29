@@ -78,7 +78,7 @@ export function FieldLinkBox({ incidentId, plan }) {
       </div>
       <p className={styles.hint}>
         Người phụ trách mở link trên điện thoại để xem ca, đường đi, gọi video và báo "Đã đến" (không cần đăng
-        nhập). SMS chỉ báo người đó được phân công (nhà mạng chặn tin có link); link gửi qua Zalo hoặc sao chép.
+        nhập).
       </p>
       {link?.sms && (
         <div className={link.sms.sent ? styles.smsOk : styles.smsErr} role="status">
@@ -92,27 +92,40 @@ export function FieldLinkBox({ incidentId, plan }) {
       ) : (
         issuedAt && (
           <div className={styles.note}>
-            Đã cấp link lúc {TIME.format(issuedAt)}. Link chỉ hiện một lần: lỡ đóng thì bấm "Cấp lại mã" (link
+            Đã cấp link lúc {TIME.format(issuedAt)}. Link chỉ hiện một lần: lỡ đóng thì bấm "Cấp lại" (link
             cũ hết hiệu lực).
           </div>
         )
       )}
-      {/* "Sao chép" and "Cấp lại" side by side; on phones the second is just "Cấp lại" */}
+      {/* "Sao chép", "Gửi qua Zalo" and "Cấp lại" side by side */}
       <div className={styles.actions}>
         {link && (
           <button type="button" className={styles.copy} onClick={() => copy(link.url)}>
             Sao chép
           </button>
         )}
-        {link && zaloUrl && (
-          // a plain link (not window.open): no popup blocker, and phones hand it to the Zalo app
+        {link && (
+          // a plain link (not window.open): no popup blocker, and phones hand it to the Zalo app.
+          // Always shown: without a phone in the profile the click only says so.
           <a
             className={styles.zalo}
-            href={zaloUrl}
+            href={zaloUrl || '#'}
             target="_blank"
             rel="noopener noreferrer"
-            title={`Mở Zalo với ${who || 'người phụ trách'} (tin nhắn đã được chép sẵn, chỉ cần dán và gửi)`}
-            onClick={() => {
+            title={
+              zaloUrl
+                ? `Mở Zalo với ${who || 'người phụ trách'} (tin nhắn đã được chép sẵn, chỉ cần dán và gửi)`
+                : `${who || 'Người phụ trách'} chưa có số điện thoại trong hồ sơ`
+            }
+            onClick={(e) => {
+              if (!zaloUrl) {
+                e.preventDefault();
+                toast.show(
+                  `${who || 'Người phụ trách hiện trường'} chưa cung cấp số điện thoại: bấm "Sao chép" rồi gửi link cách khác`,
+                  { tone: 'error', duration: 6000 },
+                );
+                return;
+              }
               // started inside the click, before Zalo takes the focus
               navigator.clipboard
                 ?.writeText(zaloText(incidentId, link.url))
@@ -141,10 +154,7 @@ export function FieldLinkBox({ incidentId, plan }) {
           {busy ? (
             'Đang tạo...'
           ) : link || issuedAt ? (
-            <>
-              <span className={styles.longLabel}>Cấp lại mã & báo lại SMS</span>
-              <span className={styles.shortLabel}>Cấp lại</span>
-            </>
+            'Cấp lại'
           ) : (
             'Tạo link & báo SMS'
           )}

@@ -296,6 +296,9 @@ export function OfficerLoginForm() {
     try {
       const result = await login({ email: email.trim(), password });
       if (result.unitToken) {
+        // Phones: the password field still holds the keyboard. Closing it on the first tap moves the officer list,
+        // and the browser drops that tap, so picking a profile took two taps. Close it before the list shows.
+        document.activeElement?.blur?.();
         setSubmitting(false);
         setPassword('');
         setUnitToken(result.unitToken);

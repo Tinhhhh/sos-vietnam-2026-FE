@@ -2,8 +2,8 @@ import { useEffect, useRef } from 'react';
 
 import { speakSosPrompt } from '../utils/sos-voice-prompt';
 import { CrystalOrb } from './crystal-orb';
-import { HotlineCards } from './hotline-cards';
 import { LegalWarningCard } from './legal-warning-card';
+import { SilentReportBar } from './silent-report-bar';
 import desk from '@/components/layouts/citizen-layout/citizen-desktop.module.css';
 
 import styles from './sos-hero.module.css';
@@ -28,9 +28,6 @@ export function SosHero({ onTrigger }) {
 
   return (
     <section className={styles.sosHero}>
-      <div className={`${styles.heroBadgePill} liquid-glass`}>
-        <span className={styles.liveDot} /> HỆ THỐNG ĐIỀU PHỐI KHẨN CẤP QUỐC GIA 24/7
-      </div>
       <h1 className={`${styles.sosHeroTitle} ${desk.heroTitle}`}>Sống An Toàn, Được Bảo Vệ Từng Giây</h1>
       <p className={`${styles.sosHeroSub} ${desk.heroSub}`}>
         Chạm vào nút bên dưới để gửi tọa độ GPS và thông báo sự cố ngay lập tức tới lực lượng Công an, Y tế,
@@ -39,7 +36,7 @@ export function SosHero({ onTrigger }) {
 
       <CrystalOrb onActivate={handleActivate} />
       <LegalWarningCard />
-      <HotlineCards />
+      <SilentReportBar />
     </section>
   );
 }

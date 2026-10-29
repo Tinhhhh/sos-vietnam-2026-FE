@@ -12,6 +12,8 @@ import styles from './modal.module.css';
  */
 export function Modal({ open, onClose, title, titleStyle, containerStyle, solid = false, children }) {
   const titleId = useId();
+  // the window itself stays put (title row + close button); only its body scrolls. Layout props go to the body.
+  const { display, flexDirection, gap, ...shellStyle } = containerStyle || {};
 
   useEffect(() => {
     if (!open) return undefined;
@@ -34,18 +36,26 @@ export function Modal({ open, onClose, title, titleStyle, containerStyle, solid 
       }}
     >
       <div
-        className={solid ? `modal-container ${styles.solid}` : 'modal-container liquid-glass'}
-        style={containerStyle}
+        className={`${solid ? `modal-container ${styles.solid}` : 'modal-container liquid-glass'} ${styles.shell}`}
+        style={shellStyle}
       >
-        <div className="modal-header">
+        <button
+          type="button"
+          className={`btn-close-modal ${styles.close}`}
+          aria-label="Đóng"
+          onClick={onClose}
+        >
+          &times;
+        </button>
+        {/* title row outside the scrolling body: the scrollbar starts under its line */}
+        <div className={`modal-header ${styles.header}`}>
           <div className="modal-title" id={titleId} style={titleStyle}>
             {title}
           </div>
-          <button type="button" className="btn-close-modal" aria-label="Đóng" onClick={onClose}>
-            &times;
-          </button>
         </div>
-        {children}
+        <div className={styles.body} style={{ display, flexDirection, gap }}>
+          {children}
+        </div>
       </div>
     </div>,
     document.body,

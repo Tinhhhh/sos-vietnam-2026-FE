@@ -19,7 +19,7 @@
 
 .top {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-start;
   align-items: center;
   gap: 8px;
   font-size: 12px;
@@ -37,6 +37,7 @@
   font-weight: 700;
 }
 .conn {
+  margin-left: auto; /* connection and "⋯" packed on the right */
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -590,9 +591,12 @@
 
 /* "← Về trang chủ" while the case is open (it stays open, the menu links back to it) */
 .homeBtn {
-  align-self: flex-start;
-  margin-bottom: 8px;
-  padding: 6px 12px;
+  flex-shrink: 0;
+  /* first item of the top row: left end, arrow + "Về" */
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 12px 5px 9px;
   border-radius: 999px;
   border: 1px solid rgba(148, 163, 184, 0.35);
   background: rgba(15, 23, 42, 0.6);

@@ -5,9 +5,9 @@ import { useToast } from '@/components/ui/toast/toast-context';
 
 import {
   arriveDispatch,
-  changeFieldMember,
   departDelegation,
   getDispatchPlan,
+  getSimulationSpeedKmh,
   getRoadSnap,
   saveDispatchPlan,
 } from '../api/dispatch-api';
@@ -27,11 +27,32 @@ import { DelegationStep } from './delegation-step';
 import delegationStyles from './delegation.module.css';
 import { DispatchStepper } from './dispatch-stepper';
 import { DispatchTrackingView } from './dispatch-tracking-view';
-import trackingStyles from './dispatch-tracking.module.css';
 import { FieldLinkBox } from './field-link-box';
-import { FieldOfficerChange, FieldOfficerPicker } from './field-officer-picker';
+import { FieldOfficerList } from './field-officer-picker';
 import { FinishPanel } from './finish-panel';
 import { RouteMap } from './route-map';
+
+/**
+ * Travel time shown when choosing the route: the distance at the "Mô phỏng" speed set in Cài đặt (the simulated
+ * vehicle drives at that speed), so the estimate and the simulation agree. No speed known: the route's own time.
+ */
+function etaAt(route, speedKmh) {
+  if (!route) return null;
+  if (!speedKmh || route.distanceM == null) return route.durationS;
+  return route.distanceM / ((speedKmh * 1000) / 3600);
+}
+
+/** "5.4 km · 40 km/h" under the travel time */
+function DistanceSpeed({ route, speedKmh }) {
+  if (route.distanceM == null) return null; // no distance yet: no "~— · 40 km/h"
+  return (
+    <span>
+      {route.estimated ? '~' : ''}
+      {formatDistance(route.distanceM)}
+      {speedKmh ? ` · ${speedKmh} km/h` : ''}
+    </span>
+  );
+}
 
 const ROAD_LIMIT = 40; // nearest stations that get a real road estimate; the rest straight-line
 const DELAY_NOTE = 'Thời gian thực tế có thể lâu hơn do ùn tắc giao thông hoặc thời tiết không thuận lợi.';
@@ -112,8 +133,18 @@ function DispatchWindowBody({
   const toast = useToast();
   const [draft, setDraft] = useState(initialPlan);
   const [editing, setEditing] = useState(!draft || draft.step === 1);
-  const [changingField, setChangingField] = useState(false);
   const [saving, setSaving] = useState(false);
+  // speed of the simulated vehicle (Cài đặt › Mô phỏng): the travel times below are computed at that speed
+  const [speedKmh, setSpeedKmh] = useState(null);
+  useEffect(() => {
+    let alive = true;
+    getSimulationSpeedKmh()
+      .then((v) => alive && setSpeedKmh(v))
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   // The ward unit accepts / rejects / sets off on its own screen: every queue push of this incident
   // re-reads the plan so this window follows (unless the officer is editing step 1).
@@ -175,7 +206,7 @@ function DispatchWindowBody({
   const est = estimates.key === destKey ? estimates.byId : null;
 
   const sorted = useMemo(() => {
-    const dur = (s) => est?.[s.id]?.durationS ?? Infinity;
+    const dur = (s) => etaAt(est?.[s.id], speedKmh) ?? Infinity;
     const list = [...candidates].sort(
       (a, b) => dur(a) - dur(b) || haversineKm(a, destination) - haversineKm(b, destination),
     );
@@ -183,7 +214,7 @@ function DispatchWindowBody({
     return mode === 'province'
       ? [...list.filter((s) => s.level !== 'ward'), ...list.filter((s) => s.level === 'ward')]
       : list;
-  }, [candidates, est, destination, mode]);
+  }, [candidates, est, destination, mode, speedKmh]);
 
   // Ward police: their own station, nearest one preselected
   const effectiveId = selectedId ?? (mode === 'ward' ? sorted[0]?.id : null);
@@ -241,16 +272,25 @@ function DispatchWindowBody({
 
   // Handed to a ward officer who has not answered yet: the plan is locked (BE refuses changes too)
   const waitingAnswer = draft?.status === 'PENDING_ACCEPT' && !!draft?.assignedTo;
+  // The ward took the delegated case: the next steps are theirs, the holder cannot go back and re-plan (BE 409)
+  const delegateTook = draft?.status === 'ACCEPTED' && !!draft?.assignedTo;
   // "Khởi hành" pressed: the earlier steps are closed for good
   const departed = ['EN_ROUTE', 'ARRIVED', 'DONE'].includes(draft?.status);
-  // own unit on the way: "Đổi người" (the field officer) next to the tracking card
-  const canArrive = step === 3 && draft?.status === 'EN_ROUTE' && !draft?.assignedTo;
+  // step 3 (set off) is locked: no "Đổi người" / "Đổi điểm" here any more, they belong to steps 1 and 2
   // the holder issues the field link when their unit goes or for a PCCC / CSGT team they appointed
-  const holderLink =
-    !!draft?.tracker && (!draft.assignedTo || draft.assignedTo.memberId === draft.tracker.memberId);
   const isWard = mode === 'ward';
   // my own unit goes (ward police, province HQ): step 2 picks the field officer, no delegation
   const ownUnit = !!draft && !needsDelegation(officer, draft.origin);
+  // PCCC / CSGT: the holder appoints the team officer (also the field officer) and sends them off;
+  // police: the ward officer the case was delegated to does that, the province only watches
+  const appointed = draft?.origin?.agency === 'fire' || draft?.origin?.agency === 'csgt';
+  const delegatedAway = !ownUnit && !!draft?.assignedTo && !appointed;
+  const holderLink =
+    !!draft?.tracker &&
+    (!draft.assignedTo || draft.assignedTo.memberId === draft.tracker.memberId) &&
+    !delegatedAway;
+  // the delegated ward's link / "Khởi hành", shown dimmed to the province (hover says why)
+  const wardControls = delegatedAway && !!draft?.tracker;
   const steps = STEP_KEYS.map((key) => ({
     key,
     title: key === 'delegate' && (ownUnit || (isWard && !draft)) ? 'Điều động' : STEP_TITLES[key],
@@ -309,6 +349,7 @@ function DispatchWindowBody({
                 selectedId={effectiveId}
                 onSelect={setSelectedId}
                 hasDestination={!!destination}
+                speedKmh={speedKmh}
               />
             )}
           </div>
@@ -323,6 +364,7 @@ function DispatchWindowBody({
               station={selected}
               route={currentRoute || (selected && est?.[selected.id]) || null}
               error={routeError}
+              speedKmh={speedKmh}
             />
           </div>
           <div className={styles.footer}>
@@ -370,80 +412,59 @@ function DispatchWindowBody({
                     onPlan={setDraft}
                   />
                 )}
-                // the simulated vehicle drives this route with this officer: both changes wait until it stops
-                actions={
-                  (canArrive || (step === 3 && !waitingAnswer)) &&
-                  (({ simulating }) => (
-                    <>
-                      {canArrive && (
-                        <button
-                          type="button"
-                          className={trackingStyles.actionBtn}
-                          disabled={simulating}
-                          title={simulating ? 'Đang mô phỏng: dừng mô phỏng rồi mới đổi người' : undefined}
-                          onClick={() => setChangingField(true)}
-                        >
-                          {simulating ? '🔒 Đổi người' : 'Đổi người'}
-                        </button>
-                      )}
-                      {step === 3 && !waitingAnswer && (
-                        <button
-                          type="button"
-                          className={trackingStyles.actionBtn}
-                          disabled={simulating}
-                          title={simulating ? 'Đang mô phỏng: dừng mô phỏng rồi mới đổi điểm' : undefined}
-                          onClick={() => setEditing(true)}
-                        >
-                          {simulating ? '🔒 ' : ''}
-                          {isWard ? 'Đổi điểm đến' : 'Đổi điểm xuất phát / điểm đến'}
-                        </button>
-                      )}
-                    </>
-                  ))
-                }
               />
-              {holderLink && ['EN_ROUTE', 'ARRIVED'].includes(draft.status) && (
-                <FieldLinkBox incidentId={incident.id} plan={draft} />
-              )}
-              {canArrive && changingField && (
-                <FieldOfficerChange
-                  incidentId={incident.id}
-                  plan={draft}
-                  onPlan={setDraft}
-                  open
-                  onClose={() => setChangingField(false)}
-                />
+              {(holderLink || wardControls) && ['EN_ROUTE', 'ARRIVED'].includes(draft.status) && (
+                <DelegatedAway when={wardControls}>
+                  <FieldLinkBox incidentId={incident.id} plan={draft} />
+                </DelegatedAway>
               )}
             </>
           ) : (
-            <div className={delegationStyles.panel}>
-              <ChosenSummary
-                draft={draft}
-                canPickOrigin={!isWard}
-                locked={waitingAnswer}
-                onEdit={() => setEditing(true)}
-              />
-              {ownUnit ? (
-                <OwnDispatchStep incidentId={incident.id} plan={draft} onPlan={setDraft} />
-              ) : (
-                <DelegationStep
-                  incidentId={incident.id}
-                  plan={draft}
-                  onPlan={setDraft}
-                  locked={waitingAnswer}
+            // step 2: the chosen route already on the map, like step 1 (one column on phones)
+            <div className={styles.layout}>
+              <div className={`${styles.side} ${styles.sideScroll} ${delegationStyles.panel}`}>
+                <ChosenSummary
+                  draft={draft}
+                  canPickOrigin={!isWard}
+                  locked={waitingAnswer || delegateTook}
+                  onEdit={() => setEditing(true)}
+                  speedKmh={speedKmh}
                 />
-              )}
-              {/* PCCC / CSGT team appointed (it is also the field officer): the holder sends the link and sets off */}
-              {!ownUnit && holderLink && draft.status === 'ACCEPTED' && (
-                <>
-                  <FieldLinkBox incidentId={incident.id} plan={draft} />
-                  <DepartButton
-                    who={draft.tracker.fullName}
-                    onDepart={() => departDelegation(incident.id)}
+                {ownUnit ? (
+                  <OwnDispatchStep incidentId={incident.id} plan={draft} onPlan={setDraft} />
+                ) : (
+                  <DelegationStep
+                    incidentId={incident.id}
+                    plan={draft}
                     onPlan={setDraft}
+                    locked={waitingAnswer}
                   />
-                </>
-              )}
+                )}
+                {/* PCCC / CSGT team appointed (it is also the field officer): the holder sends the link and sets off */}
+                {!ownUnit && (holderLink || wardControls) && draft.status === 'ACCEPTED' && (
+                  <DelegatedAway when={wardControls}>
+                    <FieldLinkBox incidentId={incident.id} plan={draft} />
+                  </DelegatedAway>
+                )}
+              </div>
+              <div className={styles.mapCol}>
+                <RouteMap
+                  origin={draft.origin}
+                  destination={draft.destination}
+                  coords={draft.route?.coords || null}
+                  citizen={incident.lat != null ? { lat: incident.lat, lng: incident.lng } : null}
+                />
+                {/* "Khởi hành" under the map: my own unit, or the PCCC / CSGT team I appointed, once someone is picked */}
+                {(ownUnit || holderLink || wardControls) && draft.tracker && draft.status === 'ACCEPTED' && (
+                  <DelegatedAway when={wardControls}>
+                    <DepartButton
+                      who={draft.tracker.fullName}
+                      onDepart={() => departDelegation(incident.id)}
+                      onPlan={setDraft}
+                    />
+                  </DelegatedAway>
+                )}
+              </div>
             </div>
           )}
           {step === 4 ? (
@@ -464,12 +485,16 @@ function DispatchWindowBody({
                   Đang chờ {draft.assignedTo.fullName} trả lời: tạm khoá. Không liên lạc được thì bấm "Thu hồi
                   uỷ quyền" ở trên để chọn lại.
                 </span>
-              ) : departed ? (
+              ) : departed || delegateTook ? (
                 <button
                   type="button"
                   className={styles.btnBack}
                   disabled
-                  title="Đã khởi hành: không quay lại bước trước được nữa"
+                  title={
+                    departed
+                      ? 'Đã khởi hành: không quay lại bước trước được nữa'
+                      : `${draft.assignedTo.fullName} đã nhận ca uỷ quyền: không quay lại bước trước được nữa`
+                  }
                 >
                   🔒 Quay lại bước trước
                 </button>
@@ -527,8 +552,6 @@ function DispatchWindowBody({
  * "Khởi hành" (EN_ROUTE: GPS taken from then on). The field officer can also press "Khởi hành" on the link.
  */
 function OwnDispatchStep({ incidentId, plan, onPlan }) {
-  const toast = useToast();
-  const [open, setOpen] = useState(false);
   const picked = plan.tracker; // saved on the trip (status ACCEPTED, waiting to set off)
   // once the force has set off (or a simulation drives the route) the field officer cannot change any more
   const locked =
@@ -536,101 +559,62 @@ function OwnDispatchStep({ incidentId, plan, onPlan }) {
     plan.status === 'ARRIVED' ||
     plan.status === 'DONE' ||
     !!plan.simulation?.running;
-  const [draftPick, setDraftPick] = useState(null);
-  const [busy, setBusy] = useState(false);
-
-  const choose = async () => {
-    setBusy(true);
-    try {
-      const next = await changeFieldMember(incidentId, draftPick.memberId);
-      onPlan(next);
-      setOpen(false);
-      toast.show(
-        `${next?.tracker?.fullName || 'Đã chọn'} phụ trách hiện trường: bấm "Khởi hành" khi xuất phát`,
-        {
-          tone: 'success',
-        },
-      );
-    } catch (err) {
-      toast.show(err.message, { tone: 'error' });
-    } finally {
-      setBusy(false);
-    }
-  };
+  // same list as the delegated ward officer's window: open while nobody is picked, or after "Đổi người phụ trách"
+  const [changing, setChanging] = useState(false);
+  const listing = !locked && (!picked || changing);
 
   return (
-    <div className={delegationStyles.card}>
-      <div className={delegationStyles.cardHead}>
-        <div className={delegationStyles.cardTitle}>Người phụ trách hiện trường *</div>
-      </div>
-      <div className={delegationStyles.meta}>
-        Người ra hiện trường cầm điện thoại GPS; người báo tin thấy vị trí và gọi được cho người này.
-      </div>
-      {picked ? (
-        <div className={styles.pickedOfficer}>
-          <b>{picked.fullName}</b>
-          {picked.badgeNumber && <span> · Số hiệu {picked.badgeNumber}</span>}
-        </div>
-      ) : (
-        <div className={delegationStyles.meta}>Chưa chỉ định ai.</div>
-      )}
-      <button
-        type="button"
-        className={`${styles.btnGhost} ${styles.btnFull}`}
-        disabled={locked}
-        title={locked ? 'Lực lượng đã khởi hành: không đổi người phụ trách được nữa' : undefined}
-        onClick={() => {
-          setDraftPick(picked?.memberId ?? null);
-          setOpen(true);
-        }}
-      >
-        {locked
-          ? '🔒 Đã khởi hành, không đổi người phụ trách'
-          : picked
-            ? 'Đổi người phụ trách'
-            : 'Chỉ định người phụ trách'}
-      </button>
+    <>
       {picked && (
-        <>
-          <FieldLinkBox incidentId={incidentId} plan={plan} />
-          <DepartButton who={picked.fullName} onDepart={() => departDelegation(incidentId)} onPlan={onPlan} />
-        </>
-      )}
-
-      {open && (
-        <Modal
-          open
-          onClose={() => setOpen(false)}
-          solid
-          containerStyle={{ maxWidth: 480, width: 'min(480px, calc(100vw - 16px))' }}
-          title={<span className={styles.confirmTitle}>Chỉ định người phụ trách hiện trường</span>}
-        >
-          <div className={styles.confirmBody}>
-            <p>
-              Ca <b>{plan ? incidentId : ''}</b> · {plan.origin.name}
-            </p>
-            <FieldOfficerPicker
-              incidentId={incidentId}
-              value={draftPick?.memberId ?? draftPick}
-              onChange={(memberId, officer) => setDraftPick(officer || { memberId })}
-              compact
-            />
-            <div className={styles.confirmActions}>
-              <button type="button" className={styles.btnGhost} onClick={() => setOpen(false)}>
-                Huỷ
-              </button>
-              <button
-                type="button"
-                className={styles.btnPrimary}
-                disabled={!draftPick?.memberId || busy || draftPick.memberId === picked?.memberId}
-                onClick={choose}
-              >
-                {busy ? 'Đang lưu...' : 'Chọn người này'}
-              </button>
-            </div>
+        <div className={delegationStyles.card}>
+          <div className={delegationStyles.cardHead}>
+            <div className={delegationStyles.cardTitle}>Người phụ trách hiện trường</div>
           </div>
-        </Modal>
+          <div className={styles.pickedOfficer}>
+            <b>{picked.fullName}</b>
+            {picked.badgeNumber && <span> · Số hiệu {picked.badgeNumber}</span>}
+          </div>
+          <button
+            type="button"
+            className={`${styles.btnGhost} ${styles.btnFull}`}
+            disabled={locked}
+            title={locked ? 'Lực lượng đã khởi hành: không đổi người phụ trách được nữa' : undefined}
+            onClick={() => setChanging((v) => !v)}
+          >
+            {locked
+              ? '🔒 Đã khởi hành, không đổi người phụ trách'
+              : changing
+                ? 'Giữ người này'
+                : 'Đổi người phụ trách'}
+          </button>
+        </div>
       )}
+      {listing && (
+        <FieldOfficerList
+          incidentId={incidentId}
+          onPlan={(next) => {
+            setChanging(false);
+            onPlan(next);
+          }}
+        />
+      )}
+      {/* "Khởi hành" sits under the map (right column) */}
+      {picked && !changing && <FieldLinkBox incidentId={incidentId} plan={plan} />}
+    </>
+  );
+}
+
+/**
+ * The province delegated the case to a ward officer: that officer sends the link and sets off. The province still
+ * sees those controls, dimmed and inert, with the reason on hover.
+ */
+function DelegatedAway({ when, children }) {
+  if (!when) return children;
+  return (
+    <div className={styles.delegatedAway} title="Bạn đã uỷ quyền cho người khác" aria-disabled="true">
+      <div className={styles.delegatedAwayInner} inert>
+        {children}
+      </div>
     </div>
   );
 }
@@ -816,7 +800,7 @@ function DestinationBox({ destination, original, typeLabel, onChange, onOpenPick
 }
 
 /** Province / PCCC / CSGT officers: pick the HQ or a ward station (ward police never see this). */
-function OriginList({ stations, estimates, estimateError, selectedId, onSelect, hasDestination }) {
+function OriginList({ stations, estimates, estimateError, selectedId, onSelect, hasDestination, speedKmh }) {
   return (
     <section className={`${styles.box} ${styles.originBox}`}>
       <div className={styles.boxHead}>
@@ -866,11 +850,8 @@ function OriginList({ stations, estimates, estimateError, selectedId, onSelect, 
                 <span className={styles.originEta}>
                   {e ? (
                     <>
-                      <b>{formatDuration(e.durationS)}</b>
-                      <span>
-                        {e.estimated ? '~' : ''}
-                        {formatDistance(e.distanceM)}
-                      </span>
+                      <b>{formatDuration(etaAt(e, speedKmh))}</b>
+                      <DistanceSpeed route={e} speedKmh={speedKmh} />
                     </>
                   ) : (
                     hasDestination && <span>Đang tính...</span>
@@ -885,7 +866,7 @@ function OriginList({ stations, estimates, estimateError, selectedId, onSelect, 
   );
 }
 
-function RouteSummary({ station, route, error }) {
+function RouteSummary({ station, route, error, speedKmh }) {
   if (!station) return <div className={styles.summary}>Chọn một cơ sở để xem tuyến đường.</div>;
   return (
     <div className={styles.summary}>
@@ -900,11 +881,8 @@ function RouteSummary({ station, route, error }) {
           <div className={styles.summarySub}>{station.address || 'Chưa có địa chỉ'}</div>
         </div>
         <div className={styles.summaryEta}>
-          <b>{route ? formatDuration(route.durationS) : '—'}</b>
-          <span>
-            {route?.estimated ? '~' : ''}
-            {route ? formatDistance(route.distanceM) : ''}
-          </span>
+          <b>{route ? formatDuration(etaAt(route, speedKmh)) : '—'}</b>
+          {route && <DistanceSpeed route={route} speedKmh={speedKmh} />}
         </div>
       </div>
       {error && <div className={styles.warn}>Không vẽ được tuyến: {error}</div>}
@@ -914,7 +892,7 @@ function RouteSummary({ station, route, error }) {
 }
 
 /** Steps 2-4 come in the next batches; for now show what step 1 saved. */
-function ChosenSummary({ draft, canPickOrigin, locked = false, onEdit }) {
+function ChosenSummary({ draft, canPickOrigin, locked = false, onEdit, speedKmh }) {
   const o = draft.origin;
   return (
     <div className={styles.chosen}>
@@ -936,8 +914,8 @@ function ChosenSummary({ draft, canPickOrigin, locked = false, onEdit }) {
             <div className={styles.summarySub}>{o.address || 'Chưa có địa chỉ'}</div>
           </div>
           <div className={styles.summaryEta}>
-            <b>{formatDuration(draft.route?.durationS)}</b>
-            <span>{formatDistance(draft.route?.distanceM)}</span>
+            <b>{formatDuration(etaAt(draft.route, speedKmh))}</b>
+            {draft.route && <DistanceSpeed route={draft.route} speedKmh={speedKmh} />}
           </div>
         </div>
         <div className={styles.destCoord}>Điểm đến: {draft.destination?.address}</div>

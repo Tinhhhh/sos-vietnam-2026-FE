@@ -131,6 +131,8 @@ export function normalizePlan(raw) {
       : null,
     lastPosition: livePosition(raw.last_position),
     // officers only (null for the citizen): demo "Mô phỏng di chuyển" button
+    // speed the travel times are counted at (the "Mô phỏng" speed), km/h; null: use the route's times
+    etaSpeedKmh: raw.eta_speed_kmh || null,
     simulation: raw.simulation
       ? { available: !!raw.simulation.available, running: !!raw.simulation.running }
       : null,
@@ -356,4 +358,10 @@ export async function finishIncident(incidentId, { result, summary, forces, note
 export async function withdrawDelegation(incidentId) {
   const body = await api.post(planPath(incidentId, '/withdraw'));
   return normalizePlan(body.data);
+}
+
+/** Speed of the simulated vehicle (Cài đặt › Mô phỏng, GET /api/v1/settings/demo), km/h; null when unknown. */
+export async function getSimulationSpeedKmh() {
+  const body = await api.get('/api/v1/settings/demo');
+  return body?.data?.simulation_speed_kmh || null;
 }

@@ -175,7 +175,14 @@ function TrackingContent({
           onSwitchCamera={phone.switchCamera}
           extraControl={
             !closed &&
-            dispatchSlot?.({ incident, token, variant: 'call', callTracker, callReceiver: callBack, callDelegate })
+            dispatchSlot?.({
+              incident,
+              token,
+              variant: 'call',
+              callTracker,
+              callReceiver: callBack,
+              callDelegate,
+            })
           }
         />
         {switchDialog}
@@ -191,13 +198,24 @@ function TrackingContent({
     <div className={styles.screen} role="dialog" aria-label="Đang chờ tiếp nhận SOS">
       <EscalationNotice incident={incident} closed={closed} />
       <CompletionPrompt incident={incident} token={token} onUpdated={tracking.setIncident} notify={notify} />
-      {/* the case stays open and kept on the device; the menu shows a "Xem" strip to come back */}
-      {!closed && onHome && (
-        <button type="button" className={styles.homeBtn} onClick={onHome}>
-          ← Về trang chủ
-        </button>
-      )}
+      {/* "Về" (back arrow) at the left end, then the type; connection and "⋯" on the right */}
       <div className={styles.top}>
+        {/* the case stays open and kept on the device; the menu shows a "Xem" strip to come back */}
+        {!closed && onHome && (
+          <button type="button" className={styles.homeBtn} onClick={onHome} title="Về trang chủ">
+            <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+              <path
+                d="M10 5 4 11l6 6M4.5 11H14a6 6 0 0 1 6 6v2"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.4"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+            Về
+          </button>
+        )}
         <span className={styles.typeChip}>
           {type.icon} {type.label}
         </span>
@@ -209,7 +227,14 @@ function TrackingContent({
           {conn.text}
         </span>
         {!closed &&
-          dispatchSlot?.({ incident, token, variant: 'screen', callTracker, callReceiver: callBack, callDelegate })}
+          dispatchSlot?.({
+            incident,
+            token,
+            variant: 'screen',
+            callTracker,
+            callReceiver: callBack,
+            callDelegate,
+          })}
       </div>
 
       <div className={styles.center} onClickCapture={() => closed && setStayedFor(incident.documentStatus)}>
@@ -331,27 +356,44 @@ function AutoReturn({ paused, onReturn }) {
  */
 function LookupCode({ incidentId, code }) {
   const [open, setOpen] = useState(() => !!code && firstTime(incidentId));
+  // the popup that opened by itself: one "Lưu và ẩn" (copy + close); re-opened from the line: copy / close
+  const [first, setFirst] = useState(open);
   if (!code) return null;
   return (
     <>
       <button type="button" className={styles.codeLine} onClick={() => setOpen(true)}>
         Mã ca: <b>{code}</b> <span>· Xem / sao chép</span>
       </button>
-      <CaseCodeDialog open={open} code={code} onClose={() => setOpen(false)} />
+      <CaseCodeDialog
+        open={open}
+        code={code}
+        first={first}
+        onClose={() => {
+          setOpen(false);
+          setFirst(false);
+        }}
+      />
     </>
   );
 }
 
-function CaseCodeDialog({ open, code, onClose }) {
+function CaseCodeDialog({ open, code, first, onClose }) {
   const [copied, setCopied] = useState(false);
   const copy = async () => {
     try {
       await navigator.clipboard.writeText(code);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
+      return true;
     } catch {
       setCopied(false);
+      return false;
     }
+  };
+  // copy failed (blocked clipboard): still close, the code stays on the "Mã ca" line
+  const saveAndHide = async () => {
+    await copy();
+    onClose();
   };
   return (
     <Modal open={open} onClose={onClose} solid containerStyle={{ maxWidth: 400 }} title="Mã ca của bạn">
@@ -362,12 +404,20 @@ function CaseCodeDialog({ open, code, onClose }) {
         nút ⋯.
       </p>
       <div className={styles.codeActions}>
-        <button type="button" className={styles.lookupCopy} onClick={copy}>
-          {copied ? 'Đã chép' : 'Sao chép mã'}
-        </button>
-        <button type="button" className={styles.codeClose} onClick={onClose}>
-          Đã lưu
-        </button>
+        {first ? (
+          <button type="button" className={styles.lookupCopy} onClick={saveAndHide}>
+            Lưu và ẩn
+          </button>
+        ) : (
+          <>
+            <button type="button" className={styles.lookupCopy} onClick={copy}>
+              {copied ? 'Đã chép' : 'Sao chép mã'}
+            </button>
+            <button type="button" className={styles.codeClose} onClick={onClose}>
+              Đã lưu
+            </button>
+          </>
+        )}
       </div>
     </Modal>
   );

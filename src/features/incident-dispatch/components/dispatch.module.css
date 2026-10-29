@@ -115,6 +115,12 @@
   max-height: min(64vh, 620px);
 }
 
+/* step 2: the side column scrolls on its own next to the map */
+.sideScroll {
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
 .mapCol {
   grid-area: map;
   display: flex;
@@ -786,45 +792,12 @@
   height: 100%;
 }
 
+/* the shared ZoomBar, floating in the map's bottom right corner */
 .zoomBar {
   position: absolute;
   right: 10px;
   bottom: 34px;
   z-index: 2;
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  padding: 3px;
-  border-radius: 10px;
-  background: rgba(15, 23, 42, 0.85);
-  border: 1px solid rgba(148, 163, 184, 0.3);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
-}
-
-.zoomBtn {
-  width: 30px;
-  height: 30px;
-  border: 0;
-  border-radius: 7px;
-  background: transparent;
-  color: #e2e8f0;
-  font-size: 17px;
-  font-weight: 700;
-  line-height: 1;
-  cursor: pointer;
-}
-
-.zoomBtn:hover {
-  background: rgba(148, 163, 184, 0.18);
-}
-
-.zoomPct {
-  min-width: 46px;
-  text-align: center;
-  font-size: 12.5px;
-  font-weight: 700;
-  color: #e2e8f0;
-  font-variant-numeric: tabular-nums;
 }
 
 /* full-width button, like "Khởi hành" */
@@ -835,4 +808,14 @@
   padding: 12px 16px;
   font-size: 14px;
   text-align: center;
+}
+
+/* the delegated ward's controls as the province sees them: dimmed, not clickable, reason on hover */
+.delegatedAway {
+  cursor: not-allowed;
+}
+.delegatedAwayInner {
+  opacity: 0.45;
+  filter: grayscale(0.5);
+  pointer-events: none;
 }

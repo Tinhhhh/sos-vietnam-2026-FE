@@ -5,3 +5,70 @@
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
 }
+
+/* The window does not scroll: the title row and the close button stay put, only the body under the title
+   line scrolls (so its scrollbar starts there). Padding moves from the legacy .modal-container to the header
+   and the body (same values per breakpoint). */
+:global(.modal-container).shell {
+  display: flex !important;
+  flex-direction: column;
+  overflow: hidden !important;
+  padding: 0 !important;
+}
+
+.header {
+  flex: 0 0 auto;
+  margin: 24px 22px 0 !important;
+  padding-right: 44px;
+}
+
+.body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding: 20px 22px 30px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(56, 189, 248, 0.5) rgba(255, 255, 255, 0.06);
+}
+
+:global(.btn-close-modal).close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 5;
+  background: #1b2436;
+}
+:global(.btn-close-modal).close:hover {
+  background: #2a3550;
+}
+
+/* web: a bigger close button; phones keep the legacy size */
+@media (min-width: 769px) {
+  :global(.btn-close-modal).close {
+    width: 42px;
+    height: 42px;
+    font-size: 24px;
+  }
+  .header {
+    padding-right: 52px;
+  }
+}
+
+@media (max-width: 480px) {
+  .header {
+    margin: 16px 12px 0 !important;
+  }
+  .body {
+    padding: 16px 12px;
+  }
+}
+
+@media (max-width: 320px) {
+  .header {
+    margin: 12px 10px 0 !important;
+  }
+  .body {
+    padding: 12px 10px;
+  }
+}

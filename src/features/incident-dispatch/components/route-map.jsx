@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 
+import { ZoomBar } from '@/components/ui/zoom-bar/zoom-bar';
 import { LngLatBounds, Map, Marker } from '@/lib/maplibre';
 
 import { STATION_ICON } from '../utils/origin-candidates';
@@ -103,7 +104,7 @@ export function RouteMap({
   // user zoomed / panned keep their view unless the start or end point changes (another station / stop).
   const fitRef = useRef({ key: '', ends: '' });
   const userMovedRef = useRef(false);
-  // zoom of the default view (auto fit), shown as 100 %; "⟲" goes back to it
+  // zoom of the default view (auto fit), shown as 100 %; pressing the percentage goes back to it
   const baseZoomRef = useRef(null);
   const [zoomPct, setZoomPct] = useState(100);
   const paddingRef = useRef(padding);
@@ -336,26 +337,14 @@ export function RouteMap({
   return (
     <div className={`${className || styles.map} ${styles.mapWrap}`}>
       <div ref={containerRef} className={styles.mapCanvas} />
-      <div className={styles.zoomBar} role="group" aria-label="Thu phóng bản đồ">
-        <button type="button" className={styles.zoomBtn} onClick={() => zoomBy(-1)} aria-label="Thu nhỏ 25%">
-          −
-        </button>
-        <span className={styles.zoomPct} aria-live="polite">
-          {zoomPct}%
-        </span>
-        <button type="button" className={styles.zoomBtn} onClick={() => zoomBy(1)} aria-label="Phóng to 25%">
-          +
-        </button>
-        <button
-          type="button"
-          className={styles.zoomBtn}
-          onClick={resetZoom}
-          aria-label="Về mức zoom mặc định"
-          title="Về mức zoom mặc định"
-        >
-          ⟲
-        </button>
-      </div>
+      <ZoomBar
+        className={styles.zoomBar}
+        pct={zoomPct}
+        onOut={() => zoomBy(-1)}
+        onIn={() => zoomBy(1)}
+        onReset={resetZoom}
+        label="Thu phóng bản đồ"
+      />
     </div>
   );
 }
