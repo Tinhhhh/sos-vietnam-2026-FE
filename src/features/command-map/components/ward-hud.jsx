@@ -307,14 +307,16 @@ export function WardHud({ selection, origin, onPickFacility, onClose }) {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
               {facilities.map((fac, idx) => {
                 const isNearest = idx === 0;
+                // the highlight follows the facility shown above (the one clicked), not the first in the list
+                const isActive = station ? fac.id === station.id : isNearest;
                 const dist = typeof fac.distanceKm === 'number' ? `${fac.distanceKm.toFixed(2)} km` : '';
                 return (
                   <div
                     key={fac.id}
                     onClick={() => pick(fac)}
                     style={{
-                      background: isNearest ? 'rgba(16, 185, 129, 0.14)' : 'rgba(255, 255, 255, 0.05)',
-                      border: `1px solid ${isNearest ? '#10b981' : 'rgba(255, 255, 255, 0.12)'}`,
+                      background: isActive ? 'rgba(16, 185, 129, 0.14)' : 'rgba(255, 255, 255, 0.05)',
+                      border: `1px solid ${isActive ? '#10b981' : 'rgba(255, 255, 255, 0.12)'}`,
                       borderRadius: 6,
                       padding: '5px 7px',
                       cursor: 'pointer',
@@ -331,7 +333,7 @@ export function WardHud({ selection, origin, onPickFacility, onClose }) {
                       }}
                     >
                       <span
-                        style={{ fontSize: 11, fontWeight: 800, color: isNearest ? '#34d399' : '#f8fafc' }}
+                        style={{ fontSize: 11, fontWeight: 800, color: isActive ? '#34d399' : '#f8fafc' }}
                       >
                         {fac.name}
                       </span>
