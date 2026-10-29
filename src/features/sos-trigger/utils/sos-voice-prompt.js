@@ -11,7 +11,7 @@
  * Fallback: Web Speech API (vi-VN) nếu MP3 không phát được.
  */
 
-import { CITIZEN_VOICE, isVoiceMuted } from '@/hooks/use-voice-muted';
+import { CITIZEN_VOICE, isVoiceMuted, subscribeVoiceMuted } from '@/hooks/use-voice-muted';
 
 // Static ?url imports: see REGION_MP3
 import tayNamBoMp3 from '../sounds/sos_prompt_tay_nam_bo.mp3?url';
@@ -239,3 +239,8 @@ export function stopSosPrompt() {
   }
   if ('speechSynthesis' in window) window.speechSynthesis.cancel();
 }
+
+// "Tắt tiếng" pressed while the prompt plays: stop it at once, not only the next one
+subscribeVoiceMuted(() => {
+  if (isVoiceMuted(CITIZEN_VOICE)) stopSosPrompt();
+});

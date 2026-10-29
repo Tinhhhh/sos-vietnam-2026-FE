@@ -31,6 +31,11 @@ export function setVoiceMuted(key, muted) {
   listeners.forEach((fn) => fn());
 }
 
+/** Called on every change of any switch (this tab or another): players stop what is playing when muted. */
+export function subscribeVoiceMuted(fn) {
+  return subscribe(fn);
+}
+
 function subscribe(fn) {
   listeners.add(fn);
   window.addEventListener('storage', fn); // another tab changed it

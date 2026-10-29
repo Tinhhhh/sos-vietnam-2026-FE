@@ -75,8 +75,6 @@ export function OfficerHeader({ officer, unitCoords, onLocateUnit, pendingCount 
           aria-label={muteLabel}
           aria-pressed={muted}
           onClick={() => {
-            // cut the voice reading now; its next repeat sees the switch and stays quiet
-            if (!muted) window.speechSynthesis?.cancel();
             setMuted(!muted);
           }}
         >

@@ -10,7 +10,7 @@
  * clicked at least once (login), and unlockIncidentAlertAudio() resumes the audio on every tap.
  */
 import { cleanIncidentLabel } from '@/config/incident-suggestions';
-import { OFFICER_VOICE, isVoiceMuted } from '@/hooks/use-voice-muted';
+import { OFFICER_VOICE, isVoiceMuted, subscribeVoiceMuted } from '@/hooks/use-voice-muted';
 
 const REPEATS = 3;
 const RATE = 0.88;
@@ -127,6 +127,7 @@ function speak(text, mySession, repeat) {
     } catch {
       /* ignore */
     }
+    if (isVoiceMuted(OFFICER_VOICE)) return; // muted during the short wait
     synth.speak(utterance);
   }, 220);
 }
@@ -175,3 +176,17 @@ export function unlockIncidentAlertAudio() {
     /* ignore */
   }
 }
+
+// "Tắt tiếng" next to the bell while a new SOS is read out: stop the voice and its repeats at once
+subscribeVoiceMuted(() => {
+  if (!isVoiceMuted(OFFICER_VOICE)) return;
+  session += 1;
+  clearTimeout(pendingTimer);
+  pendingTimer = null;
+  _speaking = null;
+  try {
+    window.speechSynthesis?.cancel();
+  } catch {
+    /* ignore */
+  }
+});
