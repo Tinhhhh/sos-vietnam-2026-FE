@@ -104,15 +104,28 @@ export function FieldLinkBox({ incidentId, plan }) {
             Sao chép
           </button>
         )}
-        {link && zaloUrl && (
-          // a plain link (not window.open): no popup blocker, and phones hand it to the Zalo app
+        {link && (
+          // a plain link (not window.open): no popup blocker, and phones hand it to the Zalo app.
+          // Always shown: without a phone in the profile the click only says so.
           <a
             className={styles.zalo}
-            href={zaloUrl}
+            href={zaloUrl || '#'}
             target="_blank"
             rel="noopener noreferrer"
-            title={`Mở Zalo với ${who || 'người phụ trách'} (tin nhắn đã được chép sẵn, chỉ cần dán và gửi)`}
-            onClick={() => {
+            title={
+              zaloUrl
+                ? `Mở Zalo với ${who || 'người phụ trách'} (tin nhắn đã được chép sẵn, chỉ cần dán và gửi)`
+                : `${who || 'Người phụ trách'} chưa có số điện thoại trong hồ sơ`
+            }
+            onClick={(e) => {
+              if (!zaloUrl) {
+                e.preventDefault();
+                toast.show(
+                  `${who || 'Người phụ trách hiện trường'} chưa cung cấp số điện thoại: bấm "Sao chép" rồi gửi link cách khác`,
+                  { tone: 'error', duration: 6000 },
+                );
+                return;
+              }
               // started inside the click, before Zalo takes the focus
               navigator.clipboard
                 ?.writeText(zaloText(incidentId, link.url))
