@@ -12,7 +12,7 @@ import styles from './modal.module.css';
  */
 export function Modal({ open, onClose, title, titleStyle, containerStyle, solid = false, children }) {
   const titleId = useId();
-  // the window itself stays put (close button in its corner); its body scrolls. Layout props go to the body.
+  // the window itself stays put (title row + close button); only its body scrolls. Layout props go to the body.
   const { display, flexDirection, gap, ...shellStyle } = containerStyle || {};
 
   useEffect(() => {
@@ -47,12 +47,13 @@ export function Modal({ open, onClose, title, titleStyle, containerStyle, solid 
         >
           &times;
         </button>
-        <div className={styles.body} style={{ display, flexDirection, gap }}>
-          <div className={`modal-header ${styles.header}`}>
-            <div className="modal-title" id={titleId} style={titleStyle}>
-              {title}
-            </div>
+        {/* title row outside the scrolling body: the scrollbar starts under its line */}
+        <div className={`modal-header ${styles.header}`}>
+          <div className="modal-title" id={titleId} style={titleStyle}>
+            {title}
           </div>
+        </div>
+        <div className={styles.body} style={{ display, flexDirection, gap }}>
           {children}
         </div>
       </div>
