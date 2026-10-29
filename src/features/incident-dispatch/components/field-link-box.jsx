@@ -19,9 +19,9 @@ const zaloText = (incidentId, url) =>
 
 /**
  * "Link cho người phụ trách hiện trường": the field officer has no login, so they get a link. "Tạo link" / "Cấp lại
- * mã" makes a new code (the old link stops working, also when the field officer changes), the BE texts it to the
- * phone in their profile and returns it once so it can also be copied when the SMS did not go. "Zalo" copies a ready
- * message and opens the Zalo chat with that phone: Zalo links cannot fill in or send the text, the officer pastes.
+ * mã" makes a new code (the old link stops working, also when the field officer changes) and returns it once. The BE
+ * only texts that person that they were assigned: carriers hold or block SMS with links, so the link itself goes by
+ * Zalo ("Zalo" copies a ready message and opens the chat with that phone; the officer pastes) or by copying.
  *
  * @param {{ incidentId: string, plan: object }} props  plan.fieldLinkIssuedAt = last issue time (null = none)
  */
@@ -59,7 +59,7 @@ export function FieldLinkBox({ incidentId, plan }) {
         tone: copied ? 'success' : 'error',
       });
     } else if (sms?.sent) {
-      toast.show(`Đã gửi SMS link tới ${sms.phoneMasked}`, { tone: 'success' });
+      toast.show(`Đã báo SMS tới ${sms.phoneMasked}: bấm "Gửi qua Zalo" để gửi link`, { tone: 'success' });
     } else {
       toast.show(
         copied
@@ -78,13 +78,13 @@ export function FieldLinkBox({ incidentId, plan }) {
       </div>
       <p className={styles.hint}>
         Người phụ trách mở link trên điện thoại để xem ca, đường đi, gọi video và báo "Đã đến" (không cần đăng
-        nhập). Link được gửi SMS tới số trong hồ sơ; không nhận được thì sao chép gửi qua Zalo.
+        nhập). SMS chỉ báo người đó được phân công (nhà mạng chặn tin có link); link gửi qua Zalo hoặc sao chép.
       </p>
       {link?.sms && (
         <div className={link.sms.sent ? styles.smsOk : styles.smsErr} role="status">
           {link.sms.sent
-            ? `✓ Đã gửi SMS tới ${link.sms.phoneMasked} (tin tới sau vài giây)`
-            : `SMS chưa gửi: ${link.sms.error || 'lỗi không rõ'}. Sao chép link để gửi.`}
+            ? `✓ Đã báo SMS tới ${link.sms.phoneMasked} (có thể tới chậm vài phút). Gửi link qua Zalo.`
+            : `SMS chưa gửi: ${link.sms.error || 'lỗi không rõ'}. Gửi link qua Zalo hoặc sao chép.`}
         </div>
       )}
       {link ? (
@@ -136,17 +136,17 @@ export function FieldLinkBox({ incidentId, plan }) {
           className={styles.issue}
           disabled={busy}
           onClick={issue}
-          title={link || issuedAt ? 'Cấp lại mã & gửi lại SMS (link cũ hết hiệu lực)' : undefined}
+          title={link || issuedAt ? 'Cấp lại mã & báo lại SMS (link cũ hết hiệu lực)' : undefined}
         >
           {busy ? (
             'Đang tạo...'
           ) : link || issuedAt ? (
             <>
-              <span className={styles.longLabel}>Cấp lại mã & gửi lại SMS</span>
+              <span className={styles.longLabel}>Cấp lại mã & báo lại SMS</span>
               <span className={styles.shortLabel}>Cấp lại</span>
             </>
           ) : (
-            'Tạo link & gửi SMS'
+            'Tạo link & báo SMS'
           )}
         </button>
       </div>
