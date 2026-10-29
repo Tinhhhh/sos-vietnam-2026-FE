@@ -224,6 +224,7 @@ export function CitizenHomeRoute() {
               notify={toast.show}
               closeOnSign
               autoOpen
+              signable={incident.documentStatus === 'AWAITING_CITIZEN'}
               className="btn-refresh-loc"
               style={{ margin: '10px auto 0', padding: '8px 16px', fontWeight: 700, display: 'flex' }}
             />

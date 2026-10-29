@@ -39,6 +39,9 @@ export function normalizeTracking(raw) {
     // OFFICER_REQUEST (the ward officer moved it) | NO_RESPONSE_TIMEOUT | CITIZEN_REQUEST | null
     escalationReason: raw.escalation_reason || null,
     acceptedAt: toDate(raw.accepted_at),
+    // the officer wrote the closing report ("Đã xử lý xong"): the case closes once the citizen confirms too
+    officerConfirmedAt: toDate(raw.officer_confirmed_at),
+    citizenConfirmedAt: toDate(raw.citizen_confirmed_at),
     cancelledAt: toDate(raw.cancelled_at),
     cancelReason: raw.cancel_reason || null,
     cancelReasonLabel: raw.cancel_reason_label || null,
