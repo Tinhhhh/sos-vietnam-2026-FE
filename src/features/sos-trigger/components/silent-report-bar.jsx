@@ -33,29 +33,29 @@ export function SilentReportBar() {
   const notify = useToast().show;
   const [open, setOpen] = useState(false);
   const [up, setUp] = useState(false);
-  const liveRef = useRef(null);
+  const slotRef = useRef(null);
   const moreRef = useRef(null);
 
   // Opens downward; only when the opened bar would reach the dock (short phone screens) it opens upward.
+  // Measured from the slot (= the closed bar) so a click on an already open bar gives the same answer.
   const pickDirection = () => {
-    const live = liveRef.current;
+    const slot = slotRef.current;
     const more = moreRef.current;
-    if (!live || !more) return;
-    const openedBottom = live.getBoundingClientRect().top + live.offsetHeight + more.scrollHeight;
+    if (!slot || !more) return;
+    const openedBottom = slot.getBoundingClientRect().top + slot.offsetHeight + more.scrollHeight;
     setUp(openedBottom > window.innerHeight - DOCK_ROOM_PX);
   };
 
   return (
     // The slot keeps the closed bar's height in the page (an invisible copy of the title row); the real bar is
     // pinned over it and opens as a layer (down, or up when the dock is in the way), so the page never gets taller.
-    <div className={styles.slot}>
+    <div ref={slotRef} className={styles.slot}>
       <div className={`${styles.bar} ${styles.ghost}`} aria-hidden="true">
         <div className={styles.head}>
           <TitleRow />
         </div>
       </div>
       <div
-        ref={liveRef}
         className={`${styles.bar} ${styles.live} ${up ? styles.up : ''} ${open ? styles.open : ''}`}
         onMouseEnter={pickDirection}
         onFocus={pickDirection}
