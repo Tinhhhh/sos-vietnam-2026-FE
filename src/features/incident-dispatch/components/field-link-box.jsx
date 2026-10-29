@@ -78,7 +78,7 @@ export function FieldLinkBox({ incidentId, plan }) {
       </div>
       <p className={styles.hint}>
         Người phụ trách mở link trên điện thoại để xem ca, đường đi, gọi video và báo "Đã đến" (không cần đăng
-        nhập). SMS chỉ báo người đó được phân công (nhà mạng chặn tin có link); link gửi qua Zalo hoặc sao chép.
+        nhập).
       </p>
       {link?.sms && (
         <div className={link.sms.sent ? styles.smsOk : styles.smsErr} role="status">
@@ -92,12 +92,12 @@ export function FieldLinkBox({ incidentId, plan }) {
       ) : (
         issuedAt && (
           <div className={styles.note}>
-            Đã cấp link lúc {TIME.format(issuedAt)}. Link chỉ hiện một lần: lỡ đóng thì bấm "Cấp lại mã" (link
+            Đã cấp link lúc {TIME.format(issuedAt)}. Link chỉ hiện một lần: lỡ đóng thì bấm "Cấp lại" (link
             cũ hết hiệu lực).
           </div>
         )
       )}
-      {/* "Sao chép" and "Cấp lại" side by side; on phones the second is just "Cấp lại" */}
+      {/* "Sao chép", "Gửi qua Zalo" and "Cấp lại" side by side */}
       <div className={styles.actions}>
         {link && (
           <button type="button" className={styles.copy} onClick={() => copy(link.url)}>
@@ -154,10 +154,7 @@ export function FieldLinkBox({ incidentId, plan }) {
           {busy ? (
             'Đang tạo...'
           ) : link || issuedAt ? (
-            <>
-              <span className={styles.longLabel}>Cấp lại mã & báo lại SMS</span>
-              <span className={styles.shortLabel}>Cấp lại</span>
-            </>
+            'Cấp lại'
           ) : (
             'Tạo link & báo SMS'
           )}

@@ -103,12 +103,16 @@
   gap: 8px;
 }
 
+/* lower buttons: no legacy 44 px touch height, one line of text */
 .actions .copy,
 .actions .zalo,
 .actions .issue {
   flex: 1 1 0;
   min-width: 0;
-  padding: 9px 12px;
+  min-height: 0;
+  height: 32px;
+  padding: 0 10px;
+  line-height: 1;
 }
 
 .zalo {
