@@ -4,15 +4,39 @@ import { SvgIcon } from '@/components/ui/svg-icon/svg-icon';
 
 import styles from './map-style-selector.module.css';
 
+// Each dataset from GET /geo/data-status and the rows it shows (field: version | updated_at | checked_at).
+// boundaries = province / ward polygons (date of the geojson files), ward_names = ward names + "merged from"
+// synced with bando every 6 hours, rescue_stations = data/rescue_stations.json loaded into the DB.
 const DATASETS = [
-  { key: 'boundaries', label: 'Địa giới 34 Tỉnh · 3.321 Xã/Phường' },
-  { key: 'rescue_stations', label: 'Trụ sở cơ quan & cứu hộ' },
+  {
+    key: 'boundaries',
+    label: 'Địa giới (ranh giới) 34 Tỉnh · 3.321 Xã/Phường',
+    rows: [{ label: 'Ngày cập nhật ranh giới:', field: 'updated_at', dateOnly: true, color: '#4ade80' }],
+  },
+  {
+    key: 'ward_names',
+    label: 'Tên xã/phường & thông tin sáp nhập',
+    rows: [
+      { label: 'Dữ liệu thay đổi gần nhất:', field: 'updated_at', color: '#4ade80' },
+      { label: 'Đối chiếu bando lần cuối:', field: 'checked_at' },
+    ],
+  },
+  {
+    key: 'rescue_stations',
+    label: 'Trụ sở cơ quan & cứu hộ',
+    rows: [
+      { label: 'Bản dữ liệu:', field: 'version', color: '#4ade80' },
+      { label: 'Nạp vào hệ thống:', field: 'updated_at' },
+      { label: 'Kiểm tra lần cuối:', field: 'checked_at' },
+    ],
+  },
 ];
 
-function formatTime(value) {
+function formatTime(value, dateOnly = false) {
   if (!value) return 'Chưa có';
   const d = new Date(value);
   if (Number.isNaN(d.getTime())) return String(value);
+  if (dateOnly) return d.toLocaleDateString('vi-VN');
   return `${d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })} ${d.toLocaleDateString('vi-VN')}`;
 }
 
@@ -304,9 +328,18 @@ function DataStatusCard({ dataStatus }) {
               <div style={{ fontSize: 10, fontWeight: 800, color: '#f8fafc', marginBottom: 3 }}>
                 {ds.label}
               </div>
-              <StatusRow label="Bản cập nhật mới nhất:" value={item?.version || 'Chưa có'} color="#4ade80" />
-              <StatusRow label="Thời gian cập nhật:" value={formatTime(item?.updated_at)} />
-              <StatusRow label="Kiểm tra lần cuối:" value={formatTime(item?.checked_at)} />
+              {ds.rows.map((row) => (
+                <StatusRow
+                  key={row.field}
+                  label={row.label}
+                  value={
+                    row.field === 'version'
+                      ? item?.version || 'Chưa có'
+                      : formatTime(item?.[row.field], row.dateOnly)
+                  }
+                  color={row.color}
+                />
+              ))}
             </div>
           );
         })}

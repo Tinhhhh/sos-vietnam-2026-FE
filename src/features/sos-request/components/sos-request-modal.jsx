@@ -1,6 +1,8 @@
 import { useCallback, useRef, useState } from 'react';
 
 import { Modal } from '@/components/ui/modal/modal';
+import { VoiceMuteIcon } from '@/components/ui/voice-mute-icon';
+import { CITIZEN_VOICE, useVoiceMuted } from '@/hooks/use-voice-muted';
 import { cleanIncidentLabel } from '@/config/incident-suggestions';
 import { saveActiveIncident } from '@/stores/active-incident';
 
@@ -61,6 +63,8 @@ export function SosRequestModal({
   const media = useMediaAttachments({ onError: notifyWarning });
 
   const agency = findAgency(agencyId);
+  // the voice prompt plays while this form is open and covers the top bar: mute it from here too
+  const [muted, setMuted] = useVoiceMuted(CITIZEN_VOICE);
 
   const close = () => {
     if (submitting) return;
@@ -169,6 +173,16 @@ export function SosRequestModal({
             <line x1="12" y1="17" x2="12.01" y2="17" />
           </svg>{' '}
           BẠN CẦN TRỢ GIÚP GÌ?
+          <button
+            type="button"
+            className={`${styles.muteBtn} ${muted ? styles.muteOn : ''}`}
+            aria-pressed={muted}
+            aria-label={muted ? 'Đang tắt tiếng hướng dẫn, bấm để bật' : 'Tắt tiếng hướng dẫn'}
+            title={muted ? 'Đang tắt tiếng hướng dẫn, bấm để bật' : 'Tắt tiếng hướng dẫn'}
+            onClick={() => setMuted(!muted)}
+          >
+            <VoiceMuteIcon muted={muted} size={16} />
+          </button>
         </>
       }
     >

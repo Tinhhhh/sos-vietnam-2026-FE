@@ -33,6 +33,8 @@ async function addressFor(coords) {
  * refinement, then the ward/province lookup. Port of legacy LocationService.
  *
  * status: 'locating' | 'gps' | 'ip' | 'manual' (picked on the map) | 'unavailable'
+ * permissionDenied: the citizen refused location for this site (the browser will not ask again by itself:
+ * it has to be turned on in the browser / phone settings; a change there is picked up at once)
  * When neither GPS nor the IP lookup works there is NO position (coords null): an SOS must
  * never go out with a made-up location. The citizen turns location on (refresh) or picks the
  * spot on the map (setManual). `hasFix` says whether coords can be sent.
@@ -44,6 +46,7 @@ export function useGeolocation() {
     accuracy: null,
     address: '',
     jurisdiction: null,
+    permissionDenied: false,
   });
 
   const runIdRef = useRef(0);
@@ -57,12 +60,14 @@ export function useGeolocation() {
   }, []);
 
   // Never sets state before its first await, so it is safe to start from an effect.
+  // Resolves with the first fix ({ status: 'gps' | 'ip' | 'unavailable', accuracy }), or null when a newer run replaced it.
   const locate = useCallback(async () => {
     const runId = ++runIdRef.current;
     const isCurrent = () => runId === runIdRef.current;
     stopWatching();
 
     let fix = null;
+    let permissionDenied = false;
     if (navigator.geolocation) {
       try {
         const pos = await getCurrentPosition();
@@ -71,11 +76,12 @@ export function useGeolocation() {
           coords: { lat: pos.coords.latitude, lng: pos.coords.longitude },
           accuracy: Math.round(pos.coords.accuracy || 10),
         };
-      } catch {
+      } catch (err) {
         // denied / timeout -> IP fallback below
+        permissionDenied = err?.code === 1; // PERMISSION_DENIED
       }
     }
-    if (!isCurrent()) return;
+    if (!isCurrent()) return null;
 
     if (fix) {
       fix.address = await addressFor(fix.coords);
@@ -90,13 +96,16 @@ export function useGeolocation() {
             accuracy: null,
             address: '',
             jurisdiction: null,
+            permissionDenied,
           }));
+          return { status: 'unavailable', accuracy: null, permissionDenied };
         }
-        return;
+        return null;
       }
       fix = { status: 'ip', coords: ip.coords, accuracy: 500, address: ip.address };
     }
-    if (!isCurrent()) return;
+    if (!isCurrent()) return null;
+    fix.permissionDenied = permissionDenied;
     setState({ ...fix, jurisdiction: null });
 
     // Ward/province that contains the point. The polygon is the source of
@@ -113,7 +122,7 @@ export function useGeolocation() {
       })
       .catch(() => {});
 
-    if (fix.status !== 'gps') return;
+    if (fix.status !== 'gps') return fix;
 
     // Refine with watchPosition + Kalman filter until accurate enough or 20 s.
     const kalman = new GpsKalmanFilter(fix.coords.lat, fix.coords.lng, fix.accuracy);
@@ -147,6 +156,7 @@ export function useGeolocation() {
       stopWatching,
       { enableHighAccuracy: true, timeout: REFINE_WINDOW_MS, maximumAge: 0 },
     );
+    return fix;
   }, [stopWatching]);
 
   /** Position chosen by the citizen on the map (GPS / IP unavailable or wrong). */
@@ -169,9 +179,10 @@ export function useGeolocation() {
     [stopWatching],
   );
 
+  /** Locate again; resolves like locate() so a button can say how it went. */
   const refresh = useCallback(() => {
     setState((s) => ({ ...s, status: 'locating', jurisdiction: null }));
-    locate();
+    return locate();
   }, [locate]);
 
   useEffect(() => {
@@ -181,6 +192,28 @@ export function useGeolocation() {
       stopWatching();
     };
   }, [locate, stopWatching]);
+
+  // turned on / off in the browser settings while the page is open: locate again at once
+  useEffect(() => {
+    let status = null;
+    let alive = true;
+    const onChange = () => {
+      if (status?.state === 'granted') locate();
+      else if (status?.state === 'denied') setState((s) => ({ ...s, permissionDenied: true }));
+    };
+    navigator.permissions
+      ?.query({ name: 'geolocation' })
+      .then((st) => {
+        if (!alive) return;
+        status = st;
+        st.addEventListener('change', onChange);
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+      status?.removeEventListener('change', onChange);
+    };
+  }, [locate]);
 
   const hasFix = !!state.coords && state.status !== 'unavailable';
   return { ...state, hasFix, refresh, setManual };

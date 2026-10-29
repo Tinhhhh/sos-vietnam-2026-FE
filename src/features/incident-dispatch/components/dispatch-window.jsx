@@ -107,6 +107,7 @@ function DispatchWindowBody({
   LocationPicker,
   initialPlan,
   onCallTracker,
+  onCallDelegate,
 }) {
   const toast = useToast();
   const [draft, setDraft] = useState(initialPlan);
@@ -240,6 +241,8 @@ function DispatchWindowBody({
 
   // Handed to a ward officer who has not answered yet: the plan is locked (BE refuses changes too)
   const waitingAnswer = draft?.status === 'PENDING_ACCEPT' && !!draft?.assignedTo;
+  // "Khởi hành" pressed: the earlier steps are closed for good
+  const departed = ['EN_ROUTE', 'ARRIVED', 'DONE'].includes(draft?.status);
   // own unit on the way: "Đổi người" (the field officer) next to the tracking card
   const canArrive = step === 3 && draft?.status === 'EN_ROUTE' && !draft?.assignedTo;
   // the holder issues the field link when their unit goes or for a PCCC / CSGT team they appointed
@@ -357,38 +360,46 @@ function DispatchWindowBody({
                 plan={draft}
                 incidentId={incident.id}
                 onCallTracker={onCallTracker ? (tracker) => onCallTracker(incident, tracker) : null}
-                // "Đã đến" when the GPS is within the radius; the holder (this window) may confirm without GPS
+                onCallDelegate={onCallDelegate ? (d) => onCallDelegate(incident, d) : null}
+                // "Đã đến" when the GPS is within the radius; without GPS only when my own unit goes (delegated: the ward / field officer do)
                 renderArrive={(check) => (
                   <ArriveControl
                     check={check}
-                    canOverride
+                    canOverride={!draft.assignedTo}
                     onArrive={(reason) => arriveDispatch(incident.id, { reason })}
                     onPlan={setDraft}
                   />
                 )}
+                // the simulated vehicle drives this route with this officer: both changes wait until it stops
                 actions={
-                  (canArrive || (step === 3 && !waitingAnswer)) && (
+                  (canArrive || (step === 3 && !waitingAnswer)) &&
+                  (({ simulating }) => (
                     <>
                       {canArrive && (
                         <button
                           type="button"
                           className={trackingStyles.actionBtn}
+                          disabled={simulating}
+                          title={simulating ? 'Đang mô phỏng: dừng mô phỏng rồi mới đổi người' : undefined}
                           onClick={() => setChangingField(true)}
                         >
-                          Đổi người
+                          {simulating ? '🔒 Đổi người' : 'Đổi người'}
                         </button>
                       )}
                       {step === 3 && !waitingAnswer && (
                         <button
                           type="button"
                           className={trackingStyles.actionBtn}
+                          disabled={simulating}
+                          title={simulating ? 'Đang mô phỏng: dừng mô phỏng rồi mới đổi điểm' : undefined}
                           onClick={() => setEditing(true)}
                         >
+                          {simulating ? '🔒 ' : ''}
                           {isWard ? 'Đổi điểm đến' : 'Đổi điểm xuất phát / điểm đến'}
                         </button>
                       )}
                     </>
-                  )
+                  ))
                 }
               />
               {holderLink && ['EN_ROUTE', 'ARRIVED'].includes(draft.status) && (
@@ -453,6 +464,15 @@ function DispatchWindowBody({
                   Đang chờ {draft.assignedTo.fullName} trả lời: tạm khoá. Không liên lạc được thì bấm "Thu hồi
                   uỷ quyền" ở trên để chọn lại.
                 </span>
+              ) : departed ? (
+                <button
+                  type="button"
+                  className={styles.btnBack}
+                  disabled
+                  title="Đã khởi hành: không quay lại bước trước được nữa"
+                >
+                  🔒 Quay lại bước trước
+                </button>
               ) : (
                 <button type="button" className={styles.btnBack} onClick={goBack}>
                   ← Quay lại bước trước
@@ -510,6 +530,12 @@ function OwnDispatchStep({ incidentId, plan, onPlan }) {
   const toast = useToast();
   const [open, setOpen] = useState(false);
   const picked = plan.tracker; // saved on the trip (status ACCEPTED, waiting to set off)
+  // once the force has set off (or a simulation drives the route) the field officer cannot change any more
+  const locked =
+    plan.status === 'EN_ROUTE' ||
+    plan.status === 'ARRIVED' ||
+    plan.status === 'DONE' ||
+    !!plan.simulation?.running;
   const [draftPick, setDraftPick] = useState(null);
   const [busy, setBusy] = useState(false);
 
@@ -548,18 +574,22 @@ function OwnDispatchStep({ incidentId, plan, onPlan }) {
       ) : (
         <div className={delegationStyles.meta}>Chưa chỉ định ai.</div>
       )}
-      <div className={styles.ownActions}>
-        <button
-          type="button"
-          className={styles.btnGhost}
-          onClick={() => {
-            setDraftPick(picked?.memberId ?? null);
-            setOpen(true);
-          }}
-        >
-          {picked ? 'Đổi người phụ trách' : 'Chỉ định người phụ trách'}
-        </button>
-      </div>
+      <button
+        type="button"
+        className={`${styles.btnGhost} ${styles.btnFull}`}
+        disabled={locked}
+        title={locked ? 'Lực lượng đã khởi hành: không đổi người phụ trách được nữa' : undefined}
+        onClick={() => {
+          setDraftPick(picked?.memberId ?? null);
+          setOpen(true);
+        }}
+      >
+        {locked
+          ? '🔒 Đã khởi hành, không đổi người phụ trách'
+          : picked
+            ? 'Đổi người phụ trách'
+            : 'Chỉ định người phụ trách'}
+      </button>
       {picked && (
         <>
           <FieldLinkBox incidentId={incidentId} plan={plan} />

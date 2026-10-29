@@ -17,7 +17,7 @@ const MIN_SUMMARY = 10;
  *   writes the closing report here (that is the officer's confirmation). The case closes when both have confirmed.
  * - "Báo khống": the officer closes the case at once (report required).
  * - "Đây là ca test": closes at once, nothing to write.
- * Citizen unreachable on a real case: "Kết thúc ca" (forced) on the queue card.
+ * No forced finish any more (the BE refuses force): a case the citizen never confirms is cancelled with a reason.
  *
  * @param {{ incidentId: string, plan: object, canConfirm?: boolean, onPlan?: (plan) => void,
  *           onFinished?: () => void }} props
@@ -82,7 +82,7 @@ export function FinishPanel({ incidentId, plan, onPlan, onFinished }) {
       </ul>
       <div className={styles.hint}>
         Ca thật kết thúc khi cả người báo tin và cán bộ cùng xác nhận (bên nào trước cũng được). Báo khống thì
-        kết thúc ngay. Không liên lạc được người báo tin thì dùng "Kết thúc ca" (bắt buộc) trên thẻ ca.
+        kết thúc ngay. Không liên lạc được người báo tin thì dùng "Huỷ ca" (ghi lý do) trên thẻ ca.
       </div>
 
       {officerOk && !citizenOk ? (

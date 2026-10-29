@@ -1,4 +1,6 @@
 import { SvgIcon } from '@/components/ui/svg-icon/svg-icon';
+import { VoiceMuteIcon } from '@/components/ui/voice-mute-icon';
+import { OFFICER_VOICE, useVoiceMuted } from '@/hooks/use-voice-muted';
 
 import { useVnClock } from '../hooks/use-vn-clock';
 import { useWeather } from '../hooks/use-weather';
@@ -21,6 +23,9 @@ export function OfficerHeader({ officer, unitCoords, onLocateUnit, pendingCount 
   const clock = useVnClock();
   const weather = useWeather(unitCoords);
   const bellLabel = pendingCount > 0 ? `${pendingCount} ca đang chờ tiếp nhận` : 'Hàng đợi sự cố';
+  // mutes only the voice reading out a new SOS; the siren + chime still play
+  const [muted, setMuted] = useVoiceMuted(OFFICER_VOICE);
+  const muteLabel = muted ? 'Đang tắt giọng đọc ca SOS mới, bấm để bật' : 'Tắt giọng đọc ca SOS mới';
 
   return (
     <header className={ui.bar}>
@@ -61,6 +66,19 @@ export function OfficerHeader({ officer, unitCoords, onLocateUnit, pendingCount 
             </span>
             <span className={ui.infoSub}>{officer.unitSub}</span>
           </span>
+        </button>
+
+        <button
+          type="button"
+          className={`${ui.iconBtn} ${muted ? ui.muteOn : ''}`}
+          title={muteLabel}
+          aria-label={muteLabel}
+          aria-pressed={muted}
+          onClick={() => {
+            setMuted(!muted);
+          }}
+        >
+          <VoiceMuteIcon muted={muted} />
         </button>
 
         <button

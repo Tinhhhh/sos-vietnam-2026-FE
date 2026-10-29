@@ -819,3 +819,54 @@
   color: rgba(241, 236, 203, 0.55);
   text-transform: uppercase;
 }
+
+/* top right: back to the citizen SOS screen */
+.backToSos {
+  position: fixed;
+  top: 14px;
+  right: 16px;
+  z-index: 50;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(248, 113, 113, 0.55);
+  background: rgba(127, 29, 29, 0.55);
+  color: #fee2e2;
+  font-size: 13px;
+  font-weight: 800;
+  text-decoration: none;
+  white-space: nowrap;
+  backdrop-filter: blur(6px);
+}
+
+.backToSos:hover {
+  background: rgba(185, 28, 28, 0.75);
+}
+
+.backShort {
+  display: none;
+}
+
+@media (max-width: 640px) {
+  .backToSos {
+    top: 10px;
+    right: 10px;
+    padding: 6px 11px;
+    font-size: 12px;
+  }
+
+  .backLong {
+    display: none;
+  }
+
+  /* room for the button above the badge */
+  .header {
+    padding-top: 52px;
+  }
+
+  .backShort {
+    display: inline;
+  }
+}

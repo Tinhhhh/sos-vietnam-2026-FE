@@ -14,6 +14,8 @@ import { useIncidentTracking } from '../hooks/use-incident-tracking';
 import { CLOSED_STATUSES, TYPE_TEXT, receivingUnit } from '../utils/tracking-model';
 import { CancelControl } from './cancel-control';
 import { CitizenCallScreen } from './citizen-call-screen';
+import { CompletionPrompt } from './completion-prompt';
+import { EscalationNotice } from './escalation-notice';
 import styles from './sos-tracking.module.css';
 import { WaitTimer } from './wait-timer';
 
@@ -148,6 +150,13 @@ function TrackingContent({
       to: 'field',
       peer: { name: tracker?.fullName || null, role: 'field' },
     });
+  // "Gọi" on the "Cán bộ được uỷ quyền" row: the ward officer the province handed the case to
+  const callDelegate = (delegate) =>
+    phone.startCall({
+      incidentId: incident.id,
+      to: 'delegate',
+      peer: { name: delegate?.fullName || null, role: 'delegate' },
+    });
   const switchDialog = (
     <CallSwitchDialog waiting={phone.waiting} onYes={phone.switchToWaiting} onNo={phone.declineWaiting} />
   );
@@ -166,7 +175,7 @@ function TrackingContent({
           onSwitchCamera={phone.switchCamera}
           extraControl={
             !closed &&
-            dispatchSlot?.({ incident, token, variant: 'call', callTracker, callReceiver: callBack })
+            dispatchSlot?.({ incident, token, variant: 'call', callTracker, callReceiver: callBack, callDelegate })
           }
         />
         {switchDialog}
@@ -180,6 +189,8 @@ function TrackingContent({
 
   return (
     <div className={styles.screen} role="dialog" aria-label="Đang chờ tiếp nhận SOS">
+      <EscalationNotice incident={incident} closed={closed} />
+      <CompletionPrompt incident={incident} token={token} onUpdated={tracking.setIncident} notify={notify} />
       {/* the case stays open and kept on the device; the menu shows a "Xem" strip to come back */}
       {!closed && onHome && (
         <button type="button" className={styles.homeBtn} onClick={onHome}>
@@ -198,7 +209,7 @@ function TrackingContent({
           {conn.text}
         </span>
         {!closed &&
-          dispatchSlot?.({ incident, token, variant: 'screen', callTracker, callReceiver: callBack })}
+          dispatchSlot?.({ incident, token, variant: 'screen', callTracker, callReceiver: callBack, callDelegate })}
       </div>
 
       <div className={styles.center} onClickCapture={() => closed && setStayedFor(incident.documentStatus)}>

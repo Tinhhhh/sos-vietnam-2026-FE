@@ -48,7 +48,7 @@ export function HandoverDialog({ incident, onClose, onConfirm }) {
   };
 
   return (
-    <Modal open={open} onClose={onClose} title={`Giao ca ${incident?.id || ''}`}>
+    <Modal open={open} onClose={onClose} solid title={`Giao ca ${incident?.id || ''}`}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: '4px 2px' }}>
         <div style={{ fontSize: 12.5, color: '#cbd5e1' }}>
           Chọn cán bộ cùng đơn vị để nhận lại ca. Người đang giữ ca khác thì không giao được.

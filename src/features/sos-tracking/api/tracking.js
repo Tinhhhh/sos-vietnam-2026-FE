@@ -57,6 +57,12 @@ export async function requestProvince(id, token) {
   return normalizeTracking(body?.data);
 }
 
+/** Citizen confirms "Đã xử lý xong" (POST dispatch-plan/confirm); with the officer's confirmation the case closes. */
+export async function confirmResolved(id, token) {
+  await api.post(`/api/v1/incidents/${encodeURIComponent(id)}/dispatch-plan/confirm`, {}, tokenHeader(token));
+  return getTracking(id, token);
+}
+
 /** @param {string | null} reason one of CANCEL_REASONS codes */
 export async function cancelIncident(id, token, reason) {
   const body = await api.post(

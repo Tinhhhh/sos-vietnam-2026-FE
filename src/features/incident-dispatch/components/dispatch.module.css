@@ -533,9 +533,14 @@
   cursor: pointer;
 }
 
-.btnBack:hover {
+.btnBack:hover:not(:disabled) {
   border-color: rgba(56, 189, 248, 0.6);
   color: #bae6fd;
+}
+
+.btnBack:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 .chosen {
@@ -820,4 +825,14 @@
   font-weight: 700;
   color: #e2e8f0;
   font-variant-numeric: tabular-nums;
+}
+
+/* full-width button, like "Khởi hành" */
+.btnFull {
+  display: block;
+  width: 100%;
+  margin-top: 10px;
+  padding: 12px 16px;
+  font-size: 14px;
+  text-align: center;
 }

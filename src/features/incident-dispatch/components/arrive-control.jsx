@@ -51,8 +51,9 @@ export function DepartButton({ onDepart, onPlan, who = null }) {
 
 /**
  * "Đã đến": only when the last GPS point is within 30 m (+ its accuracy, max 50 m) of the destination
- * (plan.arrivalCheck from the BE, refreshed every 5 s with the live position). The officer holding the case can
- * still confirm without GPS (phone dead, no signal) with a reason (canOverride).
+ * (plan.arrivalCheck from the BE, refreshed every 5 s with the live position). Who handles the case (the holder of an
+ * own-unit trip, the delegated ward officer) and the field officer on their link can still confirm without GPS
+ * (phone dead, no signal) with a reason (canOverride); the province holder of a delegated case cannot.
  *
  * @param {{ check: null | { distanceM, thresholdM, within }, onArrive: (reason?: string) => Promise<object>,
  *           onPlan?: (plan) => void, canOverride?: boolean }} props
@@ -107,7 +108,7 @@ export function ArriveControl({ check, onArrive, onPlan, canOverride = false }) 
   );
 }
 
-/** The holder confirms the arrival without GPS: reason required (kept with the trip). */
+/** Confirm the arrival without GPS: reason required (kept with the trip). */
 function OverrideDialog({ busy, onConfirm, onClose }) {
   const [reason, setReason] = useState('');
   const short = reason.trim().length < MIN_REASON;

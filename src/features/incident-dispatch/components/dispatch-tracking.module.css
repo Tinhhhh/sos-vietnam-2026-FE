@@ -550,17 +550,26 @@
   flex: 1 1 160px;
 }
 
-.trackerButtons {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 6px;
+/* "Gọi" next to the field officer's name: same size as the other "Gọi" buttons */
+.trackerCall {
+  flex: 0 0 auto;
+  text-align: center;
 }
 
-/* narrow card (phone): label + name on lines 1-2, the buttons on line 3 */
-@container (max-width: 480px) {
-  .trackerButtons {
-    flex-basis: 100%;
-  }
+/* "Đổi người" + "Đổi điểm ..." on a row of their own, sharing the width */
+.trackerActions {
+  flex-basis: 100%;
+  display: flex;
+  gap: 8px;
+}
+
+.trackerActions > * {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.actionBtn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  filter: grayscale(0.6);
 }

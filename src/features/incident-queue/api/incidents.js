@@ -34,8 +34,8 @@ import { cleanTags, normalizeHistoryItem, normalizeIncident } from '../utils/inc
  *     media url = GET /api/v1/incidents/{id}/media/{file} (public, R2 redirects to a signed link)
  *
  *   POST /api/v1/incidents/{id}/claim                -> data: <incident>   409 = taken / already holding one
- *   POST /api/v1/incidents/{id}/release  body?: { to_member_id?, note? }
- *        no to_member_id = back to the shared queue, otherwise hand over to that officer
+ *   POST /api/v1/incidents/{id}/release  body: { to_member_id, note }   hand over to that officer
+ *        (no to_member_id = 400: a held case is not put back in the shared queue)
  *   GET  /api/v1/incidents/{id}/handover-candidates -> data: [{ member_id, full_name, online, busy }]
  *   POST /api/v1/incidents/{id}/request-dispatch     -> data: <incident>  VERIFYING -> RESOLVING (holder only)
  *   POST /api/v1/incidents/{id}/escalate             -> ward incident goes to the province now (PENDING, no holder)
@@ -68,12 +68,12 @@ export async function claimIncident(id) {
   return normalizeIncident(body?.data);
 }
 
-/** @param {{ toMemberId?: string, note?: string }} [options] */
-export async function releaseIncident(id, { toMemberId, note } = {}) {
-  const payload = {};
-  if (toMemberId) payload.to_member_id = toMemberId;
-  if (note) payload.note = note;
-  const body = await api.post(`/api/v1/incidents/${encodeURIComponent(id)}/release`, payload);
+/** Hand the case I hold over to a colleague. @param {{ toMemberId: string, note: string }} options */
+export async function releaseIncident(id, { toMemberId, note }) {
+  const body = await api.post(`/api/v1/incidents/${encodeURIComponent(id)}/release`, {
+    to_member_id: toMemberId,
+    note,
+  });
   return normalizeIncident(body?.data);
 }
 
@@ -252,14 +252,6 @@ export async function getProvinceOptions() {
 export async function getWardOptions(provinceId) {
   const body = await api.get(`/api/v1/geo/provinces/${encodeURIComponent(provinceId)}/wards`);
   return (body?.data || []).map((w) => ({ id: w.id, name: w.name }));
-}
-
-/** Officer holding the case ends it once forces are on the way / at the scene: RESOLVED, report FORCED. */
-export async function forceFinishIncident(id, reason) {
-  await api.post(`/api/v1/incidents/${encodeURIComponent(id)}/dispatch-plan/finish`, {
-    force: true,
-    note: reason,
-  });
 }
 
 /**

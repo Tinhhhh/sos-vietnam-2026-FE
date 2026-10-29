@@ -24,6 +24,7 @@ export function CitizenDispatchButton({
   variant = 'screen',
   callTracker = null,
   callReceiver = null,
+  callDelegate = null,
 }) {
   const [open, setOpen] = useState(false);
   const [seen, setSeen] = useState(null); // dispatch id + step already opened
@@ -78,6 +79,14 @@ export function CitizenDispatchButton({
                 }
               : null
           }
+          onCallDelegate={
+            callDelegate
+              ? (delegate) => {
+                  setOpen(false);
+                  callDelegate(delegate);
+                }
+              : null
+          }
           onClose={() => setOpen(false)}
         />
       )}
@@ -85,7 +94,7 @@ export function CitizenDispatchButton({
   );
 }
 
-function TrackingSheet({ plan, incidentId, lookupCode, token, onCallTracker, onCallReceiver, onClose }) {
+function TrackingSheet({ plan, incidentId, lookupCode, token, onCallTracker, onCallReceiver, onCallDelegate, onClose }) {
   useEffect(() => {
     const onKey = (e) => e.key === 'Escape' && onClose();
     document.addEventListener('keydown', onKey);
@@ -117,6 +126,7 @@ function TrackingSheet({ plan, incidentId, lookupCode, token, onCallTracker, onC
             citizenToken={token}
             onCallTracker={onCallTracker}
             onCallReceiver={onCallReceiver}
+            onCallDelegate={onCallDelegate}
             variant="sheet"
             footer={
               plan.status === 'EN_ROUTE' ? (

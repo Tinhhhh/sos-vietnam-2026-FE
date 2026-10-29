@@ -7,10 +7,21 @@ import styles from './field-link.module.css';
 
 const TIME = new Intl.DateTimeFormat('vi-VN', { hour: '2-digit', minute: '2-digit' });
 
+/** zalo.me/<phone> opens the chat with that number (Zalo app on phones, Zalo Web / PC on computers). */
+function zaloChatUrl(phone) {
+  let digits = (phone || '').replace(/\D/g, '');
+  if (digits.startsWith('84') && digits.length >= 11) digits = `0${digits.slice(2)}`;
+  return digits.length >= 9 ? `https://zalo.me/${digits}` : null;
+}
+
+const zaloText = (incidentId, url) =>
+  `[SOS Việt Nam] Ca ${incidentId}: mở link để xem ca, đường đi, gọi video và báo "Đã đến" (không cần đăng nhập): ${url}`;
+
 /**
  * "Link cho người phụ trách hiện trường": the field officer has no login, so they get a link. "Tạo link" / "Cấp lại
  * mã" makes a new code (the old link stops working, also when the field officer changes), the BE texts it to the
- * phone in their profile and returns it once so it can also be copied (Zalo...) when the SMS did not go.
+ * phone in their profile and returns it once so it can also be copied when the SMS did not go. "Zalo" copies a ready
+ * message and opens the Zalo chat with that phone: Zalo links cannot fill in or send the text, the officer pastes.
  *
  * @param {{ incidentId: string, plan: object }} props  plan.fieldLinkIssuedAt = last issue time (null = none)
  */
@@ -20,6 +31,7 @@ export function FieldLinkBox({ incidentId, plan }) {
   const [busy, setBusy] = useState(false);
   const issuedAt = link?.issuedAt || plan.fieldLinkIssuedAt;
   const who = plan.tracker?.fullName;
+  const zaloUrl = zaloChatUrl(plan.tracker?.phone);
 
   const issue = async () => {
     setBusy(true);
@@ -76,12 +88,7 @@ export function FieldLinkBox({ incidentId, plan }) {
         </div>
       )}
       {link ? (
-        <div className={styles.linkRow}>
-          <input className={styles.link} readOnly value={link.url} onFocus={(e) => e.target.select()} />
-          <button type="button" className={styles.copy} onClick={() => copy(link.url)}>
-            Sao chép
-          </button>
-        </div>
+        <input className={styles.link} readOnly value={link.url} onFocus={(e) => e.target.select()} />
       ) : (
         issuedAt && (
           <div className={styles.note}>
@@ -90,9 +97,59 @@ export function FieldLinkBox({ incidentId, plan }) {
           </div>
         )
       )}
-      <button type="button" className={styles.issue} disabled={busy} onClick={issue}>
-        {busy ? 'Đang tạo...' : link || issuedAt ? 'Cấp lại mã & gửi lại SMS' : 'Tạo link & gửi SMS'}
-      </button>
+      {/* "Sao chép" and "Cấp lại" side by side; on phones the second is just "Cấp lại" */}
+      <div className={styles.actions}>
+        {link && (
+          <button type="button" className={styles.copy} onClick={() => copy(link.url)}>
+            Sao chép
+          </button>
+        )}
+        {link && zaloUrl && (
+          // a plain link (not window.open): no popup blocker, and phones hand it to the Zalo app
+          <a
+            className={styles.zalo}
+            href={zaloUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            title={`Mở Zalo với ${who || 'người phụ trách'} (tin nhắn đã được chép sẵn, chỉ cần dán và gửi)`}
+            onClick={() => {
+              // started inside the click, before Zalo takes the focus
+              navigator.clipboard
+                ?.writeText(zaloText(incidentId, link.url))
+                .then(() =>
+                  toast.show('Đã chép tin nhắn kèm link: dán vào Zalo rồi bấm gửi', {
+                    tone: 'success',
+                    duration: 6000,
+                  }),
+                )
+                .catch(() =>
+                  toast.show('Không chép được tin: bấm "Sao chép" rồi dán vào Zalo', { tone: 'error' }),
+                );
+            }}
+          >
+            <span className={styles.longLabel}>Gửi qua Zalo</span>
+            <span className={styles.shortLabel}>Zalo</span>
+          </a>
+        )}
+        <button
+          type="button"
+          className={styles.issue}
+          disabled={busy}
+          onClick={issue}
+          title={link || issuedAt ? 'Cấp lại mã & gửi lại SMS (link cũ hết hiệu lực)' : undefined}
+        >
+          {busy ? (
+            'Đang tạo...'
+          ) : link || issuedAt ? (
+            <>
+              <span className={styles.longLabel}>Cấp lại mã & gửi lại SMS</span>
+              <span className={styles.shortLabel}>Cấp lại</span>
+            </>
+          ) : (
+            'Tạo link & gửi SMS'
+          )}
+        </button>
+      </div>
     </div>
   );
 }

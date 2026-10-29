@@ -39,9 +39,11 @@ const telOf = (phone) => (phone || '').replace(/[^0-9+]/g, '');
  * @param {{ plan: object, incidentId?: string, citizenToken?: string, variant?: 'inline' | 'sheet',
  *           footer?: React.ReactNode, actions?: React.ReactNode }} props  plan from normalizePlan(); incidentId
  *   enables the live GPS; sheet = fills its (full-screen) parent: map takes the free height, the card sits at
- *   the bottom; actions = extra buttons next to "Gọi" ("Đổi người", "Đổi điểm đến" of the dispatch window);
+ *   the bottom; actions = extra buttons under the field officer ("Đổi người", "Đổi điểm đến" of the dispatch
+ *   window), a node or ({ simulating }) => node so they can lock while the simulated vehicle drives;
  *   onCallTracker(tracker) = "Gọi" starts a video call to the field officer (else a tel: link);
  *   onCallReceiver(receiver) = "Gọi" on the "Người nhận ca" row (none for the holder: it is them);
+ *   onCallDelegate(assignedTo) = "Gọi" on the "Cán bộ được uỷ quyền" row (none for the delegate: it is them);
  *   renderArrive(arrivalCheck) = the "Đã đến" control, fed with the distance polled every 5 s;
  *   renderDepart() = the "Khởi hành" control in its place while the person is chosen but not gone (ACCEPTED): the
  *   simulation buttons then show greyed out ("Hãy khởi hành trước"); between = a section between map and card
@@ -55,6 +57,7 @@ export function DispatchTrackingView({
   actions = null,
   onCallTracker = null,
   onCallReceiver = null,
+  onCallDelegate = null,
   renderArrive = null,
   renderDepart = null,
   between = null,
@@ -91,6 +94,9 @@ export function DispatchTrackingView({
       ? new Date(etaFrom.getTime() + route.durationS * 1000)
       : null;
   const now = useNow(enRoute, 2000);
+  // latest polled state: the parent's plan may be a few seconds older than the simulation control
+  const simulating = !!(live.simulation || plan.simulation)?.running;
+  const extraActions = typeof actions === 'function' ? actions({ simulating }) : actions;
   const stale = enRoute && (!position?.receivedAt || now - position.receivedAt.getTime() > STALE_MS);
   const speed = position?.speedKmh != null ? ` · ${Math.round(position.speedKmh)} km/h` : '';
   const lastAt = position?.receivedAt ? CLOCK.format(position.receivedAt) : '';
@@ -197,6 +203,16 @@ export function DispatchTrackingView({
               <div className={styles.trackerLabel}>Cán bộ được uỷ quyền</div>
               <div className={styles.unitName}>{plan.assignedTo.fullName}</div>
             </div>
+            {onCallDelegate && (
+              <button
+                type="button"
+                className={styles.callBtn}
+                title={`Gọi video cho ${plan.assignedTo.fullName}`}
+                onClick={() => onCallDelegate(plan.assignedTo)}
+              >
+                Gọi
+              </button>
+            )}
           </div>
         )}
 
@@ -207,26 +223,28 @@ export function DispatchTrackingView({
               <div className={styles.unitName}>{tracker.fullName}</div>
               {tracker.badgeNumber && <div className={styles.unitSub}>Số hiệu {tracker.badgeNumber}</div>}
             </div>
-            {/* own line under the name on a narrow card (phone) */}
-            <div className={styles.trackerButtons}>
-              {actions && <div className={styles.actions}>{actions}</div>}
-              {!trackerCall ? null : onCallTracker ? (
-                <button
-                  type="button"
-                  className={styles.callBtn}
-                  title={`Gọi video cho ${tracker.fullName}`}
-                  onClick={() => onCallTracker(tracker)}
+            {/* "Gọi" on the name's row, the change buttons on their own row below */}
+            {!trackerCall ? null : onCallTracker ? (
+              <button
+                type="button"
+                className={`${styles.callBtn} ${styles.trackerCall}`}
+                title={`Gọi video cho ${tracker.fullName}`}
+                onClick={() => onCallTracker(tracker)}
+              >
+                Gọi
+              </button>
+            ) : (
+              trackerTel && (
+                <a
+                  className={`${styles.callBtn} ${styles.trackerCall}`}
+                  href={`tel:${trackerTel}`}
+                  title={`Gọi ${tracker.fullName}`}
                 >
                   Gọi
-                </button>
-              ) : (
-                trackerTel && (
-                  <a className={styles.callBtn} href={`tel:${trackerTel}`} title={`Gọi ${tracker.fullName}`}>
-                    Gọi
-                  </a>
-                )
-              )}
-            </div>
+                </a>
+              )
+            )}
+            {extraActions && <div className={styles.trackerActions}>{extraActions}</div>}
           </div>
         )}
 
@@ -236,7 +254,7 @@ export function DispatchTrackingView({
             <div className={styles.unitName}>{o.name}</div>
             <div className={styles.unitSub}>Xuất phát từ: {o.address || 'Trụ sở đơn vị'}</div>
           </div>
-          {actions && !tracker && <div className={styles.actions}>{actions}</div>}
+          {extraActions && !tracker && <div className={styles.actions}>{extraActions}</div>}
           {phone && !tracker && (
             <a className={styles.callBtn} href={`tel:${phone}`} title={`Gọi ${o.phone}`}>
               Gọi
@@ -271,6 +289,8 @@ function newer(a, b) {
 }
 
 const LOCKED_HINT = 'Hãy khởi hành trước';
+// "Rẽ đường khác" is hidden until its simulation bugs are fixed
+const SHOW_DETOUR = false;
 
 /** locked: before "Khởi hành" the buttons show greyed out, hovering says why (the BE takes no GPS yet). */
 function SimulateControl({ incidentId, simulation, locked = false }) {
@@ -290,14 +310,16 @@ function SimulateControl({ incidentId, simulation, locked = false }) {
         <span className={styles.simulateText}>Chạy thử xe theo tuyến, không cần điện thoại GPS</span>
         {/* disabled buttons get no hover: the tooltip sits on the wrapper */}
         <div className={`${styles.simulateButtons} ${styles.simulateLocked}`} title={LOCKED_HINT}>
-          <button
-            type="button"
-            className={styles.simulateDetour}
-            disabled
-            aria-label={`Rẽ đường khác: ${LOCKED_HINT}`}
-          >
-            ↪ Rẽ đường khác
-          </button>
+          {SHOW_DETOUR && (
+            <button
+              type="button"
+              className={styles.simulateDetour}
+              disabled
+              aria-label={`Rẽ đường khác: ${LOCKED_HINT}`}
+            >
+              ↪ Rẽ đường khác
+            </button>
+          )}
           <button
             type="button"
             className={styles.simulateStart}
@@ -345,15 +367,17 @@ function SimulateControl({ incidentId, simulation, locked = false }) {
       </span>
       <div className={styles.simulateButtons}>
         {/* test the automatic re-routing: leave the route on purpose */}
-        <button
-          type="button"
-          className={styles.simulateDetour}
-          disabled={busy}
-          onClick={detour}
-          title="Xe giả rẽ phải khỏi tuyến rồi mới về hiện trường, để thử tự tính lại đường đi"
-        >
-          ↪ Rẽ đường khác
-        </button>
+        {SHOW_DETOUR && (
+          <button
+            type="button"
+            className={styles.simulateDetour}
+            disabled={busy}
+            onClick={detour}
+            title="Xe giả rẽ phải khỏi tuyến rồi mới về hiện trường, để thử tự tính lại đường đi"
+          >
+            ↪ Rẽ đường khác
+          </button>
+        )}
         <button
           type="button"
           className={running ? styles.simulateStop : styles.simulateStart}

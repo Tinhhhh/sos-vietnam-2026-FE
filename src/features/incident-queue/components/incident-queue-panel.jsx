@@ -10,7 +10,6 @@ import {
   claimIncident,
   escalateIncident,
   transferIncident,
-  forceFinishIncident,
   releaseIncident,
   requestDispatch,
 } from '../api/incidents';
@@ -74,7 +73,7 @@ const badgeStyle = (bg, fg, border = 'transparent') => ({
 
 /**
  * Window "Hàng đợi sự cố" (legacy #panelIncidentsView + renderQueue()): live queue of the
- * officer's unit, with claim / release / hand over. The whole live queue is in memory (STOMP
+ * officer's unit, with claim / hand over. The whole live queue is in memory (STOMP
  * updates), so the pages (PAGE_SIZE cards) are cut here. Like booking a ride: the first
  * officer to press "Tiếp nhận" holds the incident, the others still see it locked.
  * An officer holds at most one incident at a time.
@@ -83,7 +82,7 @@ const badgeStyle = (bg, fg, border = 'transparent') => ({
  *   incidents: object[], status: 'loading'|'ready'|'unavailable'|'error', error?: string|null,
  *   connection: 'connecting'|'live'|'reconnecting', officerLevel: string,
  *   selectedId?: string|null, onSelect: (inc) => void, onRetry: () => void,
- *   onChange: (inc) => void,   // incident returned by claim / release, applied right away
+ *   onChange: (inc) => void,   // incident returned by claim / hand over, applied right away
  *   onCall?: (inc) => void,    // start a video call with the citizen (incident already held by me)
  *   inCall?: boolean,          // a call is already open: call buttons are disabled
  *   onOpenDetail?: (id) => void, // "Chi tiết" box (info, photos / videos, claim history)
@@ -116,7 +115,7 @@ export function IncidentQueuePanel({
   const holding = incidents.find((i) => i.heldByMe) || null;
   const [busyId, setBusyId] = useState(null);
   const [handoverOf, setHandoverOf] = useState(null);
-  const [confirmOf, setConfirmOf] = useState(null); // { kind: 'finish' | 'cancel' | 'transfer', inc }
+  const [confirmOf, setConfirmOf] = useState(null); // { kind: 'cancel' | 'transfer', inc }
   // picked in the "Chuyển lực lượng" dialog: a force (POLICE / CSGT / FIRE) or ESCALATE_TARGET (lên cấp tỉnh)
   const [transferTo, setTransferTo] = useState('');
   // The queue only holds open incidents (they are dealt with now), so no 1 / 7 / 30 day filter here
@@ -152,7 +151,6 @@ export function IncidentQueuePanel({
       const ok = await run(inc, () => claimIncident(inc.id), `Đã tiếp nhận ca ${inc.id}`);
       if (ok) onOpenDetail?.(inc.id);
     },
-    release: (inc) => run(inc, () => releaseIncident(inc.id), `Đã trả ca ${inc.id} về hàng đợi chung`),
     handover: (inc) => setHandoverOf(inc),
     // Verified with the citizen: ask for forces to be dispatched (VERIFYING -> RESOLVING)
     dispatch: (inc) =>
@@ -161,7 +159,6 @@ export function IncidentQueuePanel({
         : run(inc, () => requestDispatch(inc.id), `Đã gửi yêu cầu điều động lực lượng cho ca ${inc.id}`),
     openDispatch: (inc) => onOpenDispatch?.(inc),
     // Both ask first (dialog with a required reason): end once forces are dispatched / cancel at any step
-    forceFinish: (inc) => setConfirmOf({ kind: 'finish', inc }),
     cancel: (inc) => setConfirmOf({ kind: 'cancel', inc }),
     canOpenDispatch: !!onOpenDispatch,
     // One dialog (reason required): wrong force picked by the citizen -> another force's queue, or the ward
@@ -319,46 +316,37 @@ export function IncidentQueuePanel({
                   </div>
                 ),
               }
-            : confirmOf.kind === 'finish'
-              ? {
-                  title: `Kết thúc ca ${confirmOf.inc.id}?`,
-                  message:
-                    'Ca sẽ đóng ngay (đã xử lý xong), không chờ người dân xác nhận và không lập văn bản đầy đủ. Lý do được lưu vào hồ sơ ca.',
-                  confirmLabel: 'Kết thúc ca',
-                  placeholder: 'Ví dụ: đã xử lý xong, người báo không trả lời để xác nhận',
-                }
-              : {
-                  title: `Huỷ ca ${confirmOf.inc.id}?`,
-                  message: (
-                    <>
-                      Ca sẽ bị huỷ và rời hàng đợi, không thể khôi phục. Người báo tin sẽ thấy tin báo đã bị
-                      huỷ.
-                      <br />
-                      <b>Báo khống</b> = huỷ vì báo tin giả: số điện thoại báo khống 3 lần trong 24 giờ bị
-                      khoá gửi SOS 24 giờ, lần khoá thứ 3 trong 30 ngày là khoá vĩnh viễn.
-                    </>
-                  ),
-                  confirmLabel: 'Huỷ ca',
-                  placeholder:
-                    'Ví dụ: xác minh là báo nhầm / trùng với ca khác / người báo thừa nhận trêu đùa',
-                  tags: cancelTags(samePhone(incidents, confirmOf.inc)),
-                  secondary: {
-                    label: 'Báo khống',
-                    title: 'Huỷ ca vì báo tin giả: tính vào khoá số điện thoại của người báo',
-                    onConfirm: async (reason) => {
-                      const { inc } = confirmOf;
-                      const ok = await run(
-                        inc,
-                        () => cancelByOfficer(inc.id, reason, { falseAlarm: true }),
-                        `Đã huỷ ca ${inc.id}: báo khống`,
-                      );
-                      if (ok) {
-                        setConfirmOf(null);
-                        onRetry();
-                      }
-                    },
+            : {
+                title: `Huỷ ca ${confirmOf.inc.id}?`,
+                message: (
+                  <>
+                    Ca sẽ bị huỷ và rời hàng đợi, không thể khôi phục. Người báo tin sẽ thấy tin báo đã bị
+                    huỷ.
+                    <br />
+                    <b>Báo khống</b> = huỷ vì báo tin giả: số điện thoại báo khống 3 lần trong 24 giờ bị khoá
+                    gửi SOS 24 giờ, lần khoá thứ 3 trong 30 ngày là khoá vĩnh viễn.
+                  </>
+                ),
+                confirmLabel: 'Huỷ ca',
+                placeholder: 'Ví dụ: xác minh là báo nhầm / trùng với ca khác / người báo thừa nhận trêu đùa',
+                tags: cancelTags(samePhone(incidents, confirmOf.inc)),
+                secondary: {
+                  label: 'Báo khống',
+                  title: 'Huỷ ca vì báo tin giả: tính vào khoá số điện thoại của người báo',
+                  onConfirm: async (reason) => {
+                    const { inc } = confirmOf;
+                    const ok = await run(
+                      inc,
+                      () => cancelByOfficer(inc.id, reason, { falseAlarm: true }),
+                      `Đã huỷ ca ${inc.id}: báo khống`,
+                    );
+                    if (ok) {
+                      setConfirmOf(null);
+                      onRetry();
+                    }
                   },
-                })}
+                },
+              })}
           onClose={() => setConfirmOf(null)}
           onConfirm={async (reason) => {
             const { kind, inc } = confirmOf;
@@ -375,9 +363,7 @@ export function IncidentQueuePanel({
                       () => transferIncident(inc.id, transferTo, reason),
                       `Đã chuyển ca ${inc.id} sang ${TRANSFER_TARGETS.find((t) => t.value === transferTo)?.label}`,
                     )
-                  : kind === 'finish'
-                    ? await run(inc, () => forceFinishIncident(inc.id, reason), `Đã kết thúc ca ${inc.id}`)
-                    : await run(inc, () => cancelByOfficer(inc.id, reason), `Đã huỷ ca ${inc.id}`);
+                  : await run(inc, () => cancelByOfficer(inc.id, reason), `Đã huỷ ca ${inc.id}`);
             if (ok) {
               setConfirmOf(null);
               onRetry();
@@ -587,7 +573,7 @@ function QueueCard({
 
 /**
  * Claim / lock area of a card:
- * - held by me: release to the shared queue or hand over
+ * - held by me: hand over to a colleague (no release to the shared queue)
  * - held by someone else: locked with their name (still visible, like a booked ride)
  * - free and my level handles it: "Tiếp nhận ngay" (disabled while I hold another one)
  * - otherwise (watch-only): status label
@@ -641,22 +627,6 @@ function ClaimControls({ incident: inc, holding, busy, canCall, actions }) {
         look: ['rgba(56, 189, 248, 0.15)', '#38bdf8', '#bae6fd'],
         onClick: actions.transfer,
       },
-      verifying && {
-        key: 'release',
-        label: 'Trả về hàng đợi',
-        title: 'Trả ca về hàng đợi chung cho cán bộ khác nhận (đồng hồ leo thang tính tiếp)',
-        look: ['rgba(148, 163, 184, 0.15)', '#94a3b8', '#e2e8f0'],
-        onClick: actions.release,
-      },
-      // Only once the forces are on the way / at the scene (step 3 "Theo dõi" or later)
-      inc.status === 'RESOLVING' &&
-        inc.dispatchStep >= 3 && {
-          key: 'force-finish',
-          label: 'Kết thúc ca',
-          title: 'Kết thúc ca ngay (ghi lý do), không chờ xác nhận / văn bản',
-          look: ['rgba(245, 158, 11, 0.15)', '#fbbf24', '#fde68a'],
-          onClick: actions.forceFinish,
-        },
       {
         key: 'cancel',
         label: 'Huỷ ca',

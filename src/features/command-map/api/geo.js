@@ -12,7 +12,7 @@ import { api } from '@/lib/api-client';
  *
  * Read-only data status (OFFICER/ADMIN):
  *   GET /api/v1/geo/data-status
- *     -> data: [{ dataset: 'boundaries' | 'rescue_stations', version, updated_at, checked_at, total }]
+ *     -> data: [{ dataset: 'boundaries' | 'ward_names' | 'rescue_stations', version, updated_at, checked_at, total }]
  */
 const GEO_BASE = '/assets/geo';
 

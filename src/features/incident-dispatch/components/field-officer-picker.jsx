@@ -90,12 +90,12 @@ function sortCandidates(items) {
 }
 
 /**
- * Officers of my unit as a list like the "Uỷ quyền" step (avatar, online, phone): "Chọn đi hiện trường" saves
+ * Officers of my unit as a list like the "Uỷ quyền" step (avatar, online, phone): "Chọn" saves
  * that person as the field officer right away (the delegated ward officer's window, before "Khởi hành").
  *
- * @param {{ incidentId: string, unitName: string, onPlan: (plan) => void }} props
+ * @param {{ incidentId: string, onPlan: (plan) => void }} props
  */
-export function FieldOfficerList({ incidentId, unitName, onPlan }) {
+export function FieldOfficerList({ incidentId, onPlan }) {
   const toast = useToast();
   const [state, setState] = useState({ status: 'loading', items: [], error: null });
   const [reload, setReload] = useState(0);
@@ -125,13 +125,10 @@ export function FieldOfficerList({ incidentId, unitName, onPlan }) {
     }
   };
 
-  const online = state.items.filter((o) => o.online).length;
   return (
     <div className={list.card}>
       <div className={list.cardHead}>
-        <div className={list.cardTitle}>
-          Chọn người đi hiện trường · {unitName} · {state.items.length} người, {online} trực tuyến
-        </div>
+        <div className={list.cardTitle}>Chọn người đi hiện trường</div>
         <button
           type="button"
           className={list.refresh}
@@ -157,8 +154,9 @@ export function FieldOfficerList({ incidentId, unitName, onPlan }) {
               <i className={o.online ? list.dotOn : list.dotOff} />
             </span>
             <div className={list.officerMain}>
-              <div className={list.officerName}>
-                {o.fullName}{' '}
+              {/* name / status / badge / phone, one line each */}
+              <div className={list.officerName}>{o.fullName}</div>
+              <div>
                 <span className={o.online ? list.chipOn : list.chipOff}>
                   {o.online ? 'Trực tuyến' : 'Ngoại tuyến'}
                 </span>
@@ -168,13 +166,12 @@ export function FieldOfficerList({ incidentId, unitName, onPlan }) {
                 {o.selectable
                   ? [o.badgeNumber && `Số hiệu ${o.badgeNumber}`, o.position].filter(Boolean).join(' · ')
                   : o.unavailableReason}
-                {o.phone && (
-                  <>
-                    {' · '}
-                    <a href={`tel:${o.phone}`}>{o.phone}</a>
-                  </>
-                )}
               </div>
+              {o.phone && (
+                <div className={list.officerSub}>
+                  <a href={`tel:${o.phone}`}>{o.phone}</a>
+                </div>
+              )}
             </div>
             <button
               type="button"
@@ -183,11 +180,7 @@ export function FieldOfficerList({ incidentId, unitName, onPlan }) {
               title={o.unavailableReason || 'Người này cầm điện thoại GPS đi hiện trường'}
               onClick={() => pick(o)}
             >
-              {busyId === o.memberId
-                ? 'Đang lưu...'
-                : o.selectable
-                  ? 'Chọn đi hiện trường'
-                  : 'Không chọn được'}
+              {busyId === o.memberId ? 'Đang lưu...' : 'Chọn'}
             </button>
           </li>
         ))}
