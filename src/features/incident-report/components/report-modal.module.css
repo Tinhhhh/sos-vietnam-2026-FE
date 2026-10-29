@@ -92,6 +92,11 @@
   padding: 2px;
 }
 
+/* zoomed in, the sheet gets wider than the window: scroll sideways too */
+.zoomScroll {
+  overflow-x: auto;
+}
+
 .empty {
   display: flex;
   flex-direction: column;

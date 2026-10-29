@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 
 import { Modal } from '@/components/ui/modal/modal';
+import { ZoomBar } from '@/components/ui/zoom-bar/zoom-bar';
 
 import { getCitizenDocument, signAsCitizen } from '../api/report-api';
 import { printDocument } from '../utils/print-document';
@@ -10,6 +11,10 @@ import styles from './report-modal.module.css';
 import { SignaturePad } from './signature-pad';
 
 const POLL_MS = 8000;
+// zoom of the document for reading on a phone: 50 % to 200 %, 25 % a step
+const ZOOM_MIN = 50;
+const ZOOM_MAX = 200;
+const ZOOM_STEP = 25;
 
 /**
  * Citizen reads and signs the report of their incident. access = { incidentId, token } from the tracking screen,
@@ -65,6 +70,8 @@ function CitizenDocumentWindow({ access, onClose, notify, onSigned }) {
   };
 
   const doc = state.doc;
+  const [zoom, setZoom] = useState(100);
+  const zoomTo = (next) => setZoom(Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, next)));
   return (
     <Modal
       open
@@ -108,6 +115,13 @@ function CitizenDocumentWindow({ access, onClose, notify, onSigned }) {
             <button type="button" className={styles.pdf} onClick={() => printDocument(doc)}>
               In / PDF
             </button>
+            <ZoomBar
+              pct={zoom}
+              onOut={() => zoomTo(zoom - ZOOM_STEP)}
+              onIn={() => zoomTo(zoom + ZOOM_STEP)}
+              onReset={() => setZoom(100)}
+              label="Thu phóng văn bản"
+            />
             <span className={styles.meta}>
               {!doc.saved
                 ? 'Bản nháp: lực lượng chức năng đang hoàn thiện văn bản, bạn ký được khi văn bản được lưu'
@@ -118,21 +132,24 @@ function CitizenDocumentWindow({ access, onClose, notify, onSigned }) {
                     : 'Đọc kỹ nội dung rồi ký xác nhận ở ô "Người báo tin / người dân"'}
             </span>
           </div>
-          <div className={styles.scroll}>
-            <DocumentSheet
-              doc={doc}
-              fields={doc.fields}
-              editable={false}
-              citizenAction={
-                doc.saved &&
-                !doc.citizenSignature &&
-                !doc.locked && (
-                  <button type="button" className={sheetStyles.sigBtn} onClick={() => setPadOpen(true)}>
-                    Ký xác nhận
-                  </button>
-                )
-              }
-            />
+          <div className={`${styles.scroll} ${styles.zoomScroll}`}>
+            {/* CSS zoom re-flows the page (unlike a transform), so scrolling follows the zoomed size */}
+            <div style={{ zoom: zoom / 100 }}>
+              <DocumentSheet
+                doc={doc}
+                fields={doc.fields}
+                editable={false}
+                citizenAction={
+                  doc.saved &&
+                  !doc.citizenSignature &&
+                  !doc.locked && (
+                    <button type="button" className={sheetStyles.sigBtn} onClick={() => setPadOpen(true)}>
+                      Ký xác nhận
+                    </button>
+                  )
+                }
+              />
+            </div>
           </div>
         </>
       )}
