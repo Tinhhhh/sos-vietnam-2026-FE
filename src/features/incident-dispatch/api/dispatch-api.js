@@ -108,7 +108,7 @@ export function normalizePlan(raw) {
           within: !!raw.arrival_check.within,
         }
       : null,
-    // how "Đã đến" was confirmed: GPS / HOLDER_OVERRIDE (+ note) / CITIZEN
+    // how "Đã đến" was confirmed: GPS / HOLDER_OVERRIDE / FIELD_OVERRIDE (+ note) / CITIZEN
     arrivalSource: raw.arrival_source || null,
     arrivalSourceLabel: raw.arrival_source_label || null,
     arrivalNote: raw.arrival_note || null,

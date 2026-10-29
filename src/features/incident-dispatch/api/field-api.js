@@ -57,7 +57,8 @@ export async function fieldDepart(token) {
   return normalizePlan(body.data);
 }
 
-export async function fieldArrive(token) {
-  const body = await api.post('/api/v1/field/arrive', null, headers(token));
+/** reason: confirm without GPS (phone / GPS broken), at least 5 characters */
+export async function fieldArrive(token, reason) {
+  const body = await api.post('/api/v1/field/arrive', reason ? { reason } : {}, headers(token));
   return normalizePlan(body.data);
 }

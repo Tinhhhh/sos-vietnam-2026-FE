@@ -272,13 +272,14 @@ function DelegationDetailModal({ incident, mine, onClose, onCallField, onCallRec
                 )
               : null
           }
-          // "Đã đến" only within the GPS radius (no override here: only the officer holding the case has one)
+          // "Đã đến" within the GPS radius, or without GPS with a reason (the delegated officer handles the case)
           renderArrive={
             mine
               ? (check) => (
                   <ArriveControl
                     check={check}
-                    onArrive={() => arriveDispatch(incident.id)}
+                    canOverride
+                    onArrive={(reason) => arriveDispatch(incident.id, { reason })}
                     onPlan={setLocal}
                   />
                 )

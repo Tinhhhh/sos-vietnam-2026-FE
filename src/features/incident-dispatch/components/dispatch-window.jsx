@@ -361,11 +361,11 @@ function DispatchWindowBody({
                 incidentId={incident.id}
                 onCallTracker={onCallTracker ? (tracker) => onCallTracker(incident, tracker) : null}
                 onCallDelegate={onCallDelegate ? (d) => onCallDelegate(incident, d) : null}
-                // "Đã đến" when the GPS is within the radius; the holder (this window) may confirm without GPS
+                // "Đã đến" when the GPS is within the radius; without GPS only when my own unit goes (delegated: the ward / field officer do)
                 renderArrive={(check) => (
                   <ArriveControl
                     check={check}
-                    canOverride
+                    canOverride={!draft.assignedTo}
                     onArrive={(reason) => arriveDispatch(incident.id, { reason })}
                     onPlan={setDraft}
                   />

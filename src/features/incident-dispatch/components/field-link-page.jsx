@@ -112,7 +112,7 @@ export function FieldLinkPanel({ token, onCall, callBusy = false, onIncident }) 
         onCallReceiver={onCall ? (r) => onCall('officer', r.fullName || data.handlerName || null) : null}
         onCallDelegate={onCall ? (d) => onCall('delegate', d.fullName) : null}
         renderArrive={(check) => (
-          <ArriveControl check={check} onArrive={() => fieldArrive(token)} onPlan={load} />
+          <ArriveControl check={check} canOverride onArrive={(reason) => fieldArrive(token, reason)} onPlan={load} />
         )}
         footer={
           <div className={styles.actions}>
