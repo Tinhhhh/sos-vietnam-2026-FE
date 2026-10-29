@@ -7,6 +7,7 @@ import {
   arriveDispatch,
   departDelegation,
   getDispatchPlan,
+  getSimulationSpeedKmh,
   getRoadSnap,
   saveDispatchPlan,
 } from '../api/dispatch-api';
@@ -30,6 +31,27 @@ import { FieldLinkBox } from './field-link-box';
 import { FieldOfficerList } from './field-officer-picker';
 import { FinishPanel } from './finish-panel';
 import { RouteMap } from './route-map';
+
+/**
+ * Travel time shown when choosing the route: the distance at the "Mô phỏng" speed set in Cài đặt (the simulated
+ * vehicle drives at that speed), so the estimate and the simulation agree. No speed known: the route's own time.
+ */
+function etaAt(route, speedKmh) {
+  if (!route) return null;
+  if (!speedKmh || route.distanceM == null) return route.durationS;
+  return route.distanceM / ((speedKmh * 1000) / 3600);
+}
+
+/** "5.4 km · 40 km/h" under the travel time */
+function DistanceSpeed({ route, speedKmh }) {
+  return (
+    <span>
+      {route.estimated ? '~' : ''}
+      {formatDistance(route.distanceM)}
+      {speedKmh ? ` · ${speedKmh} km/h` : ''}
+    </span>
+  );
+}
 
 const ROAD_LIMIT = 40; // nearest stations that get a real road estimate; the rest straight-line
 const DELAY_NOTE = 'Thời gian thực tế có thể lâu hơn do ùn tắc giao thông hoặc thời tiết không thuận lợi.';
@@ -111,6 +133,17 @@ function DispatchWindowBody({
   const [draft, setDraft] = useState(initialPlan);
   const [editing, setEditing] = useState(!draft || draft.step === 1);
   const [saving, setSaving] = useState(false);
+  // speed of the simulated vehicle (Cài đặt › Mô phỏng): the travel times below are computed at that speed
+  const [speedKmh, setSpeedKmh] = useState(null);
+  useEffect(() => {
+    let alive = true;
+    getSimulationSpeedKmh()
+      .then((v) => alive && setSpeedKmh(v))
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   // The ward unit accepts / rejects / sets off on its own screen: every queue push of this incident
   // re-reads the plan so this window follows (unless the officer is editing step 1).
@@ -172,7 +205,7 @@ function DispatchWindowBody({
   const est = estimates.key === destKey ? estimates.byId : null;
 
   const sorted = useMemo(() => {
-    const dur = (s) => est?.[s.id]?.durationS ?? Infinity;
+    const dur = (s) => etaAt(est?.[s.id], speedKmh) ?? Infinity;
     const list = [...candidates].sort(
       (a, b) => dur(a) - dur(b) || haversineKm(a, destination) - haversineKm(b, destination),
     );
@@ -180,7 +213,7 @@ function DispatchWindowBody({
     return mode === 'province'
       ? [...list.filter((s) => s.level !== 'ward'), ...list.filter((s) => s.level === 'ward')]
       : list;
-  }, [candidates, est, destination, mode]);
+  }, [candidates, est, destination, mode, speedKmh]);
 
   // Ward police: their own station, nearest one preselected
   const effectiveId = selectedId ?? (mode === 'ward' ? sorted[0]?.id : null);
@@ -307,6 +340,7 @@ function DispatchWindowBody({
                 selectedId={effectiveId}
                 onSelect={setSelectedId}
                 hasDestination={!!destination}
+                speedKmh={speedKmh}
               />
             )}
           </div>
@@ -321,6 +355,7 @@ function DispatchWindowBody({
               station={selected}
               route={currentRoute || (selected && est?.[selected.id]) || null}
               error={routeError}
+              speedKmh={speedKmh}
             />
           </div>
           <div className={styles.footer}>
@@ -382,6 +417,7 @@ function DispatchWindowBody({
                   canPickOrigin={!isWard}
                   locked={waitingAnswer || delegateTook}
                   onEdit={() => setEditing(true)}
+                  speedKmh={speedKmh}
                 />
                 {ownUnit ? (
                   <OwnDispatchStep incidentId={incident.id} plan={draft} onPlan={setDraft} />
@@ -734,7 +770,7 @@ function DestinationBox({ destination, original, typeLabel, onChange, onOpenPick
 }
 
 /** Province / PCCC / CSGT officers: pick the HQ or a ward station (ward police never see this). */
-function OriginList({ stations, estimates, estimateError, selectedId, onSelect, hasDestination }) {
+function OriginList({ stations, estimates, estimateError, selectedId, onSelect, hasDestination, speedKmh }) {
   return (
     <section className={`${styles.box} ${styles.originBox}`}>
       <div className={styles.boxHead}>
@@ -784,11 +820,8 @@ function OriginList({ stations, estimates, estimateError, selectedId, onSelect, 
                 <span className={styles.originEta}>
                   {e ? (
                     <>
-                      <b>{formatDuration(e.durationS)}</b>
-                      <span>
-                        {e.estimated ? '~' : ''}
-                        {formatDistance(e.distanceM)}
-                      </span>
+                      <b>{formatDuration(etaAt(e, speedKmh))}</b>
+                      <DistanceSpeed route={e} speedKmh={speedKmh} />
                     </>
                   ) : (
                     hasDestination && <span>Đang tính...</span>
@@ -803,7 +836,7 @@ function OriginList({ stations, estimates, estimateError, selectedId, onSelect, 
   );
 }
 
-function RouteSummary({ station, route, error }) {
+function RouteSummary({ station, route, error, speedKmh }) {
   if (!station) return <div className={styles.summary}>Chọn một cơ sở để xem tuyến đường.</div>;
   return (
     <div className={styles.summary}>
@@ -818,11 +851,8 @@ function RouteSummary({ station, route, error }) {
           <div className={styles.summarySub}>{station.address || 'Chưa có địa chỉ'}</div>
         </div>
         <div className={styles.summaryEta}>
-          <b>{route ? formatDuration(route.durationS) : '—'}</b>
-          <span>
-            {route?.estimated ? '~' : ''}
-            {route ? formatDistance(route.distanceM) : ''}
-          </span>
+          <b>{route ? formatDuration(etaAt(route, speedKmh)) : '—'}</b>
+          {route && <DistanceSpeed route={route} speedKmh={speedKmh} />}
         </div>
       </div>
       {error && <div className={styles.warn}>Không vẽ được tuyến: {error}</div>}
@@ -832,7 +862,7 @@ function RouteSummary({ station, route, error }) {
 }
 
 /** Steps 2-4 come in the next batches; for now show what step 1 saved. */
-function ChosenSummary({ draft, canPickOrigin, locked = false, onEdit }) {
+function ChosenSummary({ draft, canPickOrigin, locked = false, onEdit, speedKmh }) {
   const o = draft.origin;
   return (
     <div className={styles.chosen}>
@@ -854,8 +884,8 @@ function ChosenSummary({ draft, canPickOrigin, locked = false, onEdit }) {
             <div className={styles.summarySub}>{o.address || 'Chưa có địa chỉ'}</div>
           </div>
           <div className={styles.summaryEta}>
-            <b>{formatDuration(draft.route?.durationS)}</b>
-            <span>{formatDistance(draft.route?.distanceM)}</span>
+            <b>{formatDuration(etaAt(draft.route, speedKmh))}</b>
+            {draft.route && <DistanceSpeed route={draft.route} speedKmh={speedKmh} />}
           </div>
         </div>
         <div className={styles.destCoord}>Điểm đến: {draft.destination?.address}</div>
