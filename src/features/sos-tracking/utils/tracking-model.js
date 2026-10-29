@@ -36,6 +36,8 @@ export function normalizeTracking(raw) {
     createdAt: toDate(raw.created_at) || new Date(),
     escalateAt: toDate(raw.escalate_at),
     escalatedAt: toDate(raw.escalated_at),
+    // OFFICER_REQUEST (the ward officer moved it) | NO_RESPONSE_TIMEOUT | CITIZEN_REQUEST | null
+    escalationReason: raw.escalation_reason || null,
     acceptedAt: toDate(raw.accepted_at),
     cancelledAt: toDate(raw.cancelled_at),
     cancelReason: raw.cancel_reason || null,

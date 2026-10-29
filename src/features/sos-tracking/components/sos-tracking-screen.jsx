@@ -14,6 +14,7 @@ import { useIncidentTracking } from '../hooks/use-incident-tracking';
 import { CLOSED_STATUSES, TYPE_TEXT, receivingUnit } from '../utils/tracking-model';
 import { CancelControl } from './cancel-control';
 import { CitizenCallScreen } from './citizen-call-screen';
+import { EscalationNotice } from './escalation-notice';
 import styles from './sos-tracking.module.css';
 import { WaitTimer } from './wait-timer';
 
@@ -180,6 +181,7 @@ function TrackingContent({
 
   return (
     <div className={styles.screen} role="dialog" aria-label="Đang chờ tiếp nhận SOS">
+      <EscalationNotice incident={incident} closed={closed} />
       {/* the case stays open and kept on the device; the menu shows a "Xem" strip to come back */}
       {!closed && onHome && (
         <button type="button" className={styles.homeBtn} onClick={onHome}>

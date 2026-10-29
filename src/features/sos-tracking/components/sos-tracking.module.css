@@ -601,3 +601,28 @@
   font-weight: 700;
   cursor: pointer;
 }
+
+/* "Công an xã/phường đã chuyển ca lên cấp tỉnh" dialog */
+.escalationBody {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  color: #e2e8f0;
+  font-size: 14.5px;
+  line-height: 1.5;
+}
+
+.escalationBody p {
+  margin: 0;
+}
+
+.escalationOk {
+  padding: 12px;
+  border: 0;
+  border-radius: 12px;
+  background: #2563eb;
+  color: #fff;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
