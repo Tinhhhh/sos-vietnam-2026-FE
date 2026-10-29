@@ -241,6 +241,8 @@ function DispatchWindowBody({
 
   // Handed to a ward officer who has not answered yet: the plan is locked (BE refuses changes too)
   const waitingAnswer = draft?.status === 'PENDING_ACCEPT' && !!draft?.assignedTo;
+  // "Khởi hành" pressed: the earlier steps are closed for good
+  const departed = ['EN_ROUTE', 'ARRIVED', 'DONE'].includes(draft?.status);
   // own unit on the way: "Đổi người" (the field officer) next to the tracking card
   const canArrive = step === 3 && draft?.status === 'EN_ROUTE' && !draft?.assignedTo;
   // the holder issues the field link when their unit goes or for a PCCC / CSGT team they appointed
@@ -462,6 +464,15 @@ function DispatchWindowBody({
                   Đang chờ {draft.assignedTo.fullName} trả lời: tạm khoá. Không liên lạc được thì bấm "Thu hồi
                   uỷ quyền" ở trên để chọn lại.
                 </span>
+              ) : departed ? (
+                <button
+                  type="button"
+                  className={styles.btnBack}
+                  disabled
+                  title="Đã khởi hành: không quay lại bước trước được nữa"
+                >
+                  🔒 Quay lại bước trước
+                </button>
               ) : (
                 <button type="button" className={styles.btnBack} onClick={goBack}>
                   ← Quay lại bước trước
