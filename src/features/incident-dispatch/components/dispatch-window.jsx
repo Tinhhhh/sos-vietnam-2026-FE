@@ -523,7 +523,7 @@ function DispatchWindowBody({
 
 /**
  * Step 2 "Điều động" when my own unit goes: "Chỉ định người phụ trách" opens the list of my unit's officers
- * (the one who goes out with the GPS phone) and saves the choice; then the link (SMS) for that person and
+ * (the one who goes out with the GPS phone) and saves the choice; then the link (Zalo) for that person and
  * "Khởi hành" (EN_ROUTE: GPS taken from then on). The field officer can also press "Khởi hành" on the link.
  */
 function OwnDispatchStep({ incidentId, plan, onPlan }) {

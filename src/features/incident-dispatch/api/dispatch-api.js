@@ -295,7 +295,7 @@ export async function issueFieldLink(incidentId) {
     fieldMember: d.field_member
       ? { fullName: d.field_member.full_name, badgeNumber: d.field_member.badge_number }
       : null,
-    // link also sent by SMS to the field officer's phone (sent = the SMS gateway took it)
+    // SMS telling the field officer they were assigned, without the link (sent = the SMS gateway took it)
     sms: d.sms
       ? { sent: !!d.sms.sent, phoneMasked: d.sms.phone_masked || null, error: d.sms.error || null }
       : null,

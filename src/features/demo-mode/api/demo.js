@@ -5,7 +5,7 @@ import { api } from '@/lib/api-client';
  *   GET /api/v1/settings/demo -> data: DemoSettings
  *   PUT /api/v1/settings/demo { generate?, hidden?, simulation_speed_kmh? } -> data: DemoSettings (a missing field is kept)
  * DemoSettings: { generate, hidden, simulation_speed_kmh, open_count, updated_at, updated_by_name }
- *   simulation_speed_kmh = speed of the fake vehicle of "Mô phỏng" (5-150, used by the next run).
+ *   simulation_speed_kmh = speed of the fake vehicle of "Mô phỏng" (5-300, used by the next run).
  *   generate = the BE creates "[DEMO]" incidents every minute; hidden = they are left out of the queue,
  *   the history and the live queue messages (open queues drop the cards at once).
  */

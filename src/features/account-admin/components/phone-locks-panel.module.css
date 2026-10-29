@@ -1,0 +1,63 @@
+/* same switch as the "Ca demo" panel */
+.switch {
+  position: relative;
+  width: 50px;
+  height: 30px;
+  flex-shrink: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.35);
+  cursor: pointer;
+  transition: background 0.18s ease;
+}
+
+.switch:disabled {
+  opacity: 0.55;
+  cursor: wait;
+}
+
+.switch:focus-visible {
+  outline: 2px solid #60a5fa;
+  outline-offset: 2px;
+}
+
+.on {
+  background: #22c55e;
+}
+
+.knob {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+  transition: transform 0.18s ease;
+}
+
+.on .knob {
+  transform: translateX(20px);
+}
+
+.subtitle {
+  padding: 16px 0 4px;
+  color: #cbd5e1;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.muted {
+  padding-top: 12px;
+  color: #94a3b8;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.error {
+  padding: 12px 0;
+  color: #fca5a5;
+  font-size: 13.5px;
+}
