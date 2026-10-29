@@ -439,14 +439,7 @@ function DispatchWindowBody({
                 )}
                 {/* PCCC / CSGT team appointed (it is also the field officer): the holder sends the link and sets off */}
                 {!ownUnit && holderLink && draft.status === 'ACCEPTED' && (
-                  <>
-                    <FieldLinkBox incidentId={incident.id} plan={draft} />
-                    <DepartButton
-                      who={draft.tracker.fullName}
-                      onDepart={() => departDelegation(incident.id)}
-                      onPlan={setDraft}
-                    />
-                  </>
+                  <FieldLinkBox incidentId={incident.id} plan={draft} />
                 )}
               </div>
               <div className={styles.mapCol}>
@@ -456,6 +449,14 @@ function DispatchWindowBody({
                   coords={draft.route?.coords || null}
                   citizen={incident.lat != null ? { lat: incident.lat, lng: incident.lng } : null}
                 />
+                {/* "Khởi hành" under the map: my own unit, or the PCCC / CSGT team I appointed, once someone is picked */}
+                {(ownUnit || holderLink) && draft.tracker && draft.status === 'ACCEPTED' && (
+                  <DepartButton
+                    who={draft.tracker.fullName}
+                    onDepart={() => departDelegation(incident.id)}
+                    onPlan={setDraft}
+                  />
+                )}
               </div>
             </div>
           )}
@@ -590,12 +591,8 @@ function OwnDispatchStep({ incidentId, plan, onPlan }) {
           }}
         />
       )}
-      {picked && !changing && (
-        <>
-          <FieldLinkBox incidentId={incidentId} plan={plan} />
-          <DepartButton who={picked.fullName} onDepart={() => departDelegation(incidentId)} onPlan={onPlan} />
-        </>
-      )}
+      {/* "Khởi hành" sits under the map (right column) */}
+      {picked && !changing && <FieldLinkBox incidentId={incidentId} plan={plan} />}
     </>
   );
 }
