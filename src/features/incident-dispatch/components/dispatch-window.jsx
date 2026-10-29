@@ -5,7 +5,6 @@ import { useToast } from '@/components/ui/toast/toast-context';
 
 import {
   arriveDispatch,
-  changeFieldMember,
   departDelegation,
   getDispatchPlan,
   getRoadSnap,
@@ -29,7 +28,7 @@ import { DispatchStepper } from './dispatch-stepper';
 import { DispatchTrackingView } from './dispatch-tracking-view';
 import trackingStyles from './dispatch-tracking.module.css';
 import { FieldLinkBox } from './field-link-box';
-import { FieldOfficerChange, FieldOfficerPicker } from './field-officer-picker';
+import { FieldOfficerChange, FieldOfficerList } from './field-officer-picker';
 import { FinishPanel } from './finish-panel';
 import { RouteMap } from './route-map';
 
@@ -534,8 +533,6 @@ function DispatchWindowBody({
  * "Khởi hành" (EN_ROUTE: GPS taken from then on). The field officer can also press "Khởi hành" on the link.
  */
 function OwnDispatchStep({ incidentId, plan, onPlan }) {
-  const toast = useToast();
-  const [open, setOpen] = useState(false);
   const picked = plan.tracker; // saved on the trip (status ACCEPTED, waiting to set off)
   // once the force has set off (or a simulation drives the route) the field officer cannot change any more
   const locked =
@@ -543,102 +540,48 @@ function OwnDispatchStep({ incidentId, plan, onPlan }) {
     plan.status === 'ARRIVED' ||
     plan.status === 'DONE' ||
     !!plan.simulation?.running;
-  const [draftPick, setDraftPick] = useState(null);
-  const [busy, setBusy] = useState(false);
-
-  const choose = async () => {
-    setBusy(true);
-    try {
-      const next = await changeFieldMember(incidentId, draftPick.memberId);
-      onPlan(next);
-      setOpen(false);
-      toast.show(
-        `${next?.tracker?.fullName || 'Đã chọn'} phụ trách hiện trường: bấm "Khởi hành" khi xuất phát`,
-        {
-          tone: 'success',
-        },
-      );
-    } catch (err) {
-      toast.show(err.message, { tone: 'error' });
-    } finally {
-      setBusy(false);
-    }
-  };
+  // same list as the delegated ward officer's window: open while nobody is picked, or after "Đổi người phụ trách"
+  const [changing, setChanging] = useState(false);
+  const listing = !locked && (!picked || changing);
 
   return (
-    <div className={delegationStyles.card}>
-      <div className={delegationStyles.cardHead}>
-        <div className={delegationStyles.cardTitle}>Người phụ trách hiện trường *</div>
-      </div>
-      <div className={delegationStyles.meta}>
-        Người ra hiện trường cầm điện thoại GPS; người báo tin thấy vị trí và gọi được cho người này.
-      </div>
-      {picked ? (
-        <div className={styles.pickedOfficer}>
-          <b>{picked.fullName}</b>
-          {picked.badgeNumber && <span> · Số hiệu {picked.badgeNumber}</span>}
-        </div>
-      ) : (
-        <div className={delegationStyles.meta}>Chưa chỉ định ai.</div>
-      )}
-      <button
-        type="button"
-        className={`${styles.btnGhost} ${styles.btnFull}`}
-        disabled={locked}
-        title={locked ? 'Lực lượng đã khởi hành: không đổi người phụ trách được nữa' : undefined}
-        onClick={() => {
-          setDraftPick(picked?.memberId ?? null);
-          setOpen(true);
-        }}
-      >
-        {locked
-          ? '🔒 Đã khởi hành, không đổi người phụ trách'
-          : picked
-            ? 'Đổi người phụ trách'
-            : 'Chỉ định người phụ trách'}
-      </button>
+    <>
       {picked && (
+        <div className={delegationStyles.card}>
+          <div className={delegationStyles.cardHead}>
+            <div className={delegationStyles.cardTitle}>Người phụ trách hiện trường</div>
+          </div>
+          <div className={styles.pickedOfficer}>
+            <b>{picked.fullName}</b>
+            {picked.badgeNumber && <span> · Số hiệu {picked.badgeNumber}</span>}
+          </div>
+          <button
+            type="button"
+            className={`${styles.btnGhost} ${styles.btnFull}`}
+            disabled={locked}
+            title={locked ? 'Lực lượng đã khởi hành: không đổi người phụ trách được nữa' : undefined}
+            onClick={() => setChanging((v) => !v)}
+          >
+            {locked ? '🔒 Đã khởi hành, không đổi người phụ trách' : changing ? 'Giữ người này' : 'Đổi người phụ trách'}
+          </button>
+        </div>
+      )}
+      {listing && (
+        <FieldOfficerList
+          incidentId={incidentId}
+          onPlan={(next) => {
+            setChanging(false);
+            onPlan(next);
+          }}
+        />
+      )}
+      {picked && !changing && (
         <>
           <FieldLinkBox incidentId={incidentId} plan={plan} />
           <DepartButton who={picked.fullName} onDepart={() => departDelegation(incidentId)} onPlan={onPlan} />
         </>
       )}
-
-      {open && (
-        <Modal
-          open
-          onClose={() => setOpen(false)}
-          solid
-          containerStyle={{ maxWidth: 480, width: 'min(480px, calc(100vw - 16px))' }}
-          title={<span className={styles.confirmTitle}>Chỉ định người phụ trách hiện trường</span>}
-        >
-          <div className={styles.confirmBody}>
-            <p>
-              Ca <b>{plan ? incidentId : ''}</b> · {plan.origin.name}
-            </p>
-            <FieldOfficerPicker
-              incidentId={incidentId}
-              value={draftPick?.memberId ?? draftPick}
-              onChange={(memberId, officer) => setDraftPick(officer || { memberId })}
-              compact
-            />
-            <div className={styles.confirmActions}>
-              <button type="button" className={styles.btnGhost} onClick={() => setOpen(false)}>
-                Huỷ
-              </button>
-              <button
-                type="button"
-                className={styles.btnPrimary}
-                disabled={!draftPick?.memberId || busy || draftPick.memberId === picked?.memberId}
-                onClick={choose}
-              >
-                {busy ? 'Đang lưu...' : 'Chọn người này'}
-              </button>
-            </div>
-          </div>
-        </Modal>
-      )}
-    </div>
+    </>
   );
 }
 
