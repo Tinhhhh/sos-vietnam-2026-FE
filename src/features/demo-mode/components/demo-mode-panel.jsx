@@ -112,15 +112,15 @@ export function DemoModePanel() {
           </SettingsRow>
           <SettingsRow
             title="Tốc độ mô phỏng (km/h)"
-            desc="Tốc độ xe giả khi bấm “Mô phỏng” trên màn điều động, từ 5 đến 150 km/h. Đang chạy thì bấm Mô phỏng lại để áp dụng."
+            desc="Tốc độ xe giả khi bấm “Mô phỏng” trên màn điều động, từ 5 đến 300 km/h. Đang chạy thì bấm Mô phỏng lại để áp dụng."
           >
             <form
               className={styles.speed}
               onSubmit={(e) => {
                 e.preventDefault();
                 const v = Number(speed);
-                if (!Number.isFinite(v) || v < 5 || v > 150) {
-                  notify('Tốc độ từ 5 đến 150 km/h.', { tone: 'error' });
+                if (!Number.isFinite(v) || v < 5 || v > 300) {
+                  notify('Tốc độ từ 5 đến 300 km/h.', { tone: 'error' });
                   return;
                 }
                 change({ simulation_speed_kmh: v });
@@ -129,7 +129,7 @@ export function DemoModePanel() {
               <input
                 type="number"
                 min={5}
-                max={150}
+                max={300}
                 step={1}
                 inputMode="numeric"
                 aria-label="Tốc độ mô phỏng (km/h)"
