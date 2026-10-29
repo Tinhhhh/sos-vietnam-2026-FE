@@ -73,7 +73,7 @@ const badgeStyle = (bg, fg, border = 'transparent') => ({
 
 /**
  * Window "Hàng đợi sự cố" (legacy #panelIncidentsView + renderQueue()): live queue of the
- * officer's unit, with claim / release / hand over. The whole live queue is in memory (STOMP
+ * officer's unit, with claim / hand over. The whole live queue is in memory (STOMP
  * updates), so the pages (PAGE_SIZE cards) are cut here. Like booking a ride: the first
  * officer to press "Tiếp nhận" holds the incident, the others still see it locked.
  * An officer holds at most one incident at a time.
@@ -82,7 +82,7 @@ const badgeStyle = (bg, fg, border = 'transparent') => ({
  *   incidents: object[], status: 'loading'|'ready'|'unavailable'|'error', error?: string|null,
  *   connection: 'connecting'|'live'|'reconnecting', officerLevel: string,
  *   selectedId?: string|null, onSelect: (inc) => void, onRetry: () => void,
- *   onChange: (inc) => void,   // incident returned by claim / release, applied right away
+ *   onChange: (inc) => void,   // incident returned by claim / hand over, applied right away
  *   onCall?: (inc) => void,    // start a video call with the citizen (incident already held by me)
  *   inCall?: boolean,          // a call is already open: call buttons are disabled
  *   onOpenDetail?: (id) => void, // "Chi tiết" box (info, photos / videos, claim history)
@@ -151,7 +151,6 @@ export function IncidentQueuePanel({
       const ok = await run(inc, () => claimIncident(inc.id), `Đã tiếp nhận ca ${inc.id}`);
       if (ok) onOpenDetail?.(inc.id);
     },
-    release: (inc) => run(inc, () => releaseIncident(inc.id), `Đã trả ca ${inc.id} về hàng đợi chung`),
     handover: (inc) => setHandoverOf(inc),
     // Verified with the citizen: ask for forces to be dispatched (VERIFYING -> RESOLVING)
     dispatch: (inc) =>
@@ -574,7 +573,7 @@ function QueueCard({
 
 /**
  * Claim / lock area of a card:
- * - held by me: release to the shared queue or hand over
+ * - held by me: hand over to a colleague (no release to the shared queue)
  * - held by someone else: locked with their name (still visible, like a booked ride)
  * - free and my level handles it: "Tiếp nhận ngay" (disabled while I hold another one)
  * - otherwise (watch-only): status label
@@ -627,13 +626,6 @@ function ClaimControls({ incident: inc, holding, busy, canCall, actions }) {
           : 'Người dân chọn nhầm lực lượng: chuyển ca sang Công an / CSGT / PCCC',
         look: ['rgba(56, 189, 248, 0.15)', '#38bdf8', '#bae6fd'],
         onClick: actions.transfer,
-      },
-      verifying && {
-        key: 'release',
-        label: 'Trả về hàng đợi',
-        title: 'Trả ca về hàng đợi chung cho cán bộ khác nhận (đồng hồ leo thang tính tiếp)',
-        look: ['rgba(148, 163, 184, 0.15)', '#94a3b8', '#e2e8f0'],
-        onClick: actions.release,
       },
       {
         key: 'cancel',
