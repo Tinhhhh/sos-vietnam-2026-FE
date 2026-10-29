@@ -115,6 +115,12 @@
   max-height: min(64vh, 620px);
 }
 
+/* step 2: the side column scrolls on its own next to the map */
+.sideScroll {
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
 .mapCol {
   grid-area: map;
   display: flex;

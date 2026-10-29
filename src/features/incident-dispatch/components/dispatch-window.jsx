@@ -418,34 +418,45 @@ function DispatchWindowBody({
               )}
             </>
           ) : (
-            <div className={delegationStyles.panel}>
-              <ChosenSummary
-                draft={draft}
-                canPickOrigin={!isWard}
-                locked={waitingAnswer || delegateTook}
-                onEdit={() => setEditing(true)}
-              />
-              {ownUnit ? (
-                <OwnDispatchStep incidentId={incident.id} plan={draft} onPlan={setDraft} />
-              ) : (
-                <DelegationStep
-                  incidentId={incident.id}
-                  plan={draft}
-                  onPlan={setDraft}
-                  locked={waitingAnswer}
+            // step 2: the chosen route already on the map, like step 1 (one column on phones)
+            <div className={styles.layout}>
+              <div className={`${styles.side} ${styles.sideScroll} ${delegationStyles.panel}`}>
+                <ChosenSummary
+                  draft={draft}
+                  canPickOrigin={!isWard}
+                  locked={waitingAnswer || delegateTook}
+                  onEdit={() => setEditing(true)}
                 />
-              )}
-              {/* PCCC / CSGT team appointed (it is also the field officer): the holder sends the link and sets off */}
-              {!ownUnit && holderLink && draft.status === 'ACCEPTED' && (
-                <>
-                  <FieldLinkBox incidentId={incident.id} plan={draft} />
-                  <DepartButton
-                    who={draft.tracker.fullName}
-                    onDepart={() => departDelegation(incident.id)}
+                {ownUnit ? (
+                  <OwnDispatchStep incidentId={incident.id} plan={draft} onPlan={setDraft} />
+                ) : (
+                  <DelegationStep
+                    incidentId={incident.id}
+                    plan={draft}
                     onPlan={setDraft}
+                    locked={waitingAnswer}
                   />
-                </>
-              )}
+                )}
+                {/* PCCC / CSGT team appointed (it is also the field officer): the holder sends the link and sets off */}
+                {!ownUnit && holderLink && draft.status === 'ACCEPTED' && (
+                  <>
+                    <FieldLinkBox incidentId={incident.id} plan={draft} />
+                    <DepartButton
+                      who={draft.tracker.fullName}
+                      onDepart={() => departDelegation(incident.id)}
+                      onPlan={setDraft}
+                    />
+                  </>
+                )}
+              </div>
+              <div className={styles.mapCol}>
+                <RouteMap
+                  origin={draft.origin}
+                  destination={draft.destination}
+                  coords={draft.route?.coords || null}
+                  citizen={incident.lat != null ? { lat: incident.lat, lng: incident.lng } : null}
+                />
+              </div>
             </div>
           )}
           {step === 4 ? (
@@ -562,7 +573,11 @@ function OwnDispatchStep({ incidentId, plan, onPlan }) {
             title={locked ? 'Lực lượng đã khởi hành: không đổi người phụ trách được nữa' : undefined}
             onClick={() => setChanging((v) => !v)}
           >
-            {locked ? '🔒 Đã khởi hành, không đổi người phụ trách' : changing ? 'Giữ người này' : 'Đổi người phụ trách'}
+            {locked
+              ? '🔒 Đã khởi hành, không đổi người phụ trách'
+              : changing
+                ? 'Giữ người này'
+                : 'Đổi người phụ trách'}
           </button>
         </div>
       )}
