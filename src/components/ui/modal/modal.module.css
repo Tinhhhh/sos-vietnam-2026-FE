@@ -5,3 +5,78 @@
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
 }
+
+/* The window does not scroll: its body does, so the close button stays in the window's top right corner.
+   Padding moves from the legacy .modal-container to the body (same values per breakpoint). */
+:global(.modal-container).shell {
+  display: flex !important;
+  flex-direction: column;
+  overflow: hidden !important;
+  padding: 0 !important;
+}
+
+.body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding: 24px 22px 30px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(56, 189, 248, 0.5) rgba(255, 255, 255, 0.06);
+}
+
+/* the scrollbar starts below the close button and stops before the rounded corner */
+.body::-webkit-scrollbar {
+  width: 6px;
+}
+.body::-webkit-scrollbar-track {
+  margin: 64px 0 22px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 4px;
+}
+.body::-webkit-scrollbar-thumb {
+  background: rgba(56, 189, 248, 0.4);
+  border-radius: 4px;
+}
+.body::-webkit-scrollbar-thumb:hover {
+  background: rgba(56, 189, 248, 0.7);
+}
+
+:global(.btn-close-modal).close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 5;
+  background: #1b2436;
+}
+:global(.btn-close-modal).close:hover {
+  background: #2a3550;
+}
+
+.header {
+  padding-right: 44px;
+}
+
+/* web: a bigger close button; phones keep the legacy size */
+@media (min-width: 769px) {
+  :global(.btn-close-modal).close {
+    width: 42px;
+    height: 42px;
+    font-size: 24px;
+  }
+  .header {
+    padding-right: 52px;
+  }
+}
+
+@media (max-width: 480px) {
+  .body {
+    padding: 16px 12px;
+  }
+}
+
+@media (max-width: 320px) {
+  .body {
+    padding: 12px 10px;
+  }
+}

@@ -12,6 +12,8 @@ import styles from './modal.module.css';
  */
 export function Modal({ open, onClose, title, titleStyle, containerStyle, solid = false, children }) {
   const titleId = useId();
+  // the window itself stays put (close button in its corner); its body scrolls. Layout props go to the body.
+  const { display, flexDirection, gap, ...shellStyle } = containerStyle || {};
 
   useEffect(() => {
     if (!open) return undefined;
@@ -34,18 +36,25 @@ export function Modal({ open, onClose, title, titleStyle, containerStyle, solid 
       }}
     >
       <div
-        className={solid ? `modal-container ${styles.solid}` : 'modal-container liquid-glass'}
-        style={containerStyle}
+        className={`${solid ? `modal-container ${styles.solid}` : 'modal-container liquid-glass'} ${styles.shell}`}
+        style={shellStyle}
       >
-        <div className="modal-header">
-          <div className="modal-title" id={titleId} style={titleStyle}>
-            {title}
+        <button
+          type="button"
+          className={`btn-close-modal ${styles.close}`}
+          aria-label="Đóng"
+          onClick={onClose}
+        >
+          &times;
+        </button>
+        <div className={styles.body} style={{ display, flexDirection, gap }}>
+          <div className={`modal-header ${styles.header}`}>
+            <div className="modal-title" id={titleId} style={titleStyle}>
+              {title}
+            </div>
           </div>
-          <button type="button" className="btn-close-modal" aria-label="Đóng" onClick={onClose}>
-            &times;
-          </button>
+          {children}
         </div>
-        {children}
       </div>
     </div>,
     document.body,
