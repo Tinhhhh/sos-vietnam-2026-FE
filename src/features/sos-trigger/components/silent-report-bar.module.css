@@ -13,13 +13,19 @@
   visibility: hidden;
 }
 
-/* the real bar, pinned to the slot's bottom: opening grows it upward over the warning above */
+/* the real bar, pinned to the slot's top: opening drops it down over what is below, the page keeps its height */
 .live {
   position: absolute;
   left: 0;
   right: 0;
-  bottom: 0;
+  top: 0;
   z-index: 5;
+}
+
+/* not enough room above the dock (short phone screens): anchor at the bottom so it opens upward */
+.up {
+  top: auto;
+  bottom: 0;
 }
 
 .bar {
@@ -28,7 +34,7 @@
   text-align: left;
   border-radius: 16px;
   border: 1px solid rgba(167, 139, 250, 0.45);
-  background: rgba(30, 27, 75, 0.55);
+  background: #1e1b4b; /* solid: nothing shows through when it covers the page below */
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
   color: #e9d5ff;
@@ -42,7 +48,7 @@
 .live:focus-within,
 .open {
   border-color: rgba(167, 139, 250, 0.85);
-  background: rgba(46, 16, 101, 0.7);
+  background: #2e1065;
 }
 
 .head {
