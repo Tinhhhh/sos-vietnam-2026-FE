@@ -809,3 +809,13 @@
   font-size: 14px;
   text-align: center;
 }
+
+/* the delegated ward's controls as the province sees them: dimmed, not clickable, reason on hover */
+.delegatedAway {
+  cursor: not-allowed;
+}
+.delegatedAwayInner {
+  opacity: 0.45;
+  filter: grayscale(0.5);
+  pointer-events: none;
+}

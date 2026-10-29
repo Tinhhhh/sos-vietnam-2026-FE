@@ -44,6 +44,7 @@ function etaAt(route, speedKmh) {
 
 /** "5.4 km · 40 km/h" under the travel time */
 function DistanceSpeed({ route, speedKmh }) {
+  if (route.distanceM == null) return null; // no distance yet: no "~— · 40 km/h"
   return (
     <span>
       {route.estimated ? '~' : ''}
@@ -277,11 +278,19 @@ function DispatchWindowBody({
   const departed = ['EN_ROUTE', 'ARRIVED', 'DONE'].includes(draft?.status);
   // step 3 (set off) is locked: no "Đổi người" / "Đổi điểm" here any more, they belong to steps 1 and 2
   // the holder issues the field link when their unit goes or for a PCCC / CSGT team they appointed
-  const holderLink =
-    !!draft?.tracker && (!draft.assignedTo || draft.assignedTo.memberId === draft.tracker.memberId);
   const isWard = mode === 'ward';
   // my own unit goes (ward police, province HQ): step 2 picks the field officer, no delegation
   const ownUnit = !!draft && !needsDelegation(officer, draft.origin);
+  // PCCC / CSGT: the holder appoints the team officer (also the field officer) and sends them off;
+  // police: the ward officer the case was delegated to does that, the province only watches
+  const appointed = draft?.origin?.agency === 'fire' || draft?.origin?.agency === 'csgt';
+  const delegatedAway = !ownUnit && !!draft?.assignedTo && !appointed;
+  const holderLink =
+    !!draft?.tracker &&
+    (!draft.assignedTo || draft.assignedTo.memberId === draft.tracker.memberId) &&
+    !delegatedAway;
+  // the delegated ward's link / "Khởi hành", shown dimmed to the province (hover says why)
+  const wardControls = delegatedAway && !!draft?.tracker;
   const steps = STEP_KEYS.map((key) => ({
     key,
     title: key === 'delegate' && (ownUnit || (isWard && !draft)) ? 'Điều động' : STEP_TITLES[key],
@@ -404,8 +413,10 @@ function DispatchWindowBody({
                   />
                 )}
               />
-              {holderLink && ['EN_ROUTE', 'ARRIVED'].includes(draft.status) && (
-                <FieldLinkBox incidentId={incident.id} plan={draft} />
+              {(holderLink || wardControls) && ['EN_ROUTE', 'ARRIVED'].includes(draft.status) && (
+                <DelegatedAway when={wardControls}>
+                  <FieldLinkBox incidentId={incident.id} plan={draft} />
+                </DelegatedAway>
               )}
             </>
           ) : (
@@ -430,8 +441,10 @@ function DispatchWindowBody({
                   />
                 )}
                 {/* PCCC / CSGT team appointed (it is also the field officer): the holder sends the link and sets off */}
-                {!ownUnit && holderLink && draft.status === 'ACCEPTED' && (
-                  <FieldLinkBox incidentId={incident.id} plan={draft} />
+                {!ownUnit && (holderLink || wardControls) && draft.status === 'ACCEPTED' && (
+                  <DelegatedAway when={wardControls}>
+                    <FieldLinkBox incidentId={incident.id} plan={draft} />
+                  </DelegatedAway>
                 )}
               </div>
               <div className={styles.mapCol}>
@@ -442,12 +455,14 @@ function DispatchWindowBody({
                   citizen={incident.lat != null ? { lat: incident.lat, lng: incident.lng } : null}
                 />
                 {/* "Khởi hành" under the map: my own unit, or the PCCC / CSGT team I appointed, once someone is picked */}
-                {(ownUnit || holderLink) && draft.tracker && draft.status === 'ACCEPTED' && (
-                  <DepartButton
-                    who={draft.tracker.fullName}
-                    onDepart={() => departDelegation(incident.id)}
-                    onPlan={setDraft}
-                  />
+                {(ownUnit || holderLink || wardControls) && draft.tracker && draft.status === 'ACCEPTED' && (
+                  <DelegatedAway when={wardControls}>
+                    <DepartButton
+                      who={draft.tracker.fullName}
+                      onDepart={() => departDelegation(incident.id)}
+                      onPlan={setDraft}
+                    />
+                  </DelegatedAway>
                 )}
               </div>
             </div>
@@ -586,6 +601,21 @@ function OwnDispatchStep({ incidentId, plan, onPlan }) {
       {/* "Khởi hành" sits under the map (right column) */}
       {picked && !changing && <FieldLinkBox incidentId={incidentId} plan={plan} />}
     </>
+  );
+}
+
+/**
+ * The province delegated the case to a ward officer: that officer sends the link and sets off. The province still
+ * sees those controls, dimmed and inert, with the reason on hover.
+ */
+function DelegatedAway({ when, children }) {
+  if (!when) return children;
+  return (
+    <div className={styles.delegatedAway} title="Bạn đã uỷ quyền cho người khác" aria-disabled="true">
+      <div className={styles.delegatedAwayInner} inert>
+        {children}
+      </div>
+    </div>
   );
 }
 
