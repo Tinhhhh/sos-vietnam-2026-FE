@@ -191,12 +191,7 @@ function TrackingContent({
     <div className={styles.screen} role="dialog" aria-label="Đang chờ tiếp nhận SOS">
       <EscalationNotice incident={incident} closed={closed} />
       <CompletionPrompt incident={incident} token={token} onUpdated={tracking.setIncident} notify={notify} />
-      {/* the case stays open and kept on the device; the menu shows a "Xem" strip to come back */}
-      {!closed && onHome && (
-        <button type="button" className={styles.homeBtn} onClick={onHome}>
-          ← Về trang chủ
-        </button>
-      )}
+      {/* type, connection, "⋯" and "Về" on one row, "Về" at the right end */}
       <div className={styles.top}>
         <span className={styles.typeChip}>
           {type.icon} {type.label}
@@ -210,6 +205,12 @@ function TrackingContent({
         </span>
         {!closed &&
           dispatchSlot?.({ incident, token, variant: 'screen', callTracker, callReceiver: callBack, callDelegate })}
+        {/* the case stays open and kept on the device; the menu shows a "Xem" strip to come back */}
+        {!closed && onHome && (
+          <button type="button" className={styles.homeBtn} onClick={onHome} title="Về trang chủ">
+            Về
+          </button>
+        )}
       </div>
 
       <div className={styles.center} onClickCapture={() => closed && setStayedFor(incident.documentStatus)}>
