@@ -477,9 +477,10 @@
   -webkit-backdrop-filter: blur(16px) saturate(160%);
   z-index: 99999;
   display: flex;
-  align-items: center;
   justify-content: center;
   padding: 18px;
+  /* a modal taller than a phone screen (step 2 list, keyboard open) scrolls instead of being cut */
+  overflow-y: auto;
   animation: fadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
@@ -496,6 +497,7 @@
   position: relative;
   width: 100%;
   max-width: 480px;
+  margin: auto 0; /* centred while it fits, top-aligned and scrollable when taller */
   background: rgba(4, 35, 72, 0.88);
   border: 1px solid rgba(223, 176, 119, 0.45);
   border-radius: 26px;
