@@ -1,5 +1,6 @@
-/* Hand-written (legacy-global.css is generated). Solid panel: no glass see-through. */
-.solid {
+/* Hand-written (legacy-global.css is generated). Solid panel: no glass see-through.
+   Two classes so it wins over the legacy `.modal-container { background: rgba(..., 0.92) !important }`. */
+:global(.modal-container).solid {
   background: #0c1222 !important;
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
