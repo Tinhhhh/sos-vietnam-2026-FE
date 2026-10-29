@@ -6,7 +6,7 @@
  *   Sự cố     : closed-case history (documents, detail)
  *   Đơn vị    : officer status (online / holding a case, hand over), officers & duty officer (unit account)
  *   Hệ thống  : demo incidents switch (every account: stop generating / hide [DEMO] cases)
- *   Quản trị  : create account, export accounts to Excel (ADMIN)
+ *   Quản trị  : create account, export accounts to Excel, phone locks switch + lift (ADMIN)
  * The old rail buttons "Cán bộ", "Hồ sơ" and the "Lịch sử" tile now live here.
  */
 import { useMemo } from 'react';
@@ -18,7 +18,7 @@ import {
   SettingsRow,
   SettingsSection,
 } from '@/components/ui/settings-dialog/settings-dialog';
-import { ExportAccountsPanel } from '@/features/account-admin';
+import { ExportAccountsPanel, PhoneLocksPanel } from '@/features/account-admin';
 import { OfficerInfoPanel } from '@/features/auth';
 import { DemoModePanel } from '@/features/demo-mode';
 import { IncidentHistoryPanel, OfficerStatusPanel } from '@/features/incident-queue';
@@ -221,6 +221,14 @@ export function OfficerSettingsDialog({
             label: 'Xuất danh sách tài khoản',
             keywords: 'excel xlsx tải xuống export cán bộ',
             render: () => <ExportAccountsPanel />,
+          },
+          {
+            id: 'phone-locks',
+            icon: 'lock',
+            color: 'amber',
+            label: 'Khoá SĐT',
+            keywords: 'khoá số điện thoại báo khống tin giả bấm nhầm gỡ khoá chặn ban',
+            render: () => <PhoneLocksPanel />,
           },
         ],
       });
