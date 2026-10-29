@@ -6,7 +6,7 @@ import { useToast } from '@/components/ui/toast/toast-context';
 import { getActiveLocks, getPhoneLockSettings, liftLock, updatePhoneLockSettings } from '../api/phone-locks';
 import styles from './phone-locks-panel.module.css';
 
-const LIFT_NOTE = 'Quản trị viên gỡ khoá';
+const LIFT_NOTE = 'Cán bộ gỡ khoá';
 
 const formatTime = (iso) =>
   iso
@@ -14,7 +14,7 @@ const formatTime = (iso) =>
     : '';
 
 /**
- * Settings → Quản trị → "Khoá SĐT" (ADMIN): switch the false-report phone lock on / off and lift
+ * Settings → Hệ thống → "Khoá SĐT" (any officer): switch the false-report phone lock on / off and lift
  * the 5 most recent locks still in force.
  */
 export function PhoneLocksPanel() {

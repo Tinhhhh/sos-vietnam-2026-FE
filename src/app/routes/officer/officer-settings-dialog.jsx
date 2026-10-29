@@ -5,8 +5,9 @@
  *               account; change PIN: officer of a unit account)
  *   Sự cố     : closed-case history (documents, detail)
  *   Đơn vị    : officer status (online / holding a case, hand over), officers & duty officer (unit account)
- *   Hệ thống  : demo incidents switch (every account: stop generating / hide [DEMO] cases)
- *   Quản trị  : create account, export accounts to Excel, phone locks switch + lift (ADMIN)
+ *   Hệ thống  : demo incidents switch (every account: stop generating / hide [DEMO] cases),
+ *               phone locks switch + lift the latest locks (every account)
+ *   Quản trị  : create account, export accounts to Excel (ADMIN)
  * The old rail buttons "Cán bộ", "Hồ sơ" and the "Lịch sử" tile now live here.
  */
 import { useMemo } from 'react';
@@ -188,6 +189,14 @@ export function OfficerSettingsDialog({
           keywords: 'demo thử nghiệm test ẩn tắt tự sinh ca giả',
           render: () => <DemoModePanel />,
         },
+        {
+          id: 'phone-locks',
+          icon: 'lock',
+          color: 'amber',
+          label: 'Khoá SĐT',
+          keywords: 'khoá số điện thoại báo khống tin giả bấm nhầm gỡ khoá chặn ban',
+          render: () => <PhoneLocksPanel />,
+        },
       ],
     });
 
@@ -221,14 +230,6 @@ export function OfficerSettingsDialog({
             label: 'Xuất danh sách tài khoản',
             keywords: 'excel xlsx tải xuống export cán bộ',
             render: () => <ExportAccountsPanel />,
-          },
-          {
-            id: 'phone-locks',
-            icon: 'lock',
-            color: 'amber',
-            label: 'Khoá SĐT',
-            keywords: 'khoá số điện thoại báo khống tin giả bấm nhầm gỡ khoá chặn ban',
-            render: () => <PhoneLocksPanel />,
           },
         ],
       });
