@@ -331,27 +331,44 @@ function AutoReturn({ paused, onReturn }) {
  */
 function LookupCode({ incidentId, code }) {
   const [open, setOpen] = useState(() => !!code && firstTime(incidentId));
+  // the popup that opened by itself: one "Lưu và ẩn" (copy + close); re-opened from the line: copy / close
+  const [first, setFirst] = useState(open);
   if (!code) return null;
   return (
     <>
       <button type="button" className={styles.codeLine} onClick={() => setOpen(true)}>
         Mã ca: <b>{code}</b> <span>· Xem / sao chép</span>
       </button>
-      <CaseCodeDialog open={open} code={code} onClose={() => setOpen(false)} />
+      <CaseCodeDialog
+        open={open}
+        code={code}
+        first={first}
+        onClose={() => {
+          setOpen(false);
+          setFirst(false);
+        }}
+      />
     </>
   );
 }
 
-function CaseCodeDialog({ open, code, onClose }) {
+function CaseCodeDialog({ open, code, first, onClose }) {
   const [copied, setCopied] = useState(false);
   const copy = async () => {
     try {
       await navigator.clipboard.writeText(code);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
+      return true;
     } catch {
       setCopied(false);
+      return false;
     }
+  };
+  // copy failed (blocked clipboard): still close, the code stays on the "Mã ca" line
+  const saveAndHide = async () => {
+    await copy();
+    onClose();
   };
   return (
     <Modal open={open} onClose={onClose} solid containerStyle={{ maxWidth: 400 }} title="Mã ca của bạn">
@@ -362,12 +379,20 @@ function CaseCodeDialog({ open, code, onClose }) {
         nút ⋯.
       </p>
       <div className={styles.codeActions}>
-        <button type="button" className={styles.lookupCopy} onClick={copy}>
-          {copied ? 'Đã chép' : 'Sao chép mã'}
-        </button>
-        <button type="button" className={styles.codeClose} onClick={onClose}>
-          Đã lưu
-        </button>
+        {first ? (
+          <button type="button" className={styles.lookupCopy} onClick={saveAndHide}>
+            Lưu và ẩn
+          </button>
+        ) : (
+          <>
+            <button type="button" className={styles.lookupCopy} onClick={copy}>
+              {copied ? 'Đã chép' : 'Sao chép mã'}
+            </button>
+            <button type="button" className={styles.codeClose} onClick={onClose}>
+              Đã lưu
+            </button>
+          </>
+        )}
       </div>
     </Modal>
   );
